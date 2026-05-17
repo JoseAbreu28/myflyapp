@@ -71,7 +71,7 @@ function updateWindCompass(directionDeg, speedKt) {
   }
 
   const dir = Number(directionDeg);
-  arrow.style.transform = `translate(-50%, -90%) rotate(${dir}deg)`;
+  arrow.style.transform = `translate(-50%, -90%) rotate(${(dir + 180) % 360}deg)`;
   const spd = speedKt === null || speedKt === undefined ? "--" : speedKt;
   detail.textContent = `${dir} deg at ${spd} kt`;
 }
