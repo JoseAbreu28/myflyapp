@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="dashboard" class="tab-section active">
+  <article class="card frequencies-card" style="margin-bottom: 1rem;">
+    <h2>Frequencies</h2>
+    <p class="note">Aviso: frequências informativas e podem não estar atualizadas.</p>
+    <div class="freq-grid">
+      <div class="freq-card">
+        <p class="note">ATIS (selected airport)</p>
+        <p id="freq-atis-selected" class="freq-value">--</p>
+      </div>
+      <div class="freq-card">
+        <p class="note">LPVL</p>
+        <p id="freq-lpvl" class="freq-value">--</p>
+      </div>
+      <div class="freq-card">
+        <p class="note">LPPR</p>
+        <p id="freq-lppr" class="freq-value">--</p>
+      </div>
+      <div class="freq-card">
+        <p class="note">Custom ICAO</p>
+        <div class="freq-inline">
+          <input id="freq-icao-input" class="select freq-input" type="text" placeholder="LPBR" maxlength="4">
+          <button id="freq-icao-btn" class="btn" type="button">View</button>
+        </div>
+        <p id="freq-custom" class="freq-value">--</p>
+      </div>
+    </div>
+  </article>
+
+  <div class="grid two-up">
+    <article class="card">
+      <h2>{{ station }} METAR Status</h2>
+      <p><span id="metar-category" class="badge unknown">LOADING</span></p>
+      <p id="metar-raw" class="mono note">Fetching weather data...</p>
+      <div class="metar-visuals">
+        <div class="compass-box">
+          <div class="compass-face">
+            <div class="compass-n">N</div>
+            <div class="compass-e">E</div>
+            <div class="compass-s">S</div>
+            <div class="compass-w">W</div>
+            <div id="metar-wind-arrow" class="wind-arrow"></div>
+          </div>
+          <p id="metar-wind-detail" class="note">Wind direction and speed unavailable</p>
+        </div>
+        <div class="ceiling-box">
+          <div class="ceiling-scale">
+            <div class="ceiling-mark mark-3000">3000 ft</div>
+            <div class="ceiling-mark mark-1000">1000 ft</div>
+            <div class="ceiling-mark mark-500">500 ft</div>
+            <div class="ceiling-sky"></div>
+            <div id="metar-cloud-layer" class="cloud-layer"></div>
+          </div>
+          <p id="metar-ceiling-detail" class="note">Cloud ceiling unavailable</p>
+        </div>
+      </div>
+      <p class="metric">Wind: <span id="metar-wind">--</span></p>
+      <p class="metric">Visibility: <span id="metar-visibility">--</span></p>
+      <p class="metric">Ceiling: <span id="metar-ceiling">--</span></p>
+      <p class="metric">QNH: <span id="metar-qnh">--</span></p>
+    </article>
+
+    <article class="card metar-box">
+      <h2>METAR / TAF Quick Box</h2>
+      <label for="icao-select" class="note">Airport</label>
+      <select id="icao-select" class="select">
+        <option value="LPPT">LPPT - Lisboa</option>
+        <option value="LPPR" selected>LPPR - Porto</option>
+        <option value="LPFR">LPFR - Faro</option>
+        <option value="LPMA">LPMA - Madeira</option>
+        <option value="LPPD">LPPD - Ponta Delgada</option>
+        <option value="LPAZ">LPAZ - Santa Maria</option>
+        <option value="LPLA">LPLA - Lajes</option>
+        <option value="LPHR">LPHR - Horta</option>
+      </select>
+
+      <p style="margin-top: 0.7rem;"><span id="quick-metar-category" class="badge unknown">LOADING</span></p>
+      <p id="quick-metar-raw" class="mono note compact-metar">Fetching METAR...</p>
+      <pre id="quick-taf-raw" class="mono note compact-taf">Fetching TAF...</pre>
+      <p class="note source-note">
+        Source: aviationweather.gov API via local Flask proxy (`/api/metar/<icao>` and `/api/taf/<icao>`).
+      </p>
+    </article>
+  </div>
+
+  <article class="card" style="margin-top: 1rem;">
+    <h2>Fly DATA</h2>
+    <div class="split-screen">
+      <div class="split-pane">
+        <h3>Weather Map (Windy)</h3>
+        <div class="map-wrap">
+          <iframe
+            id="windy-frame"
+            data-windy-src="{{ windy_embed_url }}"
+            src=""
+            title="Windy map for {{ station }}"
+            loading="lazy"
+            allow="fullscreen"
+          ></iframe>
+        </div>
+      </div>
+      <div class="split-pane">
+        <h3>NOTAM Map</h3>
+        <div class="map-wrap" data-embed-container>
+          <iframe src="{{ notam_viewer_url }}" title="NOTAM Viewer" loading="lazy" data-embed-frame></iframe>
+        </div>
+        <article class="card fallback-hidden" data-embed-fallback>
+          <h3>NOTAM Embed Unavailable</h3>
+          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">Open NOTAM Viewer</a>
+        </article>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" style="margin-top: 1rem;">
+    <h2>Flyweather Cameras (LPVL)</h2>
+    <div class="grid two-up">
+      {% for cam in flyweather_sources %}
+      <div class="card">
+        <h3>{{ cam.label }}</h3>
+        <div class="embed-wrap">
+          <img src="{{ cam.image_url }}" alt="{{ cam.label }}" loading="lazy">
+        </div>
+        <a class="btn" href="{{ cam.source_url }}" target="_blank" rel="noopener noreferrer">Open on Flyweather</a>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="card" style="margin-top: 1rem;">
+    <h2>Portugal Civil Aerodromes</h2>
+    <div id="portugal-aerodromes-map" class="portugal-map"></div>
+    <p class="note" style="margin-top: 0.9rem;">
+      Click a marker to open ADC/VAC render links and eAIP page.
+    </p>
+  </article>
+
+</section>
+
+<section id="flightplan" class="tab-section">
+  <article class="card">
+    <div class="fpl-subtabs">
+      <button class="fpl-subtab active" data-fpl-tab="preflight" type="button">Pre-flight</button>
+      <button class="fpl-subtab" data-fpl-tab="createplan" type="button">Create Plan</button>
+    </div>
+
+    <section id="fpl-tab-preflight" class="fpl-subsection active">
+      <h2>Pre-flight Dashboard</h2>
+      <p class="note">Mapas de apoio para preparar a rota e alternantes.</p>
+      <div class="split-screen">
+        <div class="split-pane">
+          <h3>Portugal Civil Aerodromes</h3>
+          <div id="portugal-aerodromes-map-fpl" class="portugal-map"></div>
+        </div>
+        <div class="split-pane">
+          <h3>CAVOK ESPAÇO AEREO</h3>
+          <div class="map-wrap">
+            <iframe
+              src="https://www.google.com/maps/d/embed?mid=1Og8rGguyGgNR1DUpGW7Oq9k4_Xw&ll=41.44219152959212%2C-7.71446654151184&z=9"
+              title="Google My Maps LPVL area"
+              loading="lazy"
+            ></iframe>
+          </div>
+          <p class="note source-note">Source: <a href="https://cavok.pt/" target="_blank" rel="noopener noreferrer">https://cavok.pt/</a></p>
+        </div>
+      </div>
+
+      <article class="card" style="margin-top: 1rem;">
+        <h3>NOTAM Map</h3>
+        <div class="map-wrap" data-embed-container>
+          <iframe src="{{ notam_viewer_url }}" title="NOTAM Viewer" loading="lazy" data-embed-frame></iframe>
+        </div>
+        <article class="card fallback-hidden" data-embed-fallback>
+          <h3>NOTAM Embed Unavailable</h3>
+          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">Open NOTAM Viewer</a>
+        </article>
+        <p class="note source-note">Source by <a href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">{{ notam_viewer_url }}</a></p>
+      </article>
+    </section>
+
+    <section id="fpl-tab-createplan" class="fpl-subsection">
+      <h2>Create Plan</h2>
+      <div class="fpl-quick">
+        <div class="fpl-grid">
+          <label class="fpl-field">Choose Plane
+            <select id="fpl-plane" class="select">
+              <option value="CS-EAU">CS-EAU</option>
+              <option value="CS-ASP" selected>CS-ASP</option>
+              <option value="D-ELFA">D-ELFA</option>
+              <option value="CS-AUD">CS-AUD</option>
+            </select>
+          </label>
+
+          <label class="fpl-field">Voo de circuito
+            <select id="fpl-circuit" class="select">
+              <option value="no" selected>Nao</option>
+              <option value="yes">Sim</option>
+            </select>
+          </label>
+
+          <label id="fpl-quick-dep-wrap" class="fpl-field">DEP aerodrome
+            <input id="fpl-quick-dep" class="select" type="text" value="LPVL" maxlength="4">
+          </label>
+
+          <label id="fpl-quick-dest-wrap" class="fpl-field">DEST aerodrome
+            <input id="fpl-quick-dest" class="select" type="text" value="LPBR" maxlength="4">
+          </label>
+
+          <label class="fpl-field">Tipo de missao
+            <select id="fpl-mission-type" class="select">
+              <option value="normal">Voo normal</option>
+              <option value="instruction" selected>Voo de instrucao</option>
+            </select>
+          </label>
+
+          <label class="fpl-field">Quer NOTAM?
+            <select id="fpl-wants-notam" class="select">
+              <option value="yes" selected>Sim</option>
+              <option value="no">Nao</option>
+            </select>
+          </label>
+
+          <label class="fpl-field">Data (DOF)
+            <input id="fpl-quick-date" class="select" type="date">
+          </label>
+
+          <label class="fpl-field">Hora (EOBT UTC)
+            <input id="fpl-quick-time" class="select" type="time" step="60">
+          </label>
+
+          <label class="fpl-field">Narrow Route Width (NM)
+            <input id="fpl-route-width" class="select" type="number" min="1" max="100" value="20">
+          </label>
+        </div>
+        <div class="actions" style="margin-top: 0.6rem;">
+          <button id="fpl-show-advanced" class="btn" type="button">Continuar</button>
+        </div>
+      </div>
+
+      <div id="fpl-advanced" class="is-hidden">
+        <div id="fpl-notam-helper" class="fpl-helper">
+          <label class="fpl-field fpl-span-2">fplbriefing-token
+            <input id="fpl-token" class="select" type="password" placeholder="Bearer token">
+          </label>
+          <div class="actions">
+            <button id="fpl-run-pib" class="btn" type="button">Run PIB Request</button>
+            <button id="fpl-run-route" class="btn" type="button">Load Route Map</button>
+            <button id="fpl-open-notam-popup" class="btn" type="button">Open NOTAM Text</button>
+          </div>
+          <p id="fpl-helper-status" class="note">Sem pedidos executados.</p>
+          <div id="fpl-route-map" class="route-map"></div>
+        </div>
+
+        <h3>Local Flight Plan Builder</h3>
+        <div class="fpl-grid">
+      <label id="fpl-instructor-wrap" class="fpl-field fpl-span-2">Instrutor (obrigatorio em voo de instrucao)
+        <input id="fpl-instructor" class="select" type="text" value="TIAGO GONCALVES">
+      </label>
+
+      <label class="fpl-field">7 Aircraft ID
+        <input id="fpl-aircraft-id" class="select" type="text" value="CSASP">
+      </label>
+
+      <label class="fpl-field">8 Flight Rules
+        <select id="fpl-flight-rules" class="select">
+          <option value="V" selected>V - VFR</option>
+          <option value="I">I - IFR</option>
+          <option value="Y">Y - IFR then VFR</option>
+          <option value="Z">Z - VFR then IFR</option>
+        </select>
+      </label>
+
+      <label class="fpl-field">Type of Flight
+        <select id="fpl-type-of-flight" class="select">
+          <option value="X" selected>X - Other</option>
+          <option value="S">S - Scheduled</option>
+          <option value="N">N - Non-Scheduled</option>
+          <option value="G">G - General</option>
+          <option value="M">M - Military</option>
+        </select>
+      </label>
+
+      <label class="fpl-field">9 Number
+        <input id="fpl-number" class="select" type="number" min="1" value="1">
+      </label>
+
+      <label class="fpl-field">Type of Aircraft
+        <input id="fpl-type-aircraft" class="select" type="text" value="C152">
+      </label>
+
+      <label class="fpl-field">Wake Turbulence Category
+        <select id="fpl-wtc" class="select">
+          <option value="L" selected>L - Light</option>
+          <option value="M">M - Medium</option>
+          <option value="H">H - Heavy</option>
+          <option value="J">J - Jumbo</option>
+        </select>
+      </label>
+
+      <label class="fpl-field">10a Radio Equipment
+        <input id="fpl-radio-equipment" class="select" type="text" value="SY">
+      </label>
+
+      <label class="fpl-field">10b Surveillance Equipment
+        <input id="fpl-surveillance-equipment" class="select" type="text" value="S">
+      </label>
+
+      <label class="fpl-field">13 Departure Aerodrome
+        <input id="fpl-adep" class="select" type="text" value="LPVL">
+      </label>
+
+      <label class="fpl-field">EOBT (manual HHMM)
+        <input id="fpl-eobt" class="select" type="text" value="1700">
+      </label>
+
+      <label class="fpl-field">15 Speed
+        <input id="fpl-speed" class="select" type="text" value="N0090">
+      </label>
+
+      <label class="fpl-field">Level (manual ex: A015)
+        <input id="fpl-level" class="select" type="text" value="A015">
+      </label>
+
+      <label class="fpl-field fpl-span-2">Route
+        <input id="fpl-route" class="select" type="text" value="DCT ">
+      </label>
+
+      <label class="fpl-field">16 Destination Aerodrome
+        <input id="fpl-ades" class="select" type="text" value="LPVL">
+      </label>
+
+      <label class="fpl-field">Total EET (manual HHMM)
+        <input id="fpl-eet" class="select" type="text" value="0100">
+      </label>
+
+      <label class="fpl-field">Alternate Aerodrome
+        <input id="fpl-alt1" class="select" type="text" value="LPBR">
+      </label>
+
+      <label class="fpl-field">2nd Alternate Aerodrome
+        <input id="fpl-alt2" class="select" type="text" value="LPVR">
+      </label>
+
+      <label class="fpl-field fpl-span-2">18 Other Information (manual)
+        <input id="fpl-other" class="select" type="text" value="DOF/260517 RMK/LOCAL INSTRUCTION FLIGHT">
+      </label>
+
+      <label class="fpl-field">19 Endurance E/ (manual HHMM)
+        <input id="fpl-endurance" class="select" type="text" value="0430">
+      </label>
+
+      <label class="fpl-field">Persons on Board P/
+        <input id="fpl-pob" class="select" type="text" value="2">
+      </label>
+
+      <label class="fpl-field">Emergency Radio R/
+        <input id="fpl-emergency-radio" class="select" type="text" value="VE">
+      </label>
+
+      <label class="fpl-field">Aircraft Color and Markings A/
+        <input id="fpl-aircraft-color" class="select" type="text" value="WHITE">
+      </label>
+
+      <label class="fpl-field fpl-span-2">Pilot-in-Command C/
+        <input id="fpl-pic" class="select" type="text" value="">
+      </label>
+        </div>
+        <p class="note" style="margin-top: 0.8rem;">Nota: voos de circuito usam LPVL como origem e LPBR como alternate.</p>
+        <p class="note" style="margin-top: 1rem;">Submete sempre no portal oficial:</p>
+        <div class="actions">
+          <a class="btn" href="{{ fpl_briefing_url }}" target="_blank" rel="noopener noreferrer">Submit on fplbriefing.nav.pt</a>
+        </div>
+      </div>
+    </section>
+  </article>
+</section>
+
+<div id="chart-preview-modal" class="modal hidden">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <strong id="chart-preview-title">Chart Preview</strong>
+      <button class="btn" type="button" data-close-modal>Close</button>
+    </div>
+    <iframe id="chart-preview-frame" class="chart-preview-frame" title="Chart preview"></iframe>
+  </div>
+</div>
+
+<div id="notam-modal" class="modal hidden">
+  <div class="modal-backdrop" data-close-notam-modal></div>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <strong>NOTAM Text</strong>
+      <button class="btn" type="button" data-close-notam-modal>Close</button>
+    </div>
+    <div id="notam-modal-content" class="notam-content"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.HOME_ICAO = "{{ station }}";
+  window.AERODROMES = {{ aerodromes | tojson }};
+</script>
+{% endblock %}

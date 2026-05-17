@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ station }} Flight Planning Dashboard</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <h1>{{ station }} Flight Planning Dashboard</h1>
+    </div>
+    <div class="utc-box">
+      <span>UTC</span>
+      <strong id="utc-clock">--:--:--</strong>
+    </div>
+  </header>
+
+  <nav class="top-nav" aria-label="Main tabs">
+    <a href="#dashboard" data-tab="dashboard">Dashboard</a>
+    <a href="#flightplan" data-tab="flightplan">Flight Plan</a>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
+  {% block scripts %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
