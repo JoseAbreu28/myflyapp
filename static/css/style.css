@@ -566,3 +566,19 @@ h1 { margin: 0; font-size: 1.25rem; }
   .map-wrap iframe { height: 400px; }
   .portugal-map { height: 360px; }
 }
+
+.warning-banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+.warning-banner code {
+  background: rgba(255,255,255,0.08);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
