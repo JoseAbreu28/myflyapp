@@ -1,6 +1,7 @@
 # MyflyApp
 
-Dashboard de planeamento de voo para pilotos PPL EASA. Agrega informação aeronáutica portuguesa numa única página.
+Disponível em [myflyapp.vercel.app](https://myflyapp.vercel.app)
+
 
 ## Features
 
@@ -15,7 +16,3 @@ Dashboard de planeamento de voo para pilotos PPL EASA. Agrega informação aeron
 ## Stack
 
 Python · Flask · Vercel (serverless) · Vanilla JS
-
-## Deploy
-
-Disponível em [myflyapp.vercel.app](https://myflyapp.vercel.app)
