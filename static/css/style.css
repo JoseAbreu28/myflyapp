@@ -161,26 +161,26 @@ h1 { margin: 0; font-size: 1.25rem; }
   width: 4px;
   height: 48px;
   background: #f97316;
-  transform-origin: 50% 90%;
-  transform: translate(-50%, -90%) rotate(0deg);
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(0deg);
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(249, 115, 22, 0.45);
 }
 .wind-arrow::after {
   content: "";
   position: absolute;
-  top: -10px;
+  bottom: -10px;
   left: 50%;
   transform: translateX(-50%);
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-bottom: 12px solid #f97316;
+  border-top: 12px solid #f97316;
 }
 .wind-arrow::before {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -10px;
+  top: -10px;
   transform: translateX(-50%);
   width: 10px;
   height: 10px;
