@@ -65,13 +65,13 @@ function updateWindCompass(directionDeg, speedKt) {
   if (!arrow || !detail) return;
 
   if (directionDeg === null || directionDeg === undefined || Number.isNaN(Number(directionDeg))) {
-    arrow.style.transform = "translate(-50%, -90%) rotate(0deg)";
+    arrow.style.transform = "translate(-50%, -100%) rotate(0deg)";
     detail.textContent = "Wind direction and speed unavailable";
     return;
   }
 
   const dir = Number(directionDeg);
-  arrow.style.transform = `translate(-50%, -90%) rotate(${dir}deg)`;
+  arrow.style.transform = `translate(-50%, -100%) rotate(${dir}deg)`;
   const spd = speedKt === null || speedKt === undefined ? "--" : speedKt;
   detail.textContent = `${dir} deg at ${spd} kt`;
 }
