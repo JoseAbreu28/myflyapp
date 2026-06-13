@@ -1,4 +1,4 @@
-const TAB_NAMES = ["dashboard", "flightplan"];
+const TAB_NAMES = ["dashboard", "flightplan", "massbalance"];
 
 let activeTab = "dashboard";
 let aerodromeMapReady = false;

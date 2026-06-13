@@ -379,6 +379,40 @@
   </article>
 </section>
 
+<section id="massbalance" class="tab-section">
+  <article class="card">
+    <h2>Mass &amp; Balance</h2>
+    <p class="note">
+      Limites, braços e envelope de CG retirados dos POH oficiais (C150 1975, C152 1979, C172M).
+      Combustível em galões US (6 lb/gal), pessoas e bagagem em kg.
+      ⚠️ O peso vazio pré-preenchido é o valor "sample" do POH — substitui pelos valores reais da ficha de pesagem de cada avião.
+      Ferramenta de apoio; o cálculo oficial é da responsabilidade do piloto.
+    </p>
+    <label class="mb-field mb-aircraft-select">
+      <span>Aeronave</span>
+      <select id="mb-aircraft" class="select">
+        <option value="CS-ASP">CS-ASP — Cessna 152</option>
+        <option value="CS-AUD">CS-AUD — Cessna 172M</option>
+        <option value="CS-EAU">CS-EAU — Cessna 150</option>
+        <option value="D-ELFA">D-ELFA — Cessna 152</option>
+      </select>
+    </label>
+    <div id="mb-form"></div>
+  </article>
+
+  <div class="grid two-up">
+    <article class="card">
+      <h3>Resultado</h3>
+      <div id="mb-results"></div>
+    </article>
+    <article class="card">
+      <h3>Envelope de CG</h3>
+      <div id="mb-chart" class="mb-chart-wrap"></div>
+      <p class="note">Ponto = carga atual. Verde dentro do envelope, vermelho fora.</p>
+    </article>
+  </div>
+</section>
+
 <div id="chart-preview-modal" class="modal hidden">
   <div class="modal-backdrop" data-close-modal></div>
   <div class="modal-panel">
@@ -406,4 +440,5 @@
   window.HOME_ICAO = "{{ station }}";
   window.AERODROMES = {{ aerodromes | tojson }};
 </script>
+<script src="{{ url_for('static', filename='js/massbalance.js') }}"></script>
 {% endblock %}

@@ -582,3 +582,72 @@ h1 { margin: 0; font-size: 1.25rem; }
   border-radius: 3px;
   font-size: 0.9em;
 }
+
+/* ---------------- Mass & Balance ---------------- */
+.mb-aircraft-select { max-width: 360px; margin-bottom: 0.5rem; }
+.mb-field { display: flex; flex-direction: column; gap: 0.15rem; }
+.mb-field > span { font-size: 0.9rem; color: var(--text); }
+.mb-field small.note { font-size: 0.72rem; }
+.mb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.8rem;
+}
+.card-inset {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-top: 0.8rem;
+}
+.card-inset h4 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+.mb-input-wrap { position: relative; display: block; }
+.mb-input-wrap .select { padding-right: 2.6rem; }
+.mb-unit {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-30%);
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.mb-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.mb-table th, .mb-table td {
+  text-align: left;
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.mb-table th { color: var(--muted); font-weight: 600; width: 45%; }
+.mb-table td { font-family: "Consolas", monospace; }
+
+.badge.mb-ok { background: var(--vfr); }
+.badge.mb-bad { background: var(--ifr); }
+
+.mb-warnings {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.mb-warnings li {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid var(--ifr);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+.mb-chart-wrap { width: 100%; }
+.mb-svg { width: 100%; height: auto; display: block; }
+.mb-svg .mb-grid { stroke: var(--line); stroke-width: 0.5; }
+.mb-svg .mb-axis-lbl { fill: var(--muted); font-size: 9px; font-family: "Consolas", monospace; }
+.mb-svg .mb-axis-title { fill: var(--muted); font-size: 10px; }
+.mb-svg .mb-envelope { fill: rgba(34, 197, 94, 0.12); stroke: var(--vfr); stroke-width: 1.5; }
+.mb-svg .mb-cross { stroke: var(--accent); stroke-width: 0.7; stroke-dasharray: 3 3; }
+.mb-svg .mb-pt-ok { fill: var(--vfr); stroke: #fff; stroke-width: 1.5; }
+.mb-svg .mb-pt-bad { fill: var(--ifr); stroke: #fff; stroke-width: 1.5; }
