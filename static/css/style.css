@@ -33,6 +33,30 @@ body {
 h1 { margin: 0; font-size: 1.25rem; }
 .subtitle { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
 
+.site-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.site-lang-toggle select {
+  appearance: none;
+  background: #0f172a;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.site-lang-toggle select:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .utc-box {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -72,6 +96,31 @@ h1 { margin: 0; font-size: 1.25rem; }
   padding: 1.2rem 1.4rem 2rem;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.site-footer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.4rem 1.4rem 1.2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.site-footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: var(--accent);
+}
+
+.site-footer span::after {
+  content: "·";
+  margin-left: 0.5rem;
 }
 
 .tab-section { display: none; }
@@ -557,6 +606,7 @@ h1 { margin: 0; font-size: 1.25rem; }
 
 @media (max-width: 700px) {
   .site-header { flex-direction: column; align-items: flex-start; }
+  .site-header-tools { width: 100%; justify-content: space-between; }
   .metar-visuals { grid-template-columns: 1fr; }
   .embed-wrap { height: 320px; }
   .split-screen { grid-template-columns: 1fr; }
@@ -621,6 +671,11 @@ h1 { margin: 0; font-size: 1.25rem; }
 #nav-mode-break.active {
   border-color: var(--ifr);
   box-shadow: inset 0 -2px 0 var(--ifr);
+}
+
+#nav-mode-alternate.active {
+  border-color: var(--mvfr);
+  box-shadow: inset 0 -2px 0 var(--mvfr);
 }
 
 .nav-print-status {
@@ -713,6 +768,30 @@ h1 { margin: 0; font-size: 1.25rem; }
 
 .nav-e6b-results {
   margin-top: 0.8rem;
+}
+
+.nav-alternate-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-alternate-summary {
+  margin-top: 0.65rem;
+}
+
+.nav-alternate-marker {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #2563eb;
+  border: 2px solid #dbeafe;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.45);
 }
 
 .nav-actions {

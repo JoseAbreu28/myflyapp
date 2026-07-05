@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Flight Planning Dashboard</title>
+  <title>MyFlyApp</title>
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -13,24 +13,37 @@
 <body>
   <header class="site-header">
     <div>
-      <h1>My Flight Planning Dashboard</h1>
+      <h1 data-i18n="app_title">MyFlyApp</h1>
     </div>
-    <div class="utc-box">
-      <span>UTC</span>
-      <strong id="utc-clock">--:--:--</strong>
+    <div class="site-header-tools">
+      <label class="site-lang-toggle" aria-label="Language">
+        <select id="site-language" aria-label="Language">
+          <option value="pt" selected>PT</option>
+          <option value="en">EN</option>
+        </select>
+      </label>
+      <div class="utc-box">
+        <span>UTC</span>
+        <strong id="utc-clock">--:--:--</strong>
+      </div>
     </div>
   </header>
 
   <nav class="top-nav" aria-label="Main tabs">
-    <a href="#dashboard" data-tab="dashboard">Dashboard</a>
-    <a href="#flightplan" data-tab="flightplan">Flight Plan</a>
-    <a href="#navigation" data-tab="navigation">Navegações</a>
-    <a href="#massbalance" data-tab="massbalance">Mass &amp; Balance</a>
+    <a href="#dashboard" data-tab="dashboard" data-i18n="tab_dashboard">Dashboard</a>
+    <a href="#flightplan" data-tab="flightplan" data-i18n="tab_flightplan">Plano de voo</a>
+    <a href="#navigation" data-tab="navigation" data-i18n="tab_navigation">Navegações</a>
+    <a href="#massbalance" data-tab="massbalance" data-i18n="tab_massbalance">Massa &amp; Balanceamento</a>
   </nav>
 
   <main class="container">
     {% block content %}{% endblock %}
   </main>
+
+  <footer class="site-footer">
+    <span>MyFlyApp</span>
+    <a href="https://github.com/JoseAbreu28/myflyapp" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </footer>
 
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

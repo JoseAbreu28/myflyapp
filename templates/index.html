@@ -2,11 +2,11 @@
 {% block content %}
 <section id="dashboard" class="tab-section active">
   <article class="card frequencies-card" style="margin-bottom: 1rem;">
-    <h2>Frequencies</h2>
-    <p class="note">Aviso: frequências informativas e podem não estar atualizadas.</p>
+    <h2 data-i18n="freq_title">Frequências</h2>
+    <p class="note" data-i18n="freq_warning">Aviso: frequências informativas e podem não estar atualizadas.</p>
     <div class="freq-grid">
       <div class="freq-card">
-        <p class="note">ATIS (selected airport)</p>
+        <p class="note" data-i18n="atis_selected">ATIS (aeroporto selecionado)</p>
         <p id="freq-atis-selected" class="freq-value">--</p>
       </div>
       <div class="freq-card">
@@ -18,10 +18,10 @@
         <p id="freq-lppr" class="freq-value">--</p>
       </div>
       <div class="freq-card">
-        <p class="note">Custom ICAO</p>
+        <p class="note" data-i18n="custom_icao">ICAO manual</p>
         <div class="freq-inline">
           <input id="freq-icao-input" class="select freq-input" type="text" placeholder="LPBR" maxlength="4">
-          <button id="freq-icao-btn" class="btn" type="button">View</button>
+          <button id="freq-icao-btn" class="btn" type="button" data-i18n="view_btn">Ver</button>
         </div>
         <p id="freq-custom" class="freq-value">--</p>
       </div>
@@ -55,15 +55,15 @@
           <p id="metar-ceiling-detail" class="note">Cloud ceiling unavailable</p>
         </div>
       </div>
-      <p class="metric">Wind: <span id="metar-wind">--</span></p>
-      <p class="metric">Visibility: <span id="metar-visibility">--</span></p>
-      <p class="metric">Ceiling: <span id="metar-ceiling">--</span></p>
+      <p class="metric"><span data-i18n="wind_label">Vento</span>: <span id="metar-wind">--</span></p>
+      <p class="metric"><span data-i18n="visibility_label">Visibilidade</span>: <span id="metar-visibility">--</span></p>
+      <p class="metric"><span data-i18n="ceiling_label">Teto</span>: <span id="metar-ceiling">--</span></p>
       <p class="metric">QNH: <span id="metar-qnh">--</span></p>
     </article>
 
     <article class="card metar-box">
-      <h2>METAR / TAF Quick Box</h2>
-      <label for="icao-select" class="note">Airport</label>
+      <h2 data-i18n="quick_box_title">Caixa rápida METAR / TAF</h2>
+      <label for="icao-select" class="note" data-i18n="airport_label">Aeroporto</label>
       <select id="icao-select" class="select">
         <option value="LPPT">LPPT - Lisboa</option>
         <option value="LPPR" selected>LPPR - Porto</option>
@@ -79,16 +79,16 @@
       <p id="quick-metar-raw" class="mono note compact-metar">Fetching METAR...</p>
       <pre id="quick-taf-raw" class="mono note compact-taf">Fetching TAF...</pre>
       <p class="note source-note">
-        Source: aviationweather.gov API via local Flask proxy (`/api/metar/<icao>` and `/api/taf/<icao>`).
+        <span data-i18n="source_weather">Fonte: aviationweather.gov API via proxy Flask local (`/api/metar/<icao>` e `/api/taf/<icao>`).</span>
       </p>
     </article>
   </div>
 
   <article class="card" style="margin-top: 1rem;">
-    <h2>Fly DATA</h2>
+    <h2 data-i18n="fly_data_title">Fly DATA</h2>
     <div class="split-screen">
       <div class="split-pane">
-        <h3>Weather Map (Windy)</h3>
+        <h3 data-i18n="weather_map_title">Mapa meteorológico (Windy)</h3>
         <div class="map-wrap">
           <iframe
             id="windy-frame"
@@ -101,20 +101,20 @@
         </div>
       </div>
       <div class="split-pane">
-        <h3>NOTAM Map</h3>
+        <h3 data-i18n="notam_map_title">Mapa NOTAM</h3>
         <div class="map-wrap" data-embed-container>
           <iframe src="{{ notam_viewer_url }}" title="NOTAM Viewer" loading="lazy" data-embed-frame></iframe>
         </div>
         <article class="card fallback-hidden" data-embed-fallback>
-          <h3>NOTAM Embed Unavailable</h3>
-          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">Open NOTAM Viewer</a>
+          <h3 data-i18n="notam_embed_unavailable">NOTAM indisponível no embed</h3>
+          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer" data-i18n="open_notam_viewer">Abrir visualizador NOTAM</a>
         </article>
       </div>
     </div>
   </article>
 
   <article class="card" style="margin-top: 1rem;">
-    <h2>Flyweather Cameras (LPVL)</h2>
+    <h2 data-i18n="flyweather_cameras_title">Câmaras Flyweather (LPVL)</h2>
     <div class="grid two-up">
       {% for cam in flyweather_sources %}
       <div class="card">
@@ -122,17 +122,17 @@
         <div class="embed-wrap">
           <img src="{{ cam.image_url }}" alt="{{ cam.label }}" loading="lazy">
         </div>
-        <a class="btn" href="{{ cam.source_url }}" target="_blank" rel="noopener noreferrer">Open on Flyweather</a>
+        <a class="btn" href="{{ cam.source_url }}" target="_blank" rel="noopener noreferrer" data-i18n="open_flyweather">Abrir no Flyweather</a>
       </div>
       {% endfor %}
     </div>
   </article>
 
   <article class="card" style="margin-top: 1rem;">
-    <h2>Portugal Civil Aerodromes</h2>
+    <h2 data-i18n="civil_aerodromes_title">Aeródromos civis de Portugal</h2>
     <div id="portugal-aerodromes-map" class="portugal-map"></div>
     <p class="note" style="margin-top: 0.9rem;">
-      Click a marker to open ADC/VAC render links and eAIP page.
+      <span data-i18n="civil_aerodromes_note">Clica num marcador para abrir links ADC/VAC e página eAIP.</span>
     </p>
   </article>
 
@@ -141,20 +141,20 @@
 <section id="flightplan" class="tab-section">
   <article class="card">
     <div class="fpl-subtabs">
-      <button class="fpl-subtab active" data-fpl-tab="preflight" type="button">Pre-flight</button>
-      <button class="fpl-subtab" data-fpl-tab="createplan" type="button">Create Plan</button>
+      <button class="fpl-subtab active" data-fpl-tab="preflight" type="button" data-i18n="fpl_preflight_tab">Pré-voo</button>
+      <button class="fpl-subtab" data-fpl-tab="createplan" type="button" data-i18n="fpl_create_tab">Criar plano</button>
     </div>
 
     <section id="fpl-tab-preflight" class="fpl-subsection active">
-      <h2>Pre-flight Dashboard</h2>
-      <p class="note">Mapas de apoio para preparar a rota e alternantes.</p>
+      <h2 data-i18n="preflight_title">Painel pré-voo</h2>
+      <p class="note" data-i18n="preflight_note">Mapas de apoio para preparar a rota e alternantes.</p>
       <div class="split-screen">
         <div class="split-pane">
-          <h3>Portugal Civil Aerodromes</h3>
+          <h3 data-i18n="civil_aerodromes_title">Aeródromos civis de Portugal</h3>
           <div id="portugal-aerodromes-map-fpl" class="portugal-map"></div>
         </div>
         <div class="split-pane">
-          <h3>CAVOK ESPAÇO AEREO</h3>
+          <h3 data-i18n="cavok_airspace">CAVOK espaço aéreo</h3>
           <div class="map-wrap">
             <iframe
               src="https://www.google.com/maps/d/embed?mid=1Og8rGguyGgNR1DUpGW7Oq9k4_Xw&ll=41.44219152959212%2C-7.71446654151184&z=9"
@@ -162,28 +162,28 @@
               loading="lazy"
             ></iframe>
           </div>
-          <p class="note source-note">Source: <a href="https://cavok.pt/" target="_blank" rel="noopener noreferrer">https://cavok.pt/</a></p>
+          <p class="note source-note"><span data-i18n="source_label">Fonte</span>: <a href="https://cavok.pt/" target="_blank" rel="noopener noreferrer">https://cavok.pt/</a></p>
         </div>
       </div>
 
       <article class="card" style="margin-top: 1rem;">
-        <h3>NOTAM Map</h3>
+        <h3 data-i18n="notam_map_title">Mapa NOTAM</h3>
         <div class="map-wrap" data-embed-container>
           <iframe src="{{ notam_viewer_url }}" title="NOTAM Viewer" loading="lazy" data-embed-frame></iframe>
         </div>
         <article class="card fallback-hidden" data-embed-fallback>
-          <h3>NOTAM Embed Unavailable</h3>
-          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">Open NOTAM Viewer</a>
+          <h3 data-i18n="notam_embed_unavailable">NOTAM indisponível no embed</h3>
+          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer" data-i18n="open_notam_viewer">Abrir visualizador NOTAM</a>
         </article>
-        <p class="note source-note">Source by <a href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">{{ notam_viewer_url }}</a></p>
+        <p class="note source-note"><span data-i18n="source_by">Fonte</span>: <a href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">{{ notam_viewer_url }}</a></p>
       </article>
     </section>
 
     <section id="fpl-tab-createplan" class="fpl-subsection">
-      <h2>Create Plan</h2>
+      <h2 data-i18n="create_plan_title">Criar plano</h2>
       <div class="fpl-quick">
         <div class="fpl-grid">
-          <label class="fpl-field">Choose Plane
+          <label class="fpl-field" data-i18n-label="choose_plane">Escolher avião
             <select id="fpl-plane" class="select">
               <option value="CS-EAU">CS-EAU</option>
               <option value="CS-ASP" selected>CS-ASP</option>
@@ -192,80 +192,80 @@
             </select>
           </label>
 
-          <label class="fpl-field">Voo de circuito
+          <label class="fpl-field" data-i18n-label="circuit_flight">Voo de circuito
             <select id="fpl-circuit" class="select">
               <option value="no" selected>Nao</option>
               <option value="yes">Sim</option>
             </select>
           </label>
 
-          <label id="fpl-quick-dep-wrap" class="fpl-field">DEP aerodrome
+          <label id="fpl-quick-dep-wrap" class="fpl-field" data-i18n-label="dep_aerodrome">Aeródromo DEP
             <input id="fpl-quick-dep" class="select" type="text" value="LPVL" maxlength="4">
           </label>
 
-          <label id="fpl-quick-dest-wrap" class="fpl-field">DEST aerodrome
+          <label id="fpl-quick-dest-wrap" class="fpl-field" data-i18n-label="dest_aerodrome">Aeródromo DEST
             <input id="fpl-quick-dest" class="select" type="text" value="LPBR" maxlength="4">
           </label>
 
-          <label class="fpl-field">Tipo de missao
+          <label class="fpl-field" data-i18n-label="mission_type">Tipo de missão
             <select id="fpl-mission-type" class="select">
               <option value="normal">Voo normal</option>
               <option value="instruction" selected>Voo de instrucao</option>
             </select>
           </label>
 
-          <label class="fpl-field">Quer NOTAM?
+          <label class="fpl-field" data-i18n-label="wants_notam">Quer NOTAM?
             <select id="fpl-wants-notam" class="select">
               <option value="yes" selected>Sim</option>
               <option value="no">Nao</option>
             </select>
           </label>
 
-          <label class="fpl-field">Data (DOF)
+          <label class="fpl-field" data-i18n-label="date_dof">Data (DOF)
             <input id="fpl-quick-date" class="select" type="date">
           </label>
 
-          <label class="fpl-field">Hora (EOBT UTC)
+          <label class="fpl-field" data-i18n-label="time_eobt">Hora (EOBT UTC)
             <input id="fpl-quick-time" class="select" type="time" step="60">
           </label>
 
-          <label class="fpl-field">Narrow Route Width (NM)
+          <label class="fpl-field" data-i18n-label="narrow_route_width">Largura da rota (NM)
             <input id="fpl-route-width" class="select" type="number" min="1" max="100" value="20">
           </label>
         </div>
         <div class="actions" style="margin-top: 0.6rem;">
-          <button id="fpl-show-advanced" class="btn" type="button">Continuar</button>
+          <button id="fpl-show-advanced" class="btn" type="button" data-i18n="continue_btn">Continuar</button>
         </div>
       </div>
 
       <div id="fpl-advanced" class="is-hidden">
         <div id="fpl-notam-helper" class="fpl-helper">
           <p class="warning-banner">
-            ⚠️ Esta funcionalidade (PIB / NOTAM via fplbriefing.nav.pt) requer que a app esteja a correr <strong>localmente</strong> (<code>python app.py</code>). No site público não funciona.
+            <span data-i18n="local_required_warning">Esta funcionalidade (PIB / NOTAM via fplbriefing.nav.pt) requer que a app esteja a correr localmente. No site público não funciona.</span>
           </p>
           <label class="fpl-field fpl-span-2">fplbriefing-token
             <input id="fpl-token" class="select" type="password" placeholder="Bearer token">
           </label>
           <div class="actions">
-            <button id="fpl-run-pib" class="btn" type="button">Run PIB Request</button>
-            <button id="fpl-run-route" class="btn" type="button">Load Route Map</button>
-            <button id="fpl-open-notam-popup" class="btn" type="button">Open NOTAM Text</button>
+            <button id="fpl-run-pib" class="btn" type="button" data-i18n="run_pib">Executar pedido PIB</button>
+            <button id="fpl-run-route" class="btn" type="button" data-i18n="load_route_map">Carregar mapa da rota</button>
+            <button id="fpl-open-notam-popup" class="btn" type="button" data-i18n="open_notam_text">Abrir texto NOTAM</button>
           </div>
-          <p id="fpl-helper-status" class="note">Sem pedidos executados.</p>
+          <p id="fpl-helper-status" class="note" data-i18n="no_requests">Sem pedidos executados.</p>
           <div id="fpl-route-map" class="route-map"></div>
         </div>
 
-        <h3>Local Flight Plan Builder</h3>
+        <h3 data-i18n="local_fpl_builder">Construtor local de plano de voo</h3>
         <div class="fpl-grid">
-      <label id="fpl-instructor-wrap" class="fpl-field fpl-span-2">Instrutor (obrigatorio em voo de instrucao)
+      <label id="fpl-instructor-wrap" class="fpl-field fpl-span-2" data-i18n-label="instructor_required">Instrutor (obrigatório em voo de instrução)
         <input id="fpl-instructor" class="select" type="text" value="TIAGO GONCALVES">
       </label>
 
-      <label class="fpl-field">7 Aircraft ID
+      <label class="fpl-field" data-i18n-label="aircraft_id">7 Identificação da aeronave
         <input id="fpl-aircraft-id" class="select" type="text" value="CSASP">
       </label>
 
-      <label class="fpl-field">8 Flight Rules
+      <label class="fpl-field" data-i18n-label="flight_rules">8 Regras de voo
         <select id="fpl-flight-rules" class="select">
           <option value="V" selected>V - VFR</option>
           <option value="I">I - IFR</option>
@@ -274,7 +274,7 @@
         </select>
       </label>
 
-      <label class="fpl-field">Type of Flight
+      <label class="fpl-field" data-i18n-label="type_of_flight">Tipo de voo
         <select id="fpl-type-of-flight" class="select">
           <option value="X" selected>X - Other</option>
           <option value="S">S - Scheduled</option>
@@ -284,15 +284,15 @@
         </select>
       </label>
 
-      <label class="fpl-field">9 Number
+      <label class="fpl-field" data-i18n-label="number_label">9 Número
         <input id="fpl-number" class="select" type="number" min="1" value="1">
       </label>
 
-      <label class="fpl-field">Type of Aircraft
+      <label class="fpl-field" data-i18n-label="aircraft_type">Tipo de aeronave
         <input id="fpl-type-aircraft" class="select" type="text" value="C152">
       </label>
 
-      <label class="fpl-field">Wake Turbulence Category
+      <label class="fpl-field" data-i18n-label="wtc">Categoria de turbulência
         <select id="fpl-wtc" class="select">
           <option value="L" selected>L - Light</option>
           <option value="M">M - Medium</option>
@@ -301,78 +301,78 @@
         </select>
       </label>
 
-      <label class="fpl-field">10a Radio Equipment
+      <label class="fpl-field" data-i18n-label="radio_equipment">10a Equipamento rádio
         <input id="fpl-radio-equipment" class="select" type="text" value="SY">
       </label>
 
-      <label class="fpl-field">10b Surveillance Equipment
+      <label class="fpl-field" data-i18n-label="surveillance_equipment">10b Equipamento vigilância
         <input id="fpl-surveillance-equipment" class="select" type="text" value="S">
       </label>
 
-      <label class="fpl-field">13 Departure Aerodrome
+      <label class="fpl-field" data-i18n-label="departure_aerodrome">13 Aeródromo de partida
         <input id="fpl-adep" class="select" type="text" value="LPVL">
       </label>
 
-      <label class="fpl-field">EOBT (manual HHMM)
+      <label class="fpl-field" data-i18n-label="eobt_manual">EOBT (manual HHMM)
         <input id="fpl-eobt" class="select" type="text" value="1700">
       </label>
 
-      <label class="fpl-field">15 Speed
+      <label class="fpl-field" data-i18n-label="speed_label">15 Velocidade
         <input id="fpl-speed" class="select" type="text" value="N0090">
       </label>
 
-      <label class="fpl-field">Level (manual ex: A015)
+      <label class="fpl-field" data-i18n-label="level_manual">Nível (manual ex: A015)
         <input id="fpl-level" class="select" type="text" value="A015">
       </label>
 
-      <label class="fpl-field fpl-span-2">Route
+      <label class="fpl-field fpl-span-2" data-i18n-label="route_label">Rota
         <input id="fpl-route" class="select" type="text" value="DCT ">
       </label>
 
-      <label class="fpl-field">16 Destination Aerodrome
+      <label class="fpl-field" data-i18n-label="destination_aerodrome">16 Aeródromo de destino
         <input id="fpl-ades" class="select" type="text" value="LPVL">
       </label>
 
-      <label class="fpl-field">Total EET (manual HHMM)
+      <label class="fpl-field" data-i18n-label="total_eet">EET total (manual HHMM)
         <input id="fpl-eet" class="select" type="text" value="0100">
       </label>
 
-      <label class="fpl-field">Alternate Aerodrome
+      <label class="fpl-field" data-i18n-label="alternate_aerodrome">Aeródromo alternante
         <input id="fpl-alt1" class="select" type="text" value="LPBR">
       </label>
 
-      <label class="fpl-field">2nd Alternate Aerodrome
+      <label class="fpl-field" data-i18n-label="second_alternate">2.º aeródromo alternante
         <input id="fpl-alt2" class="select" type="text" value="LPVR">
       </label>
 
-      <label class="fpl-field fpl-span-2">18 Other Information (manual)
+      <label class="fpl-field fpl-span-2" data-i18n-label="other_info">18 Outras informações (manual)
         <input id="fpl-other" class="select" type="text" value="DOF/260517 RMK/LOCAL INSTRUCTION FLIGHT">
       </label>
 
-      <label class="fpl-field">19 Endurance E/ (manual HHMM)
+      <label class="fpl-field" data-i18n-label="endurance">19 Autonomia E/ (manual HHMM)
         <input id="fpl-endurance" class="select" type="text" value="0430">
       </label>
 
-      <label class="fpl-field">Persons on Board P/
+      <label class="fpl-field" data-i18n-label="pob">Pessoas a bordo P/
         <input id="fpl-pob" class="select" type="text" value="2">
       </label>
 
-      <label class="fpl-field">Emergency Radio R/
+      <label class="fpl-field" data-i18n-label="emergency_radio">Rádio emergência R/
         <input id="fpl-emergency-radio" class="select" type="text" value="VE">
       </label>
 
-      <label class="fpl-field">Aircraft Color and Markings A/
+      <label class="fpl-field" data-i18n-label="color_markings">Cor e marcas da aeronave A/
         <input id="fpl-aircraft-color" class="select" type="text" value="WHITE">
       </label>
 
-      <label class="fpl-field fpl-span-2">Pilot-in-Command C/
+      <label class="fpl-field fpl-span-2" data-i18n-label="pic">Piloto comandante C/
         <input id="fpl-pic" class="select" type="text" value="">
       </label>
         </div>
-        <p class="note" style="margin-top: 0.8rem;">Nota: voos de circuito usam LPVL como origem e LPBR como alternate.</p>
-        <p class="note" style="margin-top: 1rem;">Submete sempre no portal oficial:</p>
+        <p class="note" style="margin-top: 0.8rem;" data-i18n="circuit_note">Nota: voos de circuito usam LPVL como origem e LPBR como alternante.</p>
+        <p class="note" style="margin-top: 1rem;" data-i18n="submit_note">Submete sempre no portal oficial:</p>
         <div class="actions">
-          <a class="btn" href="{{ fpl_briefing_url }}" target="_blank" rel="noopener noreferrer">Submit on fplbriefing.nav.pt</a>
+          <a class="btn" href="{{ fpl_briefing_url }}" target="_blank" rel="noopener noreferrer" data-i18n="submit_fpl">Submeter em fplbriefing.nav.pt</a>
         </div>
       </div>
     </section>
@@ -381,8 +381,8 @@
 
 <section id="navigation" class="tab-section">
   <article class="card">
-    <h2>Navegações</h2>
-    <p class="warning-banner">
+    <h2 data-i18n="nav_title">Navegações</h2>
+    <p class="warning-banner" data-i18n="nav_disclaimer">
       Disclaimer: esta ferramenta é apenas um apoio à preparação da navegação. Não substitui a carta aeronáutica oficial, o AIP/eAIP, NOTAM, informação de espaço aéreo, altitudes mínimas, obstáculos, terreno, procedimentos publicados ou briefing operacional. Usa sempre a carta verdadeira e fontes oficiais para informação detalhada.
     </p>
 
@@ -390,36 +390,37 @@
       <div>
         <div class="nav-toolbar" aria-label="Modo do mapa">
           <div class="nav-mode-group">
-            <button id="nav-mode-route" class="btn nav-mode active" type="button">Rota</button>
-            <button id="nav-mode-break" class="btn nav-mode" type="button">Breaking point</button>
-            <button id="nav-mode-reference" class="btn nav-mode" type="button">Referência</button>
+            <button id="nav-mode-route" class="btn nav-mode active" type="button" data-i18n="mode_route">Rota</button>
+            <button id="nav-mode-break" class="btn nav-mode" type="button" data-i18n="mode_break">Breaking point</button>
+            <button id="nav-mode-alternate" class="btn nav-mode" type="button" data-i18n="mode_alternate">Alternante</button>
+            <button id="nav-mode-reference" class="btn nav-mode" type="button" data-i18n="mode_reference">Referência</button>
           </div>
-          <button id="nav-print-pdf" class="btn" type="button">Guardar PDF</button>
+          <button id="nav-print-pdf" class="btn" type="button" data-i18n="save_pdf">Guardar PDF</button>
         </div>
-        <p id="nav-print-status" class="note nav-print-status">Report pronto para exportar.</p>
+        <p id="nav-print-status" class="note nav-print-status" data-i18n="pdf_ready">Relatório pronto para exportar.</p>
         <div id="nav-map" class="nav-map"></div>
         <div class="actions nav-actions">
-          <button id="nav-undo-point" class="btn" type="button">Undo point</button>
-          <button id="nav-clear-route" class="btn" type="button">Clear route</button>
-          <button id="nav-fit-route" class="btn" type="button">Fit route</button>
-          <button id="nav-clear-references" class="btn" type="button">Clear references</button>
+          <button id="nav-undo-point" class="btn" type="button" data-i18n="undo_point">Desfazer ponto</button>
+          <button id="nav-clear-route" class="btn" type="button" data-i18n="clear_route">Limpar rota</button>
+          <button id="nav-fit-route" class="btn" type="button" data-i18n="fit_route">Ajustar mapa</button>
+          <button id="nav-clear-references" class="btn" type="button" data-i18n="clear_refs">Limpar referências</button>
           <label class="nav-toggle">
             <input id="nav-show-leg-labels" type="checkbox">
-            <span>Mostrar NM</span>
+            <span data-i18n="show_nm">Mostrar NM</span>
           </label>
         </div>
-        <p class="note">Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
+        <p class="note" data-i18n="nav_help">Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternate: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
       </div>
 
       <aside class="nav-panel">
-        <h3>Rota</h3>
+        <h3 data-i18n="route_title">Rota</h3>
         <div class="nav-summary">
           <div>
-            <span class="note">Total</span>
+            <span class="note" data-i18n="total_label">Total</span>
             <strong id="nav-total-nm">0.0 NM</strong>
           </div>
           <div>
-            <span class="note">Pernas</span>
+            <span class="note" data-i18n="legs_label">Pernas</span>
             <strong id="nav-leg-count">0</strong>
           </div>
         </div>
@@ -427,46 +428,67 @@
           <table class="table nav-table">
             <thead>
               <tr>
-                <th>Leg</th>
+                <th data-i18n="leg_header">Perna</th>
                 <th>NM</th>
                 <th>HDG</th>
-                <th>ALT VFR</th>
+                <th data-i18n="alt_vfr_header">ALT VFR</th>
               </tr>
             </thead>
             <tbody id="nav-legs-body">
-              <tr><td colspan="4" class="note">Adiciona pelo menos dois pontos.</td></tr>
+              <tr><td colspan="4" class="note" data-i18n="add_two_points">Adiciona pelo menos dois pontos.</td></tr>
             </tbody>
           </table>
         </div>
 
-        <h3>E6B rápido</h3>
+        <h3 data-i18n="alternate_title">Alternate Aerodrome</h3>
+        <div class="nav-alternate-box">
+          <label class="fpl-field" data-i18n-label="alternate_select">Selecionar aeródromo
+            <select id="nav-alternate-select" class="select">
+              <option value="" data-i18n="manual_none">Manual / nenhum</option>
+            </select>
+          </label>
+          <div class="nav-summary nav-alternate-summary">
+            <div>
+              <span class="note" data-i18n="alternate_nm_label">Distância alternante</span>
+              <strong id="nav-alternate-nm">--</strong>
+            </div>
+            <div>
+              <span class="note" data-i18n="alternate_fuel_label">Fuel alternante</span>
+              <strong id="nav-alternate-fuel">--</strong>
+            </div>
+          </div>
+          <p id="nav-alternate-detail" class="note">Sem alternate definido.</p>
+        </div>
+
+        <h3 data-i18n="e6b_title">E6B rápido</h3>
         <div class="nav-e6b">
-          <label class="fpl-field">Distância (NM)
+          <label class="fpl-field" data-i18n-label="distance_nm">Distância (NM)
             <input id="nav-e6b-nm" class="select" type="number" min="0" step="0.1" value="0">
           </label>
-          <label class="fpl-field">Velocidade GS (kt)
+          <label class="fpl-field" data-i18n-label="gs_speed">Velocidade GS (kt)
             <input id="nav-e6b-speed" class="select" type="number" min="0" step="1" value="90">
           </label>
-          <label class="fpl-field">Consumo (gal/h)
+          <label class="fpl-field" data-i18n-label="fuel_burn">Consumo (gal/h)
             <input id="nav-e6b-gph" class="select" type="number" min="0" step="0.1" value="6.0">
           </label>
-          <label class="fpl-field">Reserva (min)
+          <label class="fpl-field" data-i18n-label="reserve_min">Reserva (min)
             <input id="nav-e6b-reserve" class="select" type="number" min="0" step="1" value="30">
           </label>
-          <label class="fpl-field">Metros
+          <label class="fpl-field" data-i18n-label="meters_label">Metros
             <input id="nav-e6b-meters" class="select" type="number" min="0" step="1" value="0">
           </label>
         </div>
         <table class="mb-table nav-e6b-results">
-          <tr><th>Tempo</th><td id="nav-e6b-time">--</td></tr>
-          <tr><th>Combustível rota</th><td id="nav-e6b-fuel">--</td></tr>
-          <tr><th>Com reserva</th><td id="nav-e6b-fuel-reserve">--</td></tr>
-          <tr><th>Metros -> ft</th><td id="nav-e6b-feet">--</td></tr>
+          <tr><th data-i18n="time_label">Tempo</th><td id="nav-e6b-time">--</td></tr>
+          <tr><th data-i18n="route_fuel">Combustível rota</th><td id="nav-e6b-fuel">--</td></tr>
+          <tr><th data-i18n="final_reserve">Final reserve fuel</th><td id="nav-e6b-final-reserve">--</td></tr>
+          <tr><th data-i18n="total_with_alternate">Total c/ alternante</th><td id="nav-e6b-fuel-reserve">--</td></tr>
+          <tr><th data-i18n="meters_to_ft">Metros -> ft</th><td id="nav-e6b-feet">--</td></tr>
         </table>
 
-        <h3>Pontos de referência</h3>
+        <h3 data-i18n="reference_points">Pontos de referência</h3>
         <div id="nav-references-list" class="nav-references-list">
-          <p class="note">Sem pontos de referência.</p>
+          <p class="note" data-i18n="no_refs">Sem pontos de referência.</p>
         </div>
       </aside>
     </div>
@@ -475,15 +497,15 @@
 
 <section id="massbalance" class="tab-section">
   <article class="card">
-    <h2>Mass &amp; Balance</h2>
-    <p class="note">
+    <h2 data-i18n="mb_title">Massa &amp; Balanceamento</h2>
+    <p class="note" data-i18n="mb_note">
       Limites, braços e envelope de CG retirados dos POH oficiais (C150 1975, C152 1979, C172M).
       Combustível em galões US (6 lb/gal), pessoas e bagagem em kg.
       ⚠️ O peso vazio pré-preenchido é o valor "sample" do POH — substitui pelos valores reais da ficha de pesagem de cada avião.
       Ferramenta de apoio; o cálculo oficial é da responsabilidade do piloto.
     </p>
     <label class="mb-field mb-aircraft-select">
-      <span>Aeronave</span>
+      <span data-i18n="aircraft_label">Aeronave</span>
       <select id="mb-aircraft" class="select">
         <option value="CS-ASP">CS-ASP — Cessna 152</option>
         <option value="CS-AUD">CS-AUD — Cessna 172M</option>
@@ -496,13 +518,13 @@
 
   <div class="grid two-up">
     <article class="card">
-      <h3>Resultado</h3>
+      <h3 data-i18n="result_title">Resultado</h3>
       <div id="mb-results"></div>
     </article>
     <article class="card">
-      <h3>Envelope de CG</h3>
+      <h3 data-i18n="cg_envelope_title">Envelope de CG</h3>
       <div id="mb-chart" class="mb-chart-wrap"></div>
-      <p class="note">Ponto = carga atual. Verde dentro do envelope, vermelho fora.</p>
+      <p class="note" data-i18n="cg_point_note">Ponto = carga atual. Verde dentro do envelope, vermelho fora.</p>
     </article>
   </div>
 </section>
@@ -511,8 +533,8 @@
   <div class="modal-backdrop" data-close-modal></div>
   <div class="modal-panel">
     <div class="modal-header">
-      <strong id="chart-preview-title">Chart Preview</strong>
-      <button class="btn" type="button" data-close-modal>Close</button>
+      <strong id="chart-preview-title" data-i18n="chart_preview">Pré-visualização da carta</strong>
+      <button class="btn" type="button" data-close-modal data-i18n="close_btn">Fechar</button>
     </div>
     <iframe id="chart-preview-frame" class="chart-preview-frame" title="Chart preview"></iframe>
   </div>
@@ -522,8 +544,8 @@
   <div class="modal-backdrop" data-close-notam-modal></div>
   <div class="modal-panel">
     <div class="modal-header">
-      <strong>NOTAM Text</strong>
-      <button class="btn" type="button" data-close-notam-modal>Close</button>
+      <strong data-i18n="notam_text">Texto NOTAM</strong>
+      <button class="btn" type="button" data-close-notam-modal data-i18n="close_btn">Fechar</button>
     </div>
     <div id="notam-modal-content" class="notam-content"></div>
   </div>

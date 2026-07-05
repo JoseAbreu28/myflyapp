@@ -469,9 +469,17 @@ def api_navigation_pdf():
         f"Distancia: {e6b.get('nm', '-')}",
         f"Tempo: {e6b.get('time', '-')}",
         f"Combustivel rota: {e6b.get('fuel', '-')}",
-        f"Com reserva: {e6b.get('fuel_reserve', '-')}",
+        f"Distancia para alternante: {e6b.get('alternate_nm', '-')}",
+        f"Combustivel para alternante: {e6b.get('alternate_fuel', '-')}",
+        f"Final reserve fuel: {e6b.get('final_reserve', '-')}",
+        f"Total rota + alternante + reserva: {e6b.get('fuel_reserve', '-')}",
         f"Metros -> ft: {e6b.get('feet', '-')}",
     ]
+    alternate = body.get("alternate") or {}
+    if alternate:
+        e6b_rows.append(
+            f"Alternate: {alternate.get('title', '-')} ({alternate.get('lat', '-')}, {alternate.get('lng', '-')})"
+        )
 
     ref_rows = []
     for idx, ref in enumerate(body.get("references") or [], start=1):
