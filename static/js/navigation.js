@@ -128,6 +128,17 @@ Object.assign(NAV_I18N.pt, {
   clear_refs: "Limpar referências",
   show_nm: "Mostrar NM",
   route_title: "Rota",
+  route_builder_title: "Rota entre aeródromos",
+  route_departure: "Principal / partida",
+  route_destination: "Destino",
+  route_alternate: "Alternante",
+  route_roundtrip: "Ida e volta",
+  route_build: "Criar rota",
+  route_builder_help: "Escolhe os aeródromos para gerar a rota; depois podes ajustar com breaking points e referências.",
+  route_builder_missing: "Escolhe o aeródromo principal e o destino.",
+  route_builder_same: "Escolhe aeródromos diferentes para principal e destino.",
+  route_built_oneway: "Rota criada: {dep} -> {dest}. Podes agora inserir breaking points e referências.",
+  route_built_roundtrip: "Rota ida e volta criada: {dep} -> {dest} -> {dep}. Podes agora inserir breaking points e referências.",
   total_label: "Total",
   legs_label: "Pernas",
   leg_header: "Perna",
@@ -278,6 +289,17 @@ Object.assign(NAV_I18N.en, {
   clear_refs: "Clear references",
   show_nm: "Show NM",
   route_title: "Route",
+  route_builder_title: "Route between aerodromes",
+  route_departure: "Home / departure",
+  route_destination: "Destination",
+  route_alternate: "Alternate",
+  route_roundtrip: "Round trip",
+  route_build: "Build route",
+  route_builder_help: "Choose the aerodromes to generate the route; then adjust with breaking points and references.",
+  route_builder_missing: "Choose the home/departure aerodrome and destination.",
+  route_builder_same: "Choose different aerodromes for departure and destination.",
+  route_built_oneway: "Route created: {dep} -> {dest}. You can now insert breaking points and references.",
+  route_built_roundtrip: "Round trip route created: {dep} -> {dest} -> {dep}. You can now insert breaking points and references.",
   total_label: "Total",
   legs_label: "Legs",
   leg_header: "Leg",
@@ -381,6 +403,14 @@ function navT(key) {
   return (NAV_I18N[navLanguage] && NAV_I18N[navLanguage][key]) || NAV_I18N.pt[key] || key;
 }
 
+function navTf(key, vars = {}) {
+  let text = navT(key);
+  Object.entries(vars).forEach(([name, value]) => {
+    text = text.replaceAll(`{${name}}`, value);
+  });
+  return text;
+}
+
 function navEscapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -449,6 +479,7 @@ function navRenderAlternateSummary() {
 function navSetAlternate(alternate) {
   if (!navMap || !window.L) return;
   navAlternate = alternate;
+  navSyncAlternateSelects(alternate.icao || "");
   if (navAlternateMarker) navAlternateMarker.remove();
   navAlternateMarker = L.marker([alternate.lat, alternate.lng], {
     draggable: true,
@@ -463,8 +494,7 @@ function navSetAlternate(alternate) {
   navAlternateMarker.on("dragend", () => {
     const ll = navAlternateMarker.getLatLng();
     navAlternate = { ...navAlternate, lat: ll.lat, lng: ll.lng, icao: navAlternate.icao || "", name: navAlternate.name || navT("alternate_manual") };
-    const select = document.getElementById("nav-alternate-select");
-    if (select && navAlternate.icao === "") select.value = "";
+    if (navAlternate.icao === "") navSyncAlternateSelects("");
     navUpdateE6B();
   });
   navUpdateE6B();
@@ -482,16 +512,78 @@ function navPopulateAlternateSelect() {
   });
 }
 
-function navSelectAlternateByIcao(icao) {
+function navSyncAlternateSelects(icao = "") {
+  ["nav-alternate-select", "nav-route-alt-select"].forEach((id) => {
+    const select = document.getElementById(id);
+    if (select) select.value = icao;
+  });
+}
+
+function navGetAerodrome(icao) {
   const aerodromes = Array.isArray(window.AERODROMES) ? window.AERODROMES : [];
-  const ad = aerodromes.find((item) => item.icao === icao);
+  return aerodromes.find((item) => item.icao === icao) || null;
+}
+
+function navAerodromeLatLng(ad) {
+  if (!ad) return null;
+  const lat = Number(ad.lat);
+  const lng = Number(ad.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return L.latLng(lat, lng);
+}
+
+function navPopulateAerodromeSelect(select, defaultIcao = "") {
+  if (!select) return;
+  const aerodromes = Array.isArray(window.AERODROMES) ? window.AERODROMES : [];
+  select.innerHTML = "";
+  aerodromes.forEach((ad) => {
+    const option = document.createElement("option");
+    option.value = ad.icao;
+    option.textContent = `${ad.icao} - ${ad.name}`;
+    select.appendChild(option);
+  });
+  if (defaultIcao && aerodromes.some((ad) => ad.icao === defaultIcao)) {
+    select.value = defaultIcao;
+  }
+}
+
+function navPopulateRouteBuilderSelects() {
+  navPopulateAerodromeSelect(document.getElementById("nav-route-dep-select"), "LPVL");
+  navPopulateAerodromeSelect(document.getElementById("nav-route-dest-select"), "LPBR");
+  const alternateSelect = document.getElementById("nav-route-alt-select");
+  if (alternateSelect) {
+    alternateSelect.innerHTML = "";
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.setAttribute("data-i18n", "manual_none");
+    emptyOption.textContent = navT("manual_none");
+    alternateSelect.appendChild(emptyOption);
+    const aerodromes = Array.isArray(window.AERODROMES) ? window.AERODROMES : [];
+    aerodromes.forEach((ad) => {
+      const option = document.createElement("option");
+      option.value = ad.icao;
+      option.textContent = `${ad.icao} - ${ad.name}`;
+      alternateSelect.appendChild(option);
+    });
+  }
+}
+
+function navSelectAlternateByIcao(icao) {
+  const ad = navGetAerodrome(icao);
   if (!ad) return;
   navSetAlternate({ icao: ad.icao, name: ad.name, lat: Number(ad.lat), lng: Number(ad.lon) });
 }
 
+function navHandleAlternateSelect(value) {
+  if (value) {
+    navSelectAlternateByIcao(value);
+  } else {
+    navClearAlternate();
+  }
+}
+
 function navSetManualAlternate(latlng) {
-  const select = document.getElementById("nav-alternate-select");
-  if (select) select.value = "";
+  navSyncAlternateSelects("");
   navSetAlternate({ icao: "", name: navT("alternate_manual"), lat: latlng.lat, lng: latlng.lng });
 }
 
@@ -499,6 +591,7 @@ function navClearAlternate() {
   if (navAlternateMarker) navAlternateMarker.remove();
   navAlternateMarker = null;
   navAlternate = null;
+  navSyncAlternateSelects("");
   navUpdateE6B();
 }
 
@@ -675,6 +768,42 @@ function navAddPoint(latlng) {
   if (!marker) return;
   navMarkers.push(marker);
   navRenderRoute();
+}
+
+function navSetRouteBuilderStatus(message) {
+  const status = document.getElementById("nav-route-builder-status");
+  if (status) status.textContent = message;
+}
+
+function navBuildAerodromeRoute() {
+  if (!navMap || !window.L) return;
+  const depSelect = document.getElementById("nav-route-dep-select");
+  const destSelect = document.getElementById("nav-route-dest-select");
+  const roundTrip = Boolean(document.getElementById("nav-route-roundtrip")?.checked);
+  const dep = navGetAerodrome(depSelect?.value || "");
+  const dest = navGetAerodrome(destSelect?.value || "");
+  const depLatLng = navAerodromeLatLng(dep);
+  const destLatLng = navAerodromeLatLng(dest);
+
+  if (!dep || !dest || !depLatLng || !destLatLng) {
+    navSetRouteBuilderStatus(navT("route_builder_missing"));
+    return;
+  }
+  if (dep.icao === dest.icao) {
+    navSetRouteBuilderStatus(navT("route_builder_same"));
+    return;
+  }
+
+  navClearRoute();
+  [depLatLng, destLatLng].concat(roundTrip ? [depLatLng] : []).forEach((latlng) => navAddPoint(latlng));
+  navSetMode("route");
+  navFitRoute();
+  navSetRouteBuilderStatus(
+    navTf(roundTrip ? "route_built_roundtrip" : "route_built_oneway", {
+      dep: dep.icao,
+      dest: dest.icao,
+    })
+  );
 }
 
 function navShiftLegAltitudesAfterInsert(splitLegIndex) {
@@ -1266,12 +1395,9 @@ function initNavigation() {
   document.getElementById("nav-mode-break")?.addEventListener("click", () => navSetMode("break"));
   document.getElementById("nav-mode-alternate")?.addEventListener("click", () => navSetMode("alternate"));
   document.getElementById("nav-mode-reference")?.addEventListener("click", () => navSetMode("reference"));
-  document.getElementById("nav-alternate-select")?.addEventListener("change", (event) => {
-    if (event.target.value) {
-      navSelectAlternateByIcao(event.target.value);
-    } else {
-      navClearAlternate();
-    }
+  document.getElementById("nav-build-route")?.addEventListener("click", navBuildAerodromeRoute);
+  ["nav-alternate-select", "nav-route-alt-select"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", (event) => navHandleAlternateSelect(event.target.value));
   });
   document.getElementById("nav-print-pdf")?.addEventListener("click", navPrintPdf);
   document.getElementById("nav-legs-body")?.addEventListener("input", navHandleAltitudeInput);
@@ -1281,6 +1407,7 @@ function initNavigation() {
     document.getElementById(id)?.addEventListener("input", navUpdateE6B);
   });
   navSetMode("route");
+  navPopulateRouteBuilderSelects();
   navPopulateAlternateSelect();
   let savedLanguage = "pt";
   try {

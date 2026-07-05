@@ -414,6 +414,28 @@
 
       <aside class="nav-panel">
         <h3 data-i18n="route_title">Rota</h3>
+        <div class="nav-route-builder">
+          <h4 data-i18n="route_builder_title">Rota entre aeródromos</h4>
+          <div class="nav-route-grid">
+            <label class="fpl-field" data-i18n-label="route_departure">Principal / partida
+              <select id="nav-route-dep-select" class="select"></select>
+            </label>
+            <label class="fpl-field" data-i18n-label="route_destination">Destino
+              <select id="nav-route-dest-select" class="select"></select>
+            </label>
+            <label class="fpl-field" data-i18n-label="route_alternate">Alternante
+              <select id="nav-route-alt-select" class="select"></select>
+            </label>
+          </div>
+          <div class="nav-route-builder-actions">
+            <label class="nav-toggle">
+              <input id="nav-route-roundtrip" type="checkbox">
+              <span data-i18n="route_roundtrip">Ida e volta</span>
+            </label>
+            <button id="nav-build-route" class="btn" type="button" data-i18n="route_build">Criar rota</button>
+          </div>
+          <p id="nav-route-builder-status" class="note" data-i18n="route_builder_help">Escolhe os aeródromos para gerar a rota; depois podes ajustar com breaking points e referências.</p>
+        </div>
         <div class="nav-summary">
           <div>
             <span class="note" data-i18n="total_label">Total</span>

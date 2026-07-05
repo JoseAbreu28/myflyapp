@@ -698,6 +698,41 @@ h1 { margin: 0; font-size: 1.25rem; }
   margin: 0 0 0.65rem;
 }
 
+.nav-route-builder {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-route-builder h4 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+}
+
+.nav-route-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.nav-route-builder-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.nav-route-builder-actions .btn {
+  flex: 0 0 auto;
+}
+
+#nav-route-builder-status {
+  margin: 0.6rem 0 0;
+}
+
 .nav-summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
