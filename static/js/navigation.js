@@ -4,6 +4,7 @@ const NAV_DEFAULT_CENTER = [41.25, -8.0];
 let navMap = null;
 let navLine = null;
 let navMarkers = [];
+let navLegLabelLayer = null;
 let navReferenceMarkers = [];
 let navMode = "route";
 let navLegAltitudes = {};
@@ -81,6 +82,10 @@ function navComputeLegs() {
   return legs;
 }
 
+function navMidpointLatLng(a, b) {
+  return L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
+}
+
 function navFormatMinutes(totalMinutes) {
   if (!Number.isFinite(totalMinutes) || totalMinutes < 0) return "--";
   const rounded = Math.round(totalMinutes);
@@ -152,6 +157,7 @@ function navRenderRoute() {
   if (!navMap || !navLine) return;
   const pts = navGetRoutePoints();
   navLine.setLatLngs(pts);
+  if (navLegLabelLayer) navLegLabelLayer.clearLayers();
 
   navMarkers.forEach((marker, idx) => {
     marker.bindTooltip(String(idx + 1), {
@@ -163,6 +169,22 @@ function navRenderRoute() {
   });
 
   const legs = navComputeLegs();
+  const showLegLabels = document.getElementById("nav-show-leg-labels")?.checked;
+  if (showLegLabels && navLegLabelLayer) {
+    legs.forEach((leg) => {
+      const a = pts[leg.index - 1];
+      const b = pts[leg.index];
+      L.marker(navMidpointLatLng(a, b), {
+        interactive: false,
+        icon: L.divIcon({
+          className: "nav-leg-label",
+          html: `${navFmt(leg.nm, 1)} NM`,
+          iconSize: [70, 24],
+          iconAnchor: [35, 12],
+        }),
+      }).addTo(navLegLabelLayer);
+    });
+  }
   const totalNm = legs.reduce((sum, leg) => sum + leg.nm, 0);
   const body = document.getElementById("nav-legs-body");
   if (body) {
@@ -219,13 +241,73 @@ function navHandleAltitudeInput(event) {
   }
 }
 
-function navAddPoint(latlng) {
+function navCreateRouteMarker(latlng) {
   if (!navMap || !window.L) return;
   const marker = L.marker(latlng, { draggable: true }).addTo(navMap);
   marker.on("drag", navRenderRoute);
   marker.on("dragend", navRenderRoute);
+  return marker;
+}
+
+function navAddPoint(latlng) {
+  const marker = navCreateRouteMarker(latlng);
+  if (!marker) return;
   navMarkers.push(marker);
   navRenderRoute();
+}
+
+function navShiftLegAltitudesAfterInsert(splitLegIndex) {
+  const shifted = {};
+  Object.entries(navLegAltitudes).forEach(([key, value]) => {
+    const legIndex = Number(key);
+    if (!Number.isFinite(legIndex)) return;
+    shifted[legIndex > splitLegIndex ? legIndex + 1 : legIndex] = value;
+  });
+  navLegAltitudes = shifted;
+}
+
+function navDistancePointToSegmentPx(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(p.x - a.x, p.y - a.y);
+  }
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+  const x = a.x + t * dx;
+  const y = a.y + t * dy;
+  return Math.hypot(p.x - x, p.y - y);
+}
+
+function navFindNearestSegmentIndex(latlng) {
+  if (!navMap || navMarkers.length < 2) return -1;
+  const clickPoint = navMap.latLngToLayerPoint(latlng);
+  let bestIndex = -1;
+  let bestDistance = Infinity;
+  for (let i = 0; i < navMarkers.length - 1; i += 1) {
+    const a = navMap.latLngToLayerPoint(navMarkers[i].getLatLng());
+    const b = navMap.latLngToLayerPoint(navMarkers[i + 1].getLatLng());
+    const distance = navDistancePointToSegmentPx(clickPoint, a, b);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = i;
+    }
+  }
+  return bestIndex;
+}
+
+function navAddBreakingPoint(latlng) {
+  if (!navMap || navMarkers.length < 2) {
+    navSetPrintStatus("Cria primeiro pelo menos dois pontos de rota.");
+    return;
+  }
+  const segmentIndex = navFindNearestSegmentIndex(latlng);
+  if (segmentIndex < 0) return;
+  const marker = navCreateRouteMarker(latlng);
+  if (!marker) return;
+  navMarkers.splice(segmentIndex + 1, 0, marker);
+  navShiftLegAltitudesAfterInsert(segmentIndex + 1);
+  navRenderRoute();
+  navSetPrintStatus("Breaking point inserido na rota.");
 }
 
 function navRenderReferences() {
@@ -542,8 +624,9 @@ function navFitRoute() {
 }
 
 function navSetMode(mode) {
-  navMode = mode === "reference" ? "reference" : "route";
+  navMode = ["route", "break", "reference"].includes(mode) ? mode : "route";
   document.getElementById("nav-mode-route")?.classList.toggle("active", navMode === "route");
+  document.getElementById("nav-mode-break")?.classList.toggle("active", navMode === "break");
   document.getElementById("nav-mode-reference")?.classList.toggle("active", navMode === "reference");
 }
 
@@ -678,11 +761,21 @@ function initNavigation() {
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(navMap);
   navLine = L.polyline([], { color: "#f59e0b", weight: 4, opacity: 0.95 }).addTo(navMap);
+  navLegLabelLayer = L.layerGroup().addTo(navMap);
+  navLine.on("click", (event) => {
+    if (navMode !== "break") return;
+    if (window.L?.DomEvent) L.DomEvent.stopPropagation(event);
+    navAddBreakingPoint(event.latlng);
+  });
   navSeedAerodromes();
 
   navMap.on("click", (event) => {
     if (navMode === "reference") {
       navAddReference(event.latlng);
+      return;
+    }
+    if (navMode === "break") {
+      navAddBreakingPoint(event.latlng);
       return;
     }
     navAddPoint(event.latlng);
@@ -691,7 +784,9 @@ function initNavigation() {
   document.getElementById("nav-undo-point")?.addEventListener("click", navUndoPoint);
   document.getElementById("nav-fit-route")?.addEventListener("click", navFitRoute);
   document.getElementById("nav-clear-references")?.addEventListener("click", navClearReferences);
+  document.getElementById("nav-show-leg-labels")?.addEventListener("change", navRenderRoute);
   document.getElementById("nav-mode-route")?.addEventListener("click", () => navSetMode("route"));
+  document.getElementById("nav-mode-break")?.addEventListener("click", () => navSetMode("break"));
   document.getElementById("nav-mode-reference")?.addEventListener("click", () => navSetMode("reference"));
   document.getElementById("nav-print-pdf")?.addEventListener("click", navPrintPdf);
   document.getElementById("nav-legs-body")?.addEventListener("input", navHandleAltitudeInput);

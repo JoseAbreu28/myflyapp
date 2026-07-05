@@ -391,6 +391,7 @@
         <div class="nav-toolbar" aria-label="Modo do mapa">
           <div class="nav-mode-group">
             <button id="nav-mode-route" class="btn nav-mode active" type="button">Rota</button>
+            <button id="nav-mode-break" class="btn nav-mode" type="button">Breaking point</button>
             <button id="nav-mode-reference" class="btn nav-mode" type="button">Referência</button>
           </div>
           <button id="nav-print-pdf" class="btn" type="button">Guardar PDF</button>
@@ -402,8 +403,12 @@
           <button id="nav-clear-route" class="btn" type="button">Clear route</button>
           <button id="nav-fit-route" class="btn" type="button">Fit route</button>
           <button id="nav-clear-references" class="btn" type="button">Clear references</button>
+          <label class="nav-toggle">
+            <input id="nav-show-leg-labels" type="checkbox">
+            <span>Mostrar NM</span>
+          </label>
         </div>
-        <p class="note">Modo Rota: clica para adicionar pernas. Modo Referência: clica para marcar locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
+        <p class="note">Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
       </div>
 
       <aside class="nav-panel">
