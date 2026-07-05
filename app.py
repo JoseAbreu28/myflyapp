@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+from io import BytesIO
+import textwrap
 import re
 from urllib.parse import quote
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 import requests
 
 import config
@@ -14,6 +16,99 @@ _CEILING_RE = re.compile(r"\b(BKN|OVC|VV)(\d{3})\b")
 _FLYWEATHER_CAM_TS_RE = re.compile(r"cam31\.jpg\?t=(\d+)")
 FPLBRIEFING_PIB_URL = "https://fplbriefing.nav.pt/rest/api/create-narrow-route-pib"
 FPLBRIEFING_ROUTE_URL = "https://fplbriefing.nav.pt/rest/api/rest/routes/route/{route_id}"
+
+
+def _pdf_text(value):
+    text = str(value or "")
+    return (
+        text.encode("latin-1", "replace")
+        .decode("latin-1")
+        .replace("\\", "\\\\")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
+    )
+
+
+def _build_simple_pdf(title, sections):
+    width, height = 595, 842
+    margin_x = 48
+    line_h = 14
+    y_start = 792
+    y_min = 52
+    pages = []
+    lines = []
+
+    def push_line(text="", size=10):
+        nonlocal lines
+        wrapped = textwrap.wrap(str(text), width=94) or [""]
+        for part in wrapped:
+            lines.append((part, size))
+            if len(lines) * line_h > (y_start - y_min):
+                pages.append(lines)
+                lines = []
+
+    push_line(title, 16)
+    push_line(f"Gerado em {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", 9)
+    push_line("")
+    for heading, rows in sections:
+        push_line(heading, 13)
+        for row in rows:
+            push_line(row, 10)
+        push_line("")
+    if lines:
+        pages.append(lines)
+
+    objects = []
+
+    def add_obj(data):
+        objects.append(data)
+        return len(objects)
+
+    font_id = add_obj(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    page_ids = []
+    content_ids = []
+    for page_lines in pages:
+        y = y_start
+        stream_parts = []
+        for text, size in page_lines:
+            stream_parts.append(f"BT /F1 {size} Tf {margin_x} {y} Td ({_pdf_text(text)}) Tj ET\n")
+            y -= line_h
+        stream = "".join(stream_parts).encode("latin-1", "replace")
+        content_id = add_obj(
+            b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"endstream"
+        )
+        content_ids.append(content_id)
+        page_ids.append(None)
+
+    pages_id_placeholder = len(objects) + len(pages) + 1
+    for idx, content_id in enumerate(content_ids):
+        page_id = add_obj(
+            f"<< /Type /Page /Parent {pages_id_placeholder} 0 R /MediaBox [0 0 {width} {height}] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>".encode("ascii")
+        )
+        page_ids[idx] = page_id
+
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    pages_id = add_obj(f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii"))
+    catalog_id = add_obj(f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii"))
+
+    out = BytesIO()
+    out.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for obj_id, data in enumerate(objects, start=1):
+        offsets.append(out.tell())
+        out.write(f"{obj_id} 0 obj\n".encode("ascii"))
+        out.write(data)
+        out.write(b"\nendobj\n")
+    xref = out.tell()
+    out.write(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    out.write(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        out.write(f"{offset:010d} 00000 n \n".encode("ascii"))
+    out.write(
+        f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii")
+    )
+    return out.getvalue()
 
 AERODROMES = [
     {"icao": "LPPT", "name": "Lisboa Humberto Delgado", "lat": 38.7742, "lon": -9.1342, "atis": "127.125", "main_freq": "118.100"},
@@ -352,6 +447,61 @@ def api_taf(icao):
     _cache_set(key, payload)
     payload["cached_at"] = _cache[key]["timestamp"].isoformat()
     return jsonify(payload)
+
+
+@app.route("/api/navigation/pdf", methods=["POST"])
+def api_navigation_pdf():
+    body = request.get_json(silent=True) or {}
+
+    route_rows = []
+    for leg in body.get("legs") or []:
+        altitude = leg.get("altitude") or "-"
+        status = leg.get("altitude_status") or ""
+        route_rows.append(
+            f"Leg {leg.get('label', '-')}: {leg.get('nm', '-')} NM | "
+            f"HDG {leg.get('heading', '-')} | ALT {altitude} {status}".strip()
+        )
+    if not route_rows:
+        route_rows.append("Sem pernas de rota definidas.")
+
+    e6b = body.get("e6b") or {}
+    e6b_rows = [
+        f"Distancia: {e6b.get('nm', '-')}",
+        f"Tempo: {e6b.get('time', '-')}",
+        f"Combustivel rota: {e6b.get('fuel', '-')}",
+        f"Com reserva: {e6b.get('fuel_reserve', '-')}",
+        f"Metros -> ft: {e6b.get('feet', '-')}",
+    ]
+
+    ref_rows = []
+    for idx, ref in enumerate(body.get("references") or [], start=1):
+        altitude = f" | Altitude: {ref.get('altitude')}" if ref.get("altitude") else ""
+        note = ref.get("note") or "Sem observacoes."
+        ref_rows.append(f"{idx}. {ref.get('title') or 'Ref'}{altitude}")
+        ref_rows.append(f"   {note}")
+        if ref.get("lat") is not None and ref.get("lng") is not None:
+            ref_rows.append(f"   Coordenadas: {ref.get('lat')}, {ref.get('lng')}")
+    if not ref_rows:
+        ref_rows.append("Sem pontos de referencia.")
+
+    disclaimer = (
+        "Ferramenta de apoio. Nao substitui carta aeronautica oficial, AIP/eAIP, NOTAM, "
+        "informacao de espaco aereo, altitudes minimas, obstaculos, terreno ou briefing operacional."
+    )
+    pdf = _build_simple_pdf(
+        "MyFlyApp - Report de Navegacao",
+        [
+            ("Disclaimer", [disclaimer]),
+            ("Rota", route_rows),
+            ("E6B", e6b_rows),
+            ("Pontos de referencia", ref_rows),
+        ],
+    )
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="myflyapp-navegacao.pdf"'},
+    )
 
 
 @app.route("/api/fplbriefing/narrow-pib", methods=["POST"])

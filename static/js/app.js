@@ -1,4 +1,4 @@
-const TAB_NAMES = ["dashboard", "flightplan", "massbalance"];
+const TAB_NAMES = ["dashboard", "flightplan", "navigation", "massbalance"];
 
 let activeTab = "dashboard";
 let aerodromeMapReady = false;
@@ -851,6 +851,10 @@ function activateTab(tabName, updateHash = false) {
 
   if (updateHash && window.location.hash !== `#${name}`) {
     window.location.hash = name;
+  }
+
+  if (name === "navigation" && window.MyFlyNavigation?.ensureReady) {
+    window.MyFlyNavigation.ensureReady();
   }
 }
 

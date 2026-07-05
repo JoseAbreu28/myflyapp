@@ -379,6 +379,95 @@
   </article>
 </section>
 
+<section id="navigation" class="tab-section">
+  <article class="card">
+    <h2>Navegações</h2>
+    <p class="warning-banner">
+      Disclaimer: esta ferramenta é apenas um apoio à preparação da navegação. Não substitui a carta aeronáutica oficial, o AIP/eAIP, NOTAM, informação de espaço aéreo, altitudes mínimas, obstáculos, terreno, procedimentos publicados ou briefing operacional. Usa sempre a carta verdadeira e fontes oficiais para informação detalhada.
+    </p>
+
+    <div class="nav-layout">
+      <div>
+        <div class="nav-toolbar" aria-label="Modo do mapa">
+          <div class="nav-mode-group">
+            <button id="nav-mode-route" class="btn nav-mode active" type="button">Rota</button>
+            <button id="nav-mode-reference" class="btn nav-mode" type="button">Referência</button>
+          </div>
+          <button id="nav-print-pdf" class="btn" type="button">Guardar PDF</button>
+        </div>
+        <p id="nav-print-status" class="note nav-print-status">Report pronto para exportar.</p>
+        <div id="nav-map" class="nav-map"></div>
+        <div class="actions nav-actions">
+          <button id="nav-undo-point" class="btn" type="button">Undo point</button>
+          <button id="nav-clear-route" class="btn" type="button">Clear route</button>
+          <button id="nav-fit-route" class="btn" type="button">Fit route</button>
+          <button id="nav-clear-references" class="btn" type="button">Clear references</button>
+        </div>
+        <p class="note">Modo Rota: clica para adicionar pernas. Modo Referência: clica para marcar locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
+      </div>
+
+      <aside class="nav-panel">
+        <h3>Rota</h3>
+        <div class="nav-summary">
+          <div>
+            <span class="note">Total</span>
+            <strong id="nav-total-nm">0.0 NM</strong>
+          </div>
+          <div>
+            <span class="note">Pernas</span>
+            <strong id="nav-leg-count">0</strong>
+          </div>
+        </div>
+        <div class="nav-table-wrap">
+          <table class="table nav-table">
+            <thead>
+              <tr>
+                <th>Leg</th>
+                <th>NM</th>
+                <th>HDG</th>
+                <th>ALT VFR</th>
+              </tr>
+            </thead>
+            <tbody id="nav-legs-body">
+              <tr><td colspan="4" class="note">Adiciona pelo menos dois pontos.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>E6B rápido</h3>
+        <div class="nav-e6b">
+          <label class="fpl-field">Distância (NM)
+            <input id="nav-e6b-nm" class="select" type="number" min="0" step="0.1" value="0">
+          </label>
+          <label class="fpl-field">Velocidade GS (kt)
+            <input id="nav-e6b-speed" class="select" type="number" min="0" step="1" value="90">
+          </label>
+          <label class="fpl-field">Consumo (gal/h)
+            <input id="nav-e6b-gph" class="select" type="number" min="0" step="0.1" value="6.0">
+          </label>
+          <label class="fpl-field">Reserva (min)
+            <input id="nav-e6b-reserve" class="select" type="number" min="0" step="1" value="30">
+          </label>
+          <label class="fpl-field">Metros
+            <input id="nav-e6b-meters" class="select" type="number" min="0" step="1" value="0">
+          </label>
+        </div>
+        <table class="mb-table nav-e6b-results">
+          <tr><th>Tempo</th><td id="nav-e6b-time">--</td></tr>
+          <tr><th>Combustível rota</th><td id="nav-e6b-fuel">--</td></tr>
+          <tr><th>Com reserva</th><td id="nav-e6b-fuel-reserve">--</td></tr>
+          <tr><th>Metros -> ft</th><td id="nav-e6b-feet">--</td></tr>
+        </table>
+
+        <h3>Pontos de referência</h3>
+        <div id="nav-references-list" class="nav-references-list">
+          <p class="note">Sem pontos de referência.</p>
+        </div>
+      </aside>
+    </div>
+  </article>
+</section>
+
 <section id="massbalance" class="tab-section">
   <article class="card">
     <h2>Mass &amp; Balance</h2>
@@ -440,5 +529,6 @@
   window.HOME_ICAO = "{{ station }}";
   window.AERODROMES = {{ aerodromes | tojson }};
 </script>
+<script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/massbalance.js') }}"></script>
 {% endblock %}
