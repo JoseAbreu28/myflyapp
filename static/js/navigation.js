@@ -11,6 +11,23 @@ let navReferenceMarkers = [];
 let navMode = "route";
 let navLegAltitudes = {};
 let navLanguage = "pt";
+let navSimMap = null;
+let navSimRouteLine = null;
+let navSimDirectLine = null;
+let navSimPlaneMarker = null;
+let navSimTargetMarker = null;
+let navSimHsi = null;
+let navSimRmi = null;
+let navSimVor = null;
+let navSimRoute = [];
+let navSimLegs = [];
+let navSimTotalNm = 0;
+let navSimDistanceNm = 0;
+let navSimElapsedSeconds = 0;
+let navSimPlaying = false;
+let navSimFrame = null;
+let navSimLastFrameTime = null;
+let navSimRouteSignature = "";
 
 const NAV_I18N = {
   pt: {
@@ -121,6 +138,38 @@ Object.assign(NAV_I18N.pt, {
   mode_alternate: "Alternante",
   mode_reference: "Referência",
   save_pdf: "Guardar PDF",
+  simulate_btn: "Simular",
+  sim_title: "Simulação da navegação",
+  sim_note: "Simulação educativa simplificada; não representa sensores certificados nem substitui treino de voo.",
+  sim_close: "Fechar simulação",
+  sim_guidance_mode: "Referência dos instrumentos",
+  sim_mode_breakpoints: "Próximo breaking point",
+  sim_mode_destination: "Só destino final",
+  sim_playback_speed: "Velocidade da reprodução",
+  sim_play: "▶ Play",
+  sim_pause: "❚❚ Pausa",
+  sim_reset: "Reiniciar",
+  sim_ready: "Pronto para iniciar.",
+  sim_need_route: "Cria primeiro uma rota com pelo menos dois pontos.",
+  sim_route_changed: "A rota mudou. A simulação foi reiniciada.",
+  sim_running: "Em voo: perna {leg}, referência {target}.",
+  sim_target_point: "ponto {point}",
+  sim_target_destination: "destino final",
+  sim_paused: "Simulação em pausa.",
+  sim_complete: "Destino alcançado. Simulação concluída.",
+  sim_drag_hint: "Arrasta o avião no mapa para avançar ou recuar na simulação.",
+  sim_dragging: "Ajusta a posição do avião ao longo da rota.",
+  sim_dragged: "Posição ajustada manualmente.",
+  sim_drag_aircraft: "Arrastar avião ao longo da rota",
+  instrument_lab_title: "Estudo manual de instrumentos",
+  instrument_lab_note: "O laboratório começa com um exemplo aleatório. Altera os valores para observar o HSI, RMI e VOR; não usar para navegação real.",
+  instrument_heading: "Rumo HDG (°)",
+  instrument_course: "Curso CRS (°)",
+  instrument_cdi: "CDI (-2 esq. / +2 dir.)",
+  instrument_vor_bearing: "Bearing VOR (°)",
+  instrument_adf_bearing: "Bearing ADF (°)",
+  instrument_obs: "OBS (°)",
+  instrument_flag: "Indicador TO/FROM",
   nav_help: "Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternante: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.",
   undo_point: "Desfazer ponto",
   clear_route: "Limpar rota",
@@ -283,6 +332,38 @@ Object.assign(NAV_I18N.en, {
   mode_alternate: "Alternate",
   mode_reference: "Reference",
   save_pdf: "Save PDF",
+  simulate_btn: "Simulate",
+  sim_title: "Navigation simulation",
+  sim_note: "Simplified educational simulation; it does not represent certified sensors or replace flight training.",
+  sim_close: "Close simulation",
+  sim_guidance_mode: "Instrument reference",
+  sim_mode_breakpoints: "Next breaking point",
+  sim_mode_destination: "Final destination only",
+  sim_playback_speed: "Playback speed",
+  sim_play: "▶ Play",
+  sim_pause: "❚❚ Pause",
+  sim_reset: "Reset",
+  sim_ready: "Ready to start.",
+  sim_need_route: "Create a route with at least two points first.",
+  sim_route_changed: "The route changed. The simulation was reset.",
+  sim_running: "In flight: leg {leg}, reference {target}.",
+  sim_target_point: "point {point}",
+  sim_target_destination: "final destination",
+  sim_paused: "Simulation paused.",
+  sim_complete: "Destination reached. Simulation complete.",
+  sim_drag_hint: "Drag the aircraft on the map to move forward or backward in the simulation.",
+  sim_dragging: "Adjust the aircraft position along the route.",
+  sim_dragged: "Position adjusted manually.",
+  sim_drag_aircraft: "Drag aircraft along the route",
+  instrument_lab_title: "Manual instrument study",
+  instrument_lab_note: "The lab starts with a random example. Change the values to observe the HSI, RMI, and VOR; do not use for real navigation.",
+  instrument_heading: "Heading HDG (°)",
+  instrument_course: "Course CRS (°)",
+  instrument_cdi: "CDI (-2 left / +2 right)",
+  instrument_vor_bearing: "VOR bearing (°)",
+  instrument_adf_bearing: "ADF bearing (°)",
+  instrument_obs: "OBS (°)",
+  instrument_flag: "TO/FROM indicator",
   undo_point: "Undo point",
   clear_route: "Clear route",
   fit_route: "Fit route",
@@ -717,6 +798,7 @@ function navRenderRoute() {
   navSetText("nav-leg-count", String(legs.length));
   navSyncDistanceToE6B(totalNm);
   navRenderAlternateSummary();
+  navUpdateSimulationAvailability();
 }
 
 function navRenderAltitudeCell(leg) {
@@ -1182,6 +1264,359 @@ function navSetMode(mode) {
   document.getElementById("nav-mode-reference")?.classList.toggle("active", navMode === "reference");
 }
 
+function navGetRouteSignature(points = navGetRoutePoints()) {
+  return points.map((point) => `${Number(point.lat).toFixed(6)},${Number(point.lng).toFixed(6)}`).join("|");
+}
+
+function navSetSimulationStatus(message) {
+  navSetText("nav-sim-status", message);
+}
+
+function navUpdateSimulationPlayButton() {
+  const button = document.getElementById("nav-sim-play");
+  if (!button) return;
+  button.textContent = navT(navSimPlaying ? "sim_pause" : "sim_play");
+}
+
+function navStopSimulation() {
+  navSimPlaying = false;
+  navSimLastFrameTime = null;
+  if (navSimFrame !== null) {
+    window.cancelAnimationFrame(navSimFrame);
+    navSimFrame = null;
+  }
+  navUpdateSimulationPlayButton();
+}
+
+function navUpdateSimulationAvailability() {
+  const button = document.getElementById("nav-simulate");
+  if (button) button.disabled = navMarkers.length < 2;
+  const panel = document.getElementById("nav-simulator");
+  if (!panel || panel.hidden || !navSimRouteSignature) return;
+  const signature = navGetRouteSignature();
+  if (signature !== navSimRouteSignature) {
+    navStopSimulation();
+    if (navMarkers.length >= 2) {
+      navPrepareSimulation();
+      navSetSimulationStatus(navT("sim_route_changed"));
+    } else {
+      panel.hidden = true;
+    }
+  }
+}
+
+function navSimulationAircraftIcon() {
+  return L.divIcon({
+    className: "",
+    html: '<div class="nav-sim-aircraft"><span>▲</span></div>',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
+function navSimulationTargetIcon() {
+  return L.divIcon({
+    className: "nav-sim-target",
+    html: "◎",
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
+
+function navInitSimulationMap() {
+  if (navSimMap || !window.L) return;
+  navSimMap = L.map("nav-sim-map", { zoomControl: true }).setView(NAV_DEFAULT_CENTER, 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(navSimMap);
+  navSimRouteLine = L.polyline([], { color: "#f59e0b", weight: 4, opacity: 0.95 }).addTo(navSimMap);
+  navSimDirectLine = L.polyline([], { color: "#60a5fa", weight: 2, opacity: 0.75, dashArray: "7 7" }).addTo(navSimMap);
+  navSimPlaneMarker = L.marker(NAV_DEFAULT_CENTER, {
+    icon: navSimulationAircraftIcon(),
+    zIndexOffset: 800,
+    draggable: true,
+    autoPan: false,
+    keyboard: true,
+    riseOnHover: true,
+    title: navT("sim_drag_aircraft"),
+    alt: navT("sim_drag_aircraft"),
+  }).addTo(navSimMap);
+  navSimPlaneMarker.on("dragstart", navHandleSimulationDragStart);
+  navSimPlaneMarker.on("drag", navHandleSimulationDrag);
+  navSimPlaneMarker.on("dragend", navHandleSimulationDragEnd);
+  navUpdateSimulationMarkerLabel();
+  navSimTargetMarker = L.marker(NAV_DEFAULT_CENTER, { icon: navSimulationTargetIcon(), zIndexOffset: 700 }).addTo(navSimMap);
+}
+
+function navInitSimulationInstruments() {
+  if (!navSimHsi && window.HSIInstrument) {
+    navSimHsi = new window.HSIInstrument(document.getElementById("nav-sim-hsi"));
+  }
+  if (!navSimRmi && window.RMIInstrument) {
+    navSimRmi = new window.RMIInstrument(document.getElementById("nav-sim-rmi"));
+  }
+  if (!navSimVor && window.VORIndicator) {
+    navSimVor = new window.VORIndicator(document.getElementById("nav-sim-vor"));
+  }
+}
+
+function navBuildSimulationLegs(points) {
+  let distance = 0;
+  return points.slice(1).map((to, index) => {
+    const from = points[index];
+    const nm = navDistanceNm(from, to);
+    const leg = {
+      index,
+      from,
+      to,
+      nm,
+      heading: navBearingDeg(from, to),
+      startNm: distance,
+      endNm: distance + nm,
+    };
+    distance += nm;
+    return leg;
+  }).filter((leg) => leg.nm > 0.001);
+}
+
+function navInterpolateLatLng(from, to, fraction) {
+  const t = Math.max(0, Math.min(1, fraction));
+  return L.latLng(from.lat + (to.lat - from.lat) * t, from.lng + (to.lng - from.lng) * t);
+}
+
+function navOffsetLatLng(point, bearing, distanceNm) {
+  const angle = navToRad(bearing);
+  const lat = point.lat + (distanceNm * Math.cos(angle)) / 60;
+  const longitudeScale = Math.max(0.2, Math.cos(navToRad(point.lat)));
+  const lng = point.lng + (distanceNm * Math.sin(angle)) / (60 * longitudeScale);
+  return L.latLng(lat, lng);
+}
+
+function navSimulationAngleDelta(value, reference) {
+  return ((Number(value) - Number(reference) + 540) % 360) - 180;
+}
+
+function navSimulationFormatTime(seconds) {
+  const total = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function navFindSimulationLeg(distanceNm) {
+  if (!navSimLegs.length) return null;
+  return navSimLegs.find((leg) => distanceNm < leg.endNm) || navSimLegs[navSimLegs.length - 1];
+}
+
+function navUpdateSimulationMarkerLabel() {
+  const element = navSimPlaneMarker?.getElement();
+  if (!element) return;
+  const label = navT("sim_drag_aircraft");
+  element.setAttribute("title", label);
+  element.setAttribute("aria-label", label);
+}
+
+function navSimulationDistanceAtLatLng(latlng) {
+  if (!navSimMap || !navSimLegs.length) return navSimDistanceNm;
+  const draggedPoint = navSimMap.latLngToLayerPoint(latlng);
+  let bestPixelDistance = Number.POSITIVE_INFINITY;
+  let bestRouteDistance = navSimDistanceNm;
+
+  navSimLegs.forEach((leg) => {
+    const start = navSimMap.latLngToLayerPoint(leg.from);
+    const end = navSimMap.latLngToLayerPoint(leg.to);
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const lengthSquared = dx * dx + dy * dy;
+    const fraction = lengthSquared > 0
+      ? Math.max(0, Math.min(1, ((draggedPoint.x - start.x) * dx + (draggedPoint.y - start.y) * dy) / lengthSquared))
+      : 0;
+    const projectedX = start.x + dx * fraction;
+    const projectedY = start.y + dy * fraction;
+    const pixelDistance = (draggedPoint.x - projectedX) ** 2 + (draggedPoint.y - projectedY) ** 2;
+    const routeDistance = leg.startNm + leg.nm * fraction;
+    const closerToPointer = pixelDistance < bestPixelDistance - 0.01;
+    const sameTrack = Math.abs(pixelDistance - bestPixelDistance) <= 0.01;
+    const closerToCurrentPosition = Math.abs(routeDistance - navSimDistanceNm) < Math.abs(bestRouteDistance - navSimDistanceNm);
+    if (closerToPointer || (sameTrack && closerToCurrentPosition)) {
+      bestPixelDistance = pixelDistance;
+      bestRouteDistance = routeDistance;
+    }
+  });
+
+  return Math.max(0, Math.min(navSimTotalNm, bestRouteDistance));
+}
+
+function navHandleSimulationDragStart() {
+  navStopSimulation();
+  navSimPlaneMarker?.getElement()?.querySelector(".nav-sim-aircraft")?.classList.add("is-dragging");
+  navSetSimulationStatus(navT("sim_dragging"));
+}
+
+function navHandleSimulationDrag(event) {
+  const distance = navSimulationDistanceAtLatLng(event.target.getLatLng());
+  const groundSpeed = Math.max(1, Number(document.getElementById("nav-e6b-speed")?.value || 90));
+  navSimDistanceNm = distance;
+  navSimElapsedSeconds = (distance / groundSpeed) * 3600;
+  navRenderSimulationAtDistance(distance);
+}
+
+function navHandleSimulationDragEnd(event) {
+  navHandleSimulationDrag(event);
+  navSimPlaneMarker?.getElement()?.querySelector(".nav-sim-aircraft")?.classList.remove("is-dragging");
+  navSetSimulationStatus(navT("sim_dragged"));
+}
+
+function navRenderSimulationAtDistance(distanceNm) {
+  const boundedDistance = Math.max(0, Math.min(navSimTotalNm, distanceNm));
+  const leg = navFindSimulationLeg(boundedDistance);
+  if (!leg || !navSimRoute.length) return;
+  navSimDistanceNm = boundedDistance;
+  const fraction = leg.nm > 0 ? Math.max(0, Math.min(1, (boundedDistance - leg.startNm) / leg.nm)) : 1;
+  const basePosition = navInterpolateLatLng(leg.from, leg.to, fraction);
+  const driftNm = Math.sin(fraction * Math.PI * 2) * Math.min(0.1, leg.nm * 0.015);
+  const position = navOffsetLatLng(basePosition, leg.heading + 90, driftNm);
+  const heading = navNormalizeHeading(leg.heading + Math.cos(fraction * Math.PI * 2) * 2);
+  const mode = document.getElementById("nav-sim-mode")?.value || "breakpoints";
+  const destination = navSimRoute[navSimRoute.length - 1];
+  const target = mode === "destination" ? destination : leg.to;
+  const targetLabel = mode === "destination"
+    ? navT("sim_target_destination")
+    : navTf("sim_target_point", { point: leg.index + 2 });
+  const course = mode === "destination"
+    ? navBearingDeg(navSimRoute[0], destination)
+    : leg.heading;
+  const bearingToTarget = navBearingDeg(position, target);
+  const adfTarget = mode === "destination" ? navSimRoute[0] : destination;
+  const adfBearing = navBearingDeg(position, adfTarget);
+  const cdi = Math.max(-2, Math.min(2, navSimulationAngleDelta(bearingToTarget, course) / 5));
+  const complete = boundedDistance >= navSimTotalNm;
+
+  navSimPlaneMarker?.setLatLng(position);
+  const plane = navSimPlaneMarker?.getElement()?.querySelector("span");
+  if (plane) plane.style.transform = `rotate(${heading}deg)`;
+  navSimTargetMarker?.setLatLng(target);
+  navSimDirectLine?.setLatLngs([position, target]);
+
+  navSimHsi?.setState({ heading, course, deviation: cdi });
+  navSimRmi?.setState({ heading, vorBearing: bearingToTarget, adfBearing });
+  navSimVor?.setState({ course, deviation: cdi, flag: complete ? "FROM" : "TO" });
+
+  const progress = navSimTotalNm > 0 ? (boundedDistance / navSimTotalNm) * 100 : 0;
+  navSetText("nav-sim-progress", `${Math.round(progress)}%`);
+  navSetText("nav-sim-time", navSimulationFormatTime(navSimElapsedSeconds));
+  navSetText("nav-sim-hsi-readout", `HDG ${String(heading).padStart(3, "0")} · CRS ${String(course).padStart(3, "0")} · CDI ${cdi.toFixed(1)}`);
+  navSetText("nav-sim-rmi-readout", `VOR ${String(bearingToTarget).padStart(3, "0")} · ADF ${String(adfBearing).padStart(3, "0")}`);
+  navSetText("nav-sim-vor-readout", `OBS ${String(course).padStart(3, "0")} · ${complete ? "FROM" : "TO"}`);
+
+  if (!complete && navSimPlaying) {
+    navSetSimulationStatus(navTf("sim_running", { leg: `${leg.index + 1}/${navSimLegs.length}`, target: targetLabel }));
+  }
+}
+
+function navPrepareSimulation() {
+  if (!window.L || navMarkers.length < 2) return false;
+  const route = navGetRoutePoints().map((point) => L.latLng(point.lat, point.lng));
+  const legs = navBuildSimulationLegs(route);
+  if (!legs.length || !window.HSIInstrument || !window.RMIInstrument || !window.VORIndicator) return false;
+
+  navStopSimulation();
+  navSimRoute = route;
+  navSimLegs = legs;
+  navSimTotalNm = legs.reduce((sum, leg) => sum + leg.nm, 0);
+  navSimDistanceNm = 0;
+  navSimElapsedSeconds = 0;
+  navSimRouteSignature = navGetRouteSignature(route);
+  navInitSimulationMap();
+  navInitSimulationInstruments();
+  navSimRouteLine?.setLatLngs(route);
+  navRenderSimulationAtDistance(0);
+  navSetSimulationStatus(navT("sim_ready"));
+  navUpdateSimulationPlayButton();
+  window.setTimeout(() => {
+    navSimMap?.invalidateSize();
+    if (navSimMap && route.length) navSimMap.fitBounds(L.latLngBounds(route).pad(0.2));
+  }, 80);
+  return true;
+}
+
+function navSimulationTick(timestamp) {
+  if (!navSimPlaying) return;
+  if (navSimLastFrameTime === null) navSimLastFrameTime = timestamp;
+  const deltaSeconds = Math.min(0.25, Math.max(0, (timestamp - navSimLastFrameTime) / 1000));
+  navSimLastFrameTime = timestamp;
+  const playbackRate = Number(document.getElementById("nav-sim-rate")?.value || 60);
+  const groundSpeed = Math.max(1, Number(document.getElementById("nav-e6b-speed")?.value || 90));
+  const simulatedSeconds = deltaSeconds * playbackRate;
+  navSimElapsedSeconds += simulatedSeconds;
+  navSimDistanceNm = Math.min(navSimTotalNm, navSimDistanceNm + (groundSpeed * simulatedSeconds) / 3600);
+  navRenderSimulationAtDistance(navSimDistanceNm);
+
+  if (navSimDistanceNm >= navSimTotalNm) {
+    navStopSimulation();
+    navSetSimulationStatus(navT("sim_complete"));
+    return;
+  }
+  navSimFrame = window.requestAnimationFrame(navSimulationTick);
+}
+
+function navToggleSimulationPlayback() {
+  if (navSimRouteSignature !== navGetRouteSignature() || !navSimLegs.length) {
+    if (!navPrepareSimulation()) {
+      navSetSimulationStatus(navT("sim_need_route"));
+      return;
+    }
+  }
+  if (navSimPlaying) {
+    navStopSimulation();
+    navSetSimulationStatus(navT("sim_paused"));
+    return;
+  }
+  if (navSimDistanceNm >= navSimTotalNm) {
+    navSimDistanceNm = 0;
+    navSimElapsedSeconds = 0;
+    navRenderSimulationAtDistance(0);
+  }
+  navSimPlaying = true;
+  navSimLastFrameTime = null;
+  navUpdateSimulationPlayButton();
+  navSimFrame = window.requestAnimationFrame(navSimulationTick);
+}
+
+function navResetSimulation() {
+  navStopSimulation();
+  navSimDistanceNm = 0;
+  navSimElapsedSeconds = 0;
+  navRenderSimulationAtDistance(0);
+  navSetSimulationStatus(navT("sim_ready"));
+}
+
+function navOpenSimulation() {
+  if (navMarkers.length < 2) {
+    navSetPrintStatus(navT("sim_need_route"));
+    return;
+  }
+  const panel = document.getElementById("nav-simulator");
+  if (!panel) return;
+  panel.hidden = false;
+  if (!navPrepareSimulation()) {
+    panel.hidden = true;
+    navSetPrintStatus(navT("sim_need_route"));
+    return;
+  }
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function navCloseSimulation() {
+  navStopSimulation();
+  const panel = document.getElementById("nav-simulator");
+  if (panel) panel.hidden = true;
+}
+
 function navApplyLanguage(lang) {
   navLanguage = lang === "en" ? "en" : "pt";
   try {
@@ -1211,6 +1646,8 @@ function navApplyLanguage(lang) {
   navRenderRoute();
   navRenderReferences();
   navRenderAlternateSummary();
+  navUpdateSimulationPlayButton();
+  navUpdateSimulationMarkerLabel();
   window.MyFlyI18n = { language: navLanguage, t: navT };
   window.dispatchEvent(new CustomEvent("myflyapp:language", { detail: { language: navLanguage } }));
 }
@@ -1400,6 +1837,11 @@ function initNavigation() {
     document.getElementById(id)?.addEventListener("change", (event) => navHandleAlternateSelect(event.target.value));
   });
   document.getElementById("nav-print-pdf")?.addEventListener("click", navPrintPdf);
+  document.getElementById("nav-simulate")?.addEventListener("click", navOpenSimulation);
+  document.getElementById("nav-sim-play")?.addEventListener("click", navToggleSimulationPlayback);
+  document.getElementById("nav-sim-reset")?.addEventListener("click", navResetSimulation);
+  document.getElementById("nav-sim-close")?.addEventListener("click", navCloseSimulation);
+  document.getElementById("nav-sim-mode")?.addEventListener("change", () => navRenderSimulationAtDistance(navSimDistanceNm));
   document.getElementById("nav-legs-body")?.addEventListener("input", navHandleAltitudeInput);
   document.getElementById("nav-references-list")?.addEventListener("input", navHandleReferenceInput);
   document.getElementById("nav-references-list")?.addEventListener("click", navHandleReferenceAction);

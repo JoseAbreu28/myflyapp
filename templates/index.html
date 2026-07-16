@@ -395,7 +395,10 @@
             <button id="nav-mode-alternate" class="btn nav-mode" type="button" data-i18n="mode_alternate">Alternante</button>
             <button id="nav-mode-reference" class="btn nav-mode" type="button" data-i18n="mode_reference">Referência</button>
           </div>
-          <button id="nav-print-pdf" class="btn" type="button" data-i18n="save_pdf">Guardar PDF</button>
+          <div class="nav-toolbar-actions">
+            <button id="nav-simulate" class="btn" type="button" data-i18n="simulate_btn" disabled>Simular</button>
+            <button id="nav-print-pdf" class="btn" type="button" data-i18n="save_pdf">Guardar PDF</button>
+          </div>
         </div>
         <p id="nav-print-status" class="note nav-print-status" data-i18n="pdf_ready">Relatório pronto para exportar.</p>
         <div id="nav-map" class="nav-map"></div>
@@ -514,6 +517,128 @@
         </div>
       </aside>
     </div>
+
+    <section id="nav-simulator" class="nav-simulator" aria-labelledby="nav-sim-title" hidden>
+      <div class="nav-sim-header">
+        <div>
+          <h3 id="nav-sim-title" data-i18n="sim_title">Simulação da navegação</h3>
+          <p class="note" data-i18n="sim_note">Simulação educativa simplificada; não representa sensores certificados nem substitui treino de voo.</p>
+        </div>
+        <button id="nav-sim-close" class="btn" type="button" data-i18n="sim_close">Fechar simulação</button>
+      </div>
+
+      <div class="nav-sim-controls">
+        <label class="fpl-field" data-i18n-label="sim_guidance_mode">Referência dos instrumentos
+          <select id="nav-sim-mode" class="select">
+            <option value="breakpoints" data-i18n="sim_mode_breakpoints">Próximo breaking point</option>
+            <option value="destination" data-i18n="sim_mode_destination">Só destino final</option>
+          </select>
+        </label>
+        <label class="fpl-field" data-i18n-label="sim_playback_speed">Velocidade da reprodução
+          <select id="nav-sim-rate" class="select">
+            <option value="30">30×</option>
+            <option value="60" selected>60×</option>
+            <option value="120">120×</option>
+          </select>
+        </label>
+        <div class="nav-sim-playback">
+          <button id="nav-sim-play" class="btn nav-sim-play" type="button" data-i18n="sim_play">▶ Play</button>
+          <button id="nav-sim-reset" class="btn" type="button" data-i18n="sim_reset">Reiniciar</button>
+        </div>
+        <div class="nav-sim-readout" aria-live="polite">
+          <span id="nav-sim-progress">0%</span>
+          <strong id="nav-sim-time">00:00</strong>
+        </div>
+      </div>
+
+      <p id="nav-sim-status" class="note nav-sim-status" data-i18n="sim_ready">Pronto para iniciar.</p>
+      <p class="note nav-sim-drag-hint" data-i18n="sim_drag_hint">Arrasta o avião no mapa para avançar ou recuar na simulação.</p>
+
+      <div class="nav-sim-layout">
+        <div id="nav-sim-map" class="nav-sim-map" aria-label="Mapa da simulação"></div>
+        <div class="nav-sim-instruments">
+          <article class="nav-sim-instrument">
+            <h4>HSI</h4>
+            <canvas id="nav-sim-hsi" width="360" height="360" aria-label="HSI da simulação"></canvas>
+            <p id="nav-sim-hsi-readout" class="note mono">HDG --- · CRS --- · CDI --</p>
+          </article>
+          <article class="nav-sim-instrument">
+            <h4>RMI</h4>
+            <canvas id="nav-sim-rmi" width="360" height="360" aria-label="RMI da simulação"></canvas>
+            <p id="nav-sim-rmi-readout" class="note mono">VOR --- · ADF ---</p>
+          </article>
+          <article class="nav-sim-instrument">
+            <h4>VOR</h4>
+            <canvas id="nav-sim-vor" width="360" height="360" aria-label="VOR da simulação"></canvas>
+            <p id="nav-sim-vor-readout" class="note mono">OBS --- · TO</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="nav-instrument-lab" class="nav-instrument-lab" aria-labelledby="nav-instrument-lab-title">
+      <div class="nav-instrument-lab-header">
+        <h3 id="nav-instrument-lab-title" data-i18n="instrument_lab_title">Estudo manual de instrumentos</h3>
+        <p class="note" data-i18n="instrument_lab_note">O laboratório começa com um exemplo aleatório. Altera os valores para observar o HSI, RMI e VOR; não usar para navegação real.</p>
+      </div>
+
+      <div class="nav-instrument-lab-grid">
+        <article class="nav-study-instrument">
+          <h4>HSI</h4>
+          <canvas id="nav-study-hsi" width="360" height="360" aria-label="HSI para estudo manual"></canvas>
+          <div class="nav-study-controls">
+            <label class="fpl-field" data-i18n-label="instrument_heading">Rumo HDG (°)
+              <input id="nav-study-hsi-heading" class="select" type="number" min="0" max="359" step="1" value="45">
+            </label>
+            <label class="fpl-field" data-i18n-label="instrument_course">Curso CRS (°)
+              <input id="nav-study-hsi-course" class="select" type="number" min="0" max="359" step="1" value="90">
+            </label>
+            <label class="fpl-field" data-i18n-label="instrument_cdi">CDI (-2 esq. / +2 dir.)
+              <input id="nav-study-hsi-deviation" class="select" type="number" min="-2" max="2" step="0.1" value="0">
+            </label>
+          </div>
+          <p id="nav-study-hsi-readout" class="note mono" aria-live="polite">HDG 045 · CRS 090 · CDI 0.0</p>
+        </article>
+
+        <article class="nav-study-instrument">
+          <h4>RMI</h4>
+          <canvas id="nav-study-rmi" width="360" height="360" aria-label="RMI para estudo manual"></canvas>
+          <div class="nav-study-controls">
+            <label class="fpl-field" data-i18n-label="instrument_heading">Rumo HDG (°)
+              <input id="nav-study-rmi-heading" class="select" type="number" min="0" max="359" step="1" value="45">
+            </label>
+            <label class="fpl-field" data-i18n-label="instrument_vor_bearing">Bearing VOR (°)
+              <input id="nav-study-rmi-vor" class="select" type="number" min="0" max="359" step="1" value="110">
+            </label>
+            <label class="fpl-field" data-i18n-label="instrument_adf_bearing">Bearing ADF (°)
+              <input id="nav-study-rmi-adf" class="select" type="number" min="0" max="359" step="1" value="285">
+            </label>
+          </div>
+          <p id="nav-study-rmi-readout" class="note mono" aria-live="polite">HDG 045 · VOR 110 · ADF 285</p>
+        </article>
+
+        <article class="nav-study-instrument">
+          <h4>VOR</h4>
+          <canvas id="nav-study-vor" width="360" height="360" aria-label="VOR para estudo manual"></canvas>
+          <div class="nav-study-controls">
+            <label class="fpl-field" data-i18n-label="instrument_obs">OBS (°)
+              <input id="nav-study-vor-course" class="select" type="number" min="0" max="359" step="1" value="90">
+            </label>
+            <label class="fpl-field" data-i18n-label="instrument_cdi">CDI (-2 esq. / +2 dir.)
+              <input id="nav-study-vor-deviation" class="select" type="number" min="-2" max="2" step="0.1" value="0">
+            </label>
+            <label class="fpl-field" data-i18n-label="instrument_flag">Indicador TO/FROM
+              <select id="nav-study-vor-flag" class="select">
+                <option value="TO">TO</option>
+                <option value="FROM">FROM</option>
+                <option value="OFF">OFF / NAV</option>
+              </select>
+            </label>
+          </div>
+          <p id="nav-study-vor-readout" class="note mono" aria-live="polite">OBS 090 · CDI 0.0 · TO</p>
+        </article>
+      </div>
+    </section>
   </article>
 </section>
 
@@ -578,6 +703,10 @@
   window.HOME_ICAO = "{{ station }}";
   window.AERODROMES = {{ aerodromes | tojson }};
 </script>
+<script src="{{ url_for('static', filename='js/hsi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/rmi.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vor-indicator.js') }}"></script>
 <script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
+<script src="{{ url_for('static', filename='js/instrument-lab.js') }}"></script>
 <script src="{{ url_for('static', filename='js/massbalance.js') }}"></script>
 {% endblock %}
