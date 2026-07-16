@@ -657,6 +657,114 @@ h1 { margin: 0; font-size: 1.25rem; }
   margin-bottom: 0.7rem;
 }
 
+.nav-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nav-simulator {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.96));
+}
+
+.nav-sim-header,
+.nav-sim-controls,
+.nav-sim-readout,
+.nav-sim-playback {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.nav-sim-header { justify-content: space-between; }
+.nav-sim-header h3 { margin: 0; }
+.nav-sim-header p { margin: 0.3rem 0 0; }
+.nav-sim-controls { margin: 0.9rem 0 0.45rem; flex-wrap: wrap; }
+.nav-sim-controls .fpl-field { width: min(240px, 100%); }
+.nav-sim-playback { align-self: flex-end; }
+.nav-sim-readout {
+  margin-left: auto;
+  align-self: flex-end;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: "Consolas", monospace;
+}
+
+.nav-sim-readout span { color: var(--accent); }
+.nav-sim-status { margin: 0.45rem 0 0.75rem; }
+.nav-sim-drag-hint { margin: -0.35rem 0 0.75rem; }
+.nav-sim-layout { display: grid; grid-template-columns: minmax(360px, 1.3fr) minmax(0, 1fr); gap: 1rem; }
+.nav-sim-map { min-height: 520px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.nav-sim-instruments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+.nav-sim-instrument,
+.nav-study-instrument {
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.nav-sim-instrument:first-child { grid-column: 1 / -1; width: min(300px, 100%); justify-self: center; }
+.nav-sim-instrument h4,
+.nav-study-instrument h4 { margin: 0 0 0.35rem; text-align: center; }
+.nav-sim-instrument canvas,
+.nav-study-instrument canvas { display: block; width: 100%; height: auto; }
+.nav-sim-instrument p,
+.nav-study-instrument > p { margin: 0.35rem 0 0; text-align: center; font-size: 0.76rem; }
+
+.nav-instrument-lab {
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+.nav-instrument-lab-header h3 { margin: 0; }
+.nav-instrument-lab-header p { margin: 0.35rem 0 0.85rem; }
+.nav-instrument-lab-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.nav-study-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+  text-align: left;
+}
+.nav-study-controls .fpl-field { min-width: 0; }
+
+.nav-sim-aircraft {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #f8fafc;
+  background: #2563eb;
+  border: 2px solid #dbeafe;
+  border-radius: 50%;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.65);
+  cursor: grab;
+  touch-action: none;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.nav-sim-aircraft.is-dragging {
+  cursor: grabbing;
+  transform: scale(1.1);
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.85);
+}
+.nav-sim-aircraft span { display: block; font-size: 21px; line-height: 1; transform-origin: center; }
+.nav-sim-target { color: #fef3c7; font-weight: 800; text-shadow: 0 1px 3px #020617; }
+
 .nav-mode-group {
   display: flex;
   flex-wrap: wrap;
@@ -1029,9 +1137,22 @@ h1 { margin: 0; font-size: 1.25rem; }
 @media (max-width: 700px) {
   .nav-layout { grid-template-columns: 1fr; }
   .nav-toolbar { align-items: stretch; flex-direction: column; }
+  .nav-toolbar-actions { width: 100%; }
+  .nav-toolbar-actions .btn { flex: 1; }
   .nav-map { height: 420px; }
   .nav-panel { padding: 0.65rem; }
   .nav-e6b { grid-template-columns: 1fr; }
+  .nav-sim-header { align-items: stretch; flex-direction: column; }
+  .nav-sim-controls { align-items: stretch; flex-direction: column; }
+  .nav-sim-controls .fpl-field { width: 100%; }
+  .nav-sim-playback { align-self: stretch; }
+  .nav-sim-playback .btn { flex: 1; }
+  .nav-sim-readout { align-self: stretch; justify-content: space-between; margin-left: 0; }
+  .nav-sim-layout { grid-template-columns: 1fr; }
+  .nav-sim-map { min-height: 360px; }
+  .nav-sim-instruments { grid-template-columns: 1fr; }
+  .nav-sim-instrument:first-child { grid-column: auto; width: 100%; }
+  .nav-instrument-lab-grid { grid-template-columns: 1fr; }
 }
 
 @media print {
@@ -1046,6 +1167,11 @@ h1 { margin: 0; font-size: 1.25rem; }
   body.printing-navigation .nav-toolbar,
   body.printing-navigation .nav-print-status,
   body.printing-navigation .nav-actions {
+    display: none !important;
+  }
+
+  body.printing-navigation .nav-simulator,
+  body.printing-navigation .nav-instrument-lab {
     display: none !important;
   }
 
