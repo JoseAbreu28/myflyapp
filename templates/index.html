@@ -3,7 +3,7 @@
 <section id="dashboard" class="tab-section active">
   <article class="card frequencies-card" style="margin-bottom: 1rem;">
     <h2 data-i18n="freq_title">Frequências</h2>
-    <p class="note" data-i18n="freq_warning">Aviso: frequências informativas e podem não estar atualizadas.</p>
+    <p class="note" data-i18n="freq_warning">⚠️ Aviso: estas frequências são apenas informativas e podem estar incorretas ou desatualizadas. Confirma sempre na carta/eAIP e NOTAM atuais.</p>
     <div class="freq-grid">
       <div class="freq-card">
         <p class="note" data-i18n="atis_selected">ATIS (aeroporto selecionado)</p>
@@ -18,9 +18,18 @@
         <p id="freq-lppr" class="freq-value">--</p>
       </div>
       <div class="freq-card">
-        <p class="note" data-i18n="custom_icao">ICAO manual</p>
+        <p class="note" data-i18n="lisboa_information">Lisboa Information</p>
+        <p class="freq-value">130.905</p>
+      </div>
+      <div class="freq-card">
+        <p class="note" data-i18n="freq_aerodrome">Aeródromo</p>
         <div class="freq-inline">
-          <input id="freq-icao-input" class="select freq-input" type="text" placeholder="LPBR" maxlength="4">
+          <select id="freq-icao-input" class="select freq-input" aria-label="Selecionar aeródromo">
+            <option value="" selected data-i18n="select_aerodrome">Seleciona um aeródromo</option>
+            {% for aerodrome in aerodromes %}
+            <option value="{{ aerodrome.icao }}">{{ aerodrome.icao }} — {{ aerodrome.name }}</option>
+            {% endfor %}
+          </select>
           <button id="freq-icao-btn" class="btn" type="button" data-i18n="view_btn">Ver</button>
         </div>
         <p id="freq-custom" class="freq-value">--</p>
@@ -143,6 +152,8 @@
     <div class="fpl-subtabs">
       <button class="fpl-subtab active" data-fpl-tab="preflight" type="button" data-i18n="fpl_preflight_tab">Pré-voo</button>
       <button class="fpl-subtab" data-fpl-tab="createplan" type="button" data-i18n="fpl_create_tab">Criar plano</button>
+      <button class="fpl-subtab" data-fpl-tab="navigation" type="button" data-i18n="tab_navigation">Navegações</button>
+      <button class="fpl-subtab" data-fpl-tab="massbalance" type="button" data-i18n="tab_massbalance">Massa &amp; Balanceamento</button>
     </div>
 
     <section id="fpl-tab-preflight" class="fpl-subsection active">
@@ -167,15 +178,31 @@
       </div>
 
       <article class="card" style="margin-top: 1rem;">
-        <h3 data-i18n="notam_map_title">Mapa NOTAM</h3>
-        <div class="map-wrap" data-embed-container>
-          <iframe src="{{ notam_viewer_url }}" title="NOTAM Viewer" loading="lazy" data-embed-frame></iframe>
+        <div class="split-screen notam-map-grid">
+          <div class="split-pane">
+            <h3 data-i18n="notam_map_title">Mapa NOTAM</h3>
+            <div class="map-wrap" data-embed-container>
+              <iframe src="{{ notam_viewer_url }}" title="NOTAM Viewer" loading="lazy" data-embed-frame></iframe>
+            </div>
+            <article class="card fallback-hidden" data-embed-fallback>
+              <h3 data-i18n="notam_embed_unavailable">NOTAM indisponível no embed</h3>
+              <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer" data-i18n="open_notam_viewer">Abrir visualizador NOTAM</a>
+            </article>
+            <p class="note source-note"><span data-i18n="source_by">Fonte</span>: <a href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">{{ notam_viewer_url }}</a></p>
+          </div>
+          <div class="split-pane">
+            <h3 data-i18n="five_letter_map_title">Mapa 5-letter code</h3>
+            <div class="map-wrap">
+              <iframe
+                src="https://www.google.com/maps/d/embed?mid=1oVtBoQ-PRBQTyPVgwQo6yRjzazh0qGke&amp;ll=40.46680875293716%2C-8.208544801568893&amp;z=8"
+                title="Google My Maps 5-letter code"
+                loading="lazy"
+                allowfullscreen
+              ></iframe>
+            </div>
+            <p class="note source-note"><span data-i18n="source_by">Fonte</span>: <a href="https://www.google.com/maps/d/viewer?mid=1oVtBoQ-PRBQTyPVgwQo6yRjzazh0qGke&amp;ll=40.46680875293716%2C-8.208544801568893&amp;z=8" target="_blank" rel="noopener noreferrer" data-i18n="open_five_letter_map">Abrir no Google My Maps</a></p>
+          </div>
         </div>
-        <article class="card fallback-hidden" data-embed-fallback>
-          <h3 data-i18n="notam_embed_unavailable">NOTAM indisponível no embed</h3>
-          <a class="btn" href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer" data-i18n="open_notam_viewer">Abrir visualizador NOTAM</a>
-        </article>
-        <p class="note source-note"><span data-i18n="source_by">Fonte</span>: <a href="{{ notam_viewer_url }}" target="_blank" rel="noopener noreferrer">{{ notam_viewer_url }}</a></p>
       </article>
     </section>
 
@@ -379,13 +406,19 @@
   </article>
 </section>
 
-<section id="navigation" class="tab-section">
+<section id="navigation" class="fpl-subsection flightplan-submodule">
   <article class="card">
     <h2 data-i18n="nav_title">Navegações</h2>
     <p class="warning-banner" data-i18n="nav_disclaimer">
       Disclaimer: esta ferramenta é apenas um apoio à preparação da navegação. Não substitui a carta aeronáutica oficial, o AIP/eAIP, NOTAM, informação de espaço aéreo, altitudes mínimas, obstáculos, terreno, procedimentos publicados ou briefing operacional. Usa sempre a carta verdadeira e fontes oficiais para informação detalhada.
     </p>
 
+    <div class="fpl-subtabs nav-subtabs">
+      <button class="fpl-subtab nav-subtab active" data-nav-tab="route" type="button" data-i18n="tab_navigation">Navegações</button>
+      <button class="fpl-subtab nav-subtab" data-nav-tab="e6b" type="button" data-i18n="tab_e6b">E6B</button>
+    </div>
+
+    <section id="nav-tab-route" class="nav-subsection active">
     <div class="nav-layout">
       <div>
         <div class="nav-toolbar" aria-label="Modo do mapa">
@@ -639,10 +672,634 @@
         </article>
       </div>
     </section>
+
+    </section>
+
+    <section id="nav-tab-e6b" class="nav-subsection">
+      <article id="e6b" class="card e6b-tab" aria-labelledby="e6b-tab-title">
+        <div class="e6b-heading">
+          <div>
+            <p class="e6b-kicker" data-i18n="e6b_tab_kicker">Calculadora externa</p>
+            <h2 id="e6b-tab-title" data-i18n="e6b_tab_title">E6BX Flight Computer</h2>
+            <p class="note" data-i18n="e6b_tab_intro">
+              Calculadora E6B online para cálculos de voo, conversões e planeamento.
+            </p>
+          </div>
+          <a class="btn e6b-open-link" href="https://e6bx.com/e6b/" target="_blank" rel="noopener noreferrer" data-i18n="e6b_open">
+            Abrir E6BX numa nova janela
+          </a>
+        </div>
+
+        <div class="e6b-embed">
+          <iframe
+            id="e6b-frame"
+            data-e6b-src="https://e6bx.com/e6b/"
+            title="E6BX flight calculator"
+            loading="lazy"
+            allow="fullscreen"
+          ></iframe>
+        </div>
+
+        <p class="note source-note" data-i18n="e6b_tab_note">
+          Ferramenta externa fornecida por e6bx.com. Se não carregar dentro da tab, usa o botão para abrir a calculadora numa nova janela.
+        </p>
+      </article>
+    </section>
   </article>
 </section>
 
-<section id="massbalance" class="tab-section">
+<section id="training" class="tab-section">
+  <article class="card">
+    <h2 data-i18n="tab_training">Treino</h2>
+    <div class="fpl-subtabs training-subtabs">
+      <button class="fpl-subtab training-subtab active" data-training-tab="instruments" type="button" data-i18n="tab_instruments">Instrumentos</button>
+      <button class="fpl-subtab training-subtab" data-training-tab="avionics" type="button" data-i18n="tab_avionics">Avionics Simulator</button>
+    </div>
+  </article>
+</section>
+
+<section id="instruments" class="training-submodule">
+  <article id="vor-trainer" class="card vor-trainer" aria-labelledby="vor-trainer-title">
+    <div class="vor-trainer-heading">
+      <div>
+        <p class="vor-trainer-kicker" data-i18n="vor_trainer_kicker">Treino interativo</p>
+        <h2 id="vor-trainer-title" data-i18n="vor_trainer_title">Navegação VOR — Porto e Viseu</h2>
+        <p class="note" data-i18n="vor_trainer_intro">Sintoniza uma frequência, posiciona o avião e roda o OBS para perceber radiais, CDI e a indicação TO/FROM.</p>
+      </div>
+      <div id="vor-trainer-signal" class="vor-signal-badge is-off" aria-live="polite">NAV OFF</div>
+    </div>
+
+    <p class="warning-banner" data-i18n="vor_trainer_disclaimer">
+      Demonstração educativa simplificada. Não usar para navegação real: confirma sempre frequências, disponibilidade, cobertura e limitações no AIP/eAIP e NOTAM atuais.
+    </p>
+
+    <div class="vor-trainer-controls" aria-label="Controlos do treinador VOR">
+      <div class="vor-control-block vor-frequency-block">
+        <label for="vor-trainer-frequency" class="fpl-field" data-i18n="vor_frequency">Frequência NAV (MHz)</label>
+        <div class="vor-frequency-entry">
+          <input id="vor-trainer-frequency" class="select mono" type="text" inputmode="decimal" value="114.10" maxlength="6" autocomplete="off" aria-describedby="vor-frequency-help">
+          <button id="vor-trainer-tune" class="btn" type="button" data-i18n="vor_tune">Sintonizar</button>
+        </div>
+        <p id="vor-frequency-help" class="note" data-i18n="vor_frequency_help">Experimenta 114.10 para PRT ou 113.10 para VIS.</p>
+        <div class="vor-preset-actions">
+          <button class="btn vor-preset" type="button" data-vor-frequency="114.10">PRT · 114.10</button>
+          <button class="btn vor-preset" type="button" data-vor-frequency="113.10">VIS · 113.10</button>
+        </div>
+      </div>
+
+      <div class="vor-control-block">
+        <label for="vor-trainer-heading" class="vor-range-label">
+          <span data-i18n="aircraft_heading">Rumo do avião (HDG)</span>
+          <output id="vor-trainer-heading-output" for="vor-trainer-heading" class="mono">260°</output>
+        </label>
+        <input id="vor-trainer-heading" class="vor-range" type="range" min="0" max="359" step="1" value="260">
+        <button id="vor-trainer-direct-heading" class="btn vor-control-action" type="button" data-i18n="set_direct_heading">Apontar à estação</button>
+      </div>
+
+      <div class="vor-control-block">
+        <label for="vor-trainer-obs" class="vor-range-label">
+          <span data-i18n="vor_obs_course">Curso selecionado (OBS)</span>
+          <output id="vor-trainer-obs-output" for="vor-trainer-obs" class="mono">270°</output>
+        </label>
+        <input id="vor-trainer-obs" class="vor-range" type="range" min="0" max="359" step="1" value="270">
+        <div class="vor-control-actions">
+          <button id="vor-trainer-center-to" class="btn" type="button" data-i18n="center_to">Centrar TO</button>
+          <button id="vor-trainer-center-from" class="btn" type="button" data-i18n="center_from">Centrar FROM</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="vor-trainer-layout">
+      <div class="vor-map-panel">
+        <div id="vor-trainer-map" class="vor-trainer-map" aria-label="Mapa do treinador VOR"></div>
+        <div class="vor-map-toolbar">
+          <p class="note" data-i18n="vor_map_hint">Arrasta o avião ou clica no mapa para mudar a posição.</p>
+          <button id="vor-trainer-random-position" class="btn" type="button" data-i18n="random_position">Nova posição</button>
+        </div>
+      </div>
+
+      <div class="vor-instrument-stack">
+        <article class="vor-instrument-card">
+          <h3>HSI</h3>
+          <canvas id="vor-trainer-hsi" width="360" height="360" aria-label="HSI do treinador VOR"></canvas>
+          <p id="vor-trainer-hsi-readout" class="note mono" aria-live="polite">HDG 260 · CRS 270 · NAV OFF</p>
+        </article>
+        <article class="vor-instrument-card">
+          <h3 data-i18n="classic_vor">VOR clássico</h3>
+          <canvas id="vor-trainer-indicator" width="360" height="360" aria-label="Indicador VOR clássico"></canvas>
+          <p id="vor-trainer-vor-readout" class="note mono" aria-live="polite">OBS 270 · NAV OFF</p>
+        </article>
+      </div>
+    </div>
+
+    <div class="vor-analysis-grid">
+      <article class="vor-analysis-card">
+        <h3 data-i18n="position_analysis">Leitura da posição</h3>
+        <dl class="vor-readout-list">
+          <div><dt data-i18n="tuned_station">Estação sintonizada</dt><dd id="vor-trainer-station">—</dd></div>
+          <div><dt data-i18n="distance_dme">Distância geométrica</dt><dd id="vor-trainer-distance">—</dd></div>
+          <div><dt data-i18n="radial_from">Radial FROM</dt><dd id="vor-trainer-radial">—</dd></div>
+          <div><dt data-i18n="bearing_to">Bearing TO</dt><dd id="vor-trainer-bearing">—</dd></div>
+        </dl>
+      </article>
+      <article class="vor-analysis-card vor-guidance-card">
+        <h3 data-i18n="what_instruments_say">O que os instrumentos dizem</h3>
+        <p id="vor-trainer-guidance" class="vor-guidance-main" aria-live="polite">Sintoniza uma frequência VOR válida para começar.</p>
+        <p id="vor-trainer-explanation" class="note">TO aponta para a estação; FROM identifica o radial que sai da estação.</p>
+        <div class="vor-legend" aria-label="Legenda TO e FROM">
+          <span><strong>TO</strong> <span data-i18n="to_legend">curso selecionado leva à estação</span></span>
+          <span><strong>FROM</strong> <span data-i18n="from_legend">curso selecionado afasta-se da estação</span></span>
+          <span><strong>CDI</strong> <span data-i18n="cdi_legend">voa para a agulha para intercetar o curso</span></span>
+        </div>
+      </article>
+    </div>
+
+    <p class="note vor-source-note">
+      <span data-i18n="vor_source_prefix">Dados das estações:</span>
+      <a href="https://ais.nav.pt/wp-content/uploads/AIS_Files/eAIP_Current/eAIP_Online/eAIP/html/eAIP/LP-ENR-4.1-en-GB.html" target="_blank" rel="noopener noreferrer">NAV Portugal eAIP · ENR 4.1</a>.
+      <span data-i18n="vor_declination_note">O cálculo aplica a declinação VOR publicada de 02° W (época 2020); DME e cobertura são apenas aproximados/não simulados.</span>
+    </p>
+  </article>
+</section>
+
+<section id="avionics" class="training-submodule">
+  <article id="avionics-trainer" class="card avionics-trainer" aria-labelledby="avionics-title">
+    <div class="avionics-heading">
+      <div>
+        <p class="avionics-kicker" data-i18n="av_kicker">Treino de aviónica</p>
+        <h2 id="avionics-title" data-i18n="av_title">Avionics Simulator</h2>
+        <p class="note" data-i18n="av_intro">Treina os fluxos básicos de um Garmin G5 ligado a um GNS 430/430W: sintonização, navegação GPS/VLOC, OBS, Direct-to e leitura do HSI.</p>
+      </div>
+      <div class="avionics-heading-tools">
+        <button id="av-helper-toggle" class="avionics-helper-toggle" type="button" aria-pressed="false" aria-label="Ativar ajuda dos instrumentos" title="Ativa pequenas descrições ao passar o rato pelos controlos" data-i18n="av_helper_button">Helper</button>
+        <div class="avionics-badge" data-i18n="av_local_badge">SIMULAÇÃO LOCAL</div>
+      </div>
+    </div>
+
+    <p class="warning-banner" data-i18n="av_disclaimer">
+      Simulador educativo simplificado. Não é uma cópia certificada do Garmin PC Trainer, não usa uma base de dados aeronáutica oficial e não substitui o manual, treino aprovado, checklist, AIP/eAIP, NOTAM ou a responsabilidade do piloto.
+    </p>
+
+    <div class="avionics-subtabs" role="tablist" aria-label="Configuração do simulador de aviónica">
+      <button id="av-setup-1-tab" class="avionics-subtab is-active" type="button" role="tab" aria-selected="true" aria-controls="av-setup-1">
+        <strong>Setup 1</strong><span data-i18n="av_setup1_devices">2× G5 + GNS 430/430W</span>
+      </button>
+      <button id="av-setup-2-tab" class="avionics-subtab" type="button" role="tab" aria-selected="false" aria-controls="av-setup-2" tabindex="-1">
+        <strong>Setup 2</strong><span data-i18n="av_setup2_devices">GI-106A VOR/LOC + GNC 255</span>
+      </button>
+    </div>
+
+    <div id="av-setup-1" class="av-setup-panel is-active" role="tabpanel" aria-labelledby="av-setup-1-tab">
+    <div class="avionics-layout avionics-layout-instrument-only">
+      <div class="avionics-rack" aria-label="Dois Garmin G5 e um GNS 430 simulados">
+        <div class="g5-stack" aria-label="Painel com dois Garmin G5 simulados">
+          <article class="g5-unit g5-unit-pfd" aria-labelledby="av-g5-pfd-title">
+            <div class="g5-face">
+              <div class="g5-face-topline"><span class="g5-brand">GARMIN</span><h3 id="av-g5-pfd-title">G5 <small>PFD</small></h3></div>
+              <div class="av-display-shell g5-display-shell">
+                <canvas id="av-g5-pfd-canvas" width="520" height="520" aria-label="Display Garmin G5 PFD simulado"></canvas>
+              </div>
+              <div class="g5-bottom-controls">
+                <button id="av-g5-pfd-power" class="g5-power-control" type="button" aria-label="Ligar ou desligar G5 PFD"><span id="av-g5-pfd-status-led" class="av-status-led g5-power-symbol is-on" aria-hidden="true">⏻</span><span id="av-g5-pfd-status">ON</span></button>
+                <span class="g5-ambient-sensor" aria-hidden="true"></span>
+                <span class="g5-page-label">PFD</span>
+                <button id="av-g5-pfd-knob" class="av-knob g5-physical-knob" type="button" title="Arrastar horizontalmente ajusta o heading bug; clicar sincroniza o heading">HDG</button>
+              </div>
+            </div>
+            <p id="av-g5-pfd-readout" class="av-unit-readout mono" aria-live="polite">PFD · HDG 260 · BUG 270</p>
+          </article>
+
+          <article class="g5-unit g5-unit-hsi" aria-labelledby="av-g5-hsi-title">
+            <div class="g5-face">
+              <div class="g5-face-topline"><span class="g5-brand">GARMIN</span><h3 id="av-g5-hsi-title">G5 <small>HSI</small></h3></div>
+              <div class="av-display-shell g5-display-shell">
+                <canvas id="av-g5-hsi-canvas" width="520" height="520" aria-label="Display Garmin G5 HSI simulado"></canvas>
+                <div id="av-g5-hsi-options" class="g5-hsi-options" role="group" aria-label="G5 HSI MENU" hidden>
+                  <strong>G5 MENU</strong>
+                  <button id="av-g5-hsi-heading-option" type="button" data-g5-hsi-choice="HDG">Heading 270°</button>
+                  <button id="av-g5-hsi-course-option" type="button" data-g5-hsi-choice="CRS">Course 270°</button>
+                  <button type="button" data-g5-hsi-choice="BACK" data-i18n="av_g5_menu_back">Voltar a HDG</button>
+                  <p id="av-g5-hsi-menu-hint"></p>
+                </div>
+              </div>
+              <div class="g5-bottom-controls">
+                <button id="av-g5-hsi-power" class="g5-power-control" type="button" aria-label="Ligar ou desligar G5 HSI"><span id="av-g5-hsi-status-led" class="av-status-led g5-power-symbol is-on" aria-hidden="true">⏻</span><span id="av-g5-hsi-status">ON</span></button>
+                <span class="g5-ambient-sensor" aria-hidden="true"></span>
+                <span class="g5-page-label">HSI</span>
+                <button id="av-g5-hsi-menu" class="av-key av-key-small g5-menu-control" type="button" aria-controls="av-g5-hsi-options" aria-expanded="false" data-av-help="MENU — seleciona Heading ou Course/OBS no Garmin G5 HSI.">MENU</button>
+                <button id="av-g5-hsi-knob" class="av-knob g5-physical-knob" type="button" aria-controls="av-g5-hsi-options" aria-expanded="false" title="Arrastar ajusta o heading bug; clicar abre o menu">HDG</button>
+              </div>
+            </div>
+            <p id="av-g5-hsi-readout" class="av-unit-readout mono" aria-live="polite">HSI · CRS 270 · GPS</p>
+          </article>
+        </div>
+
+        <article class="avionics-unit gns-unit" aria-labelledby="av-gns-title">
+          <div class="gns-face">
+            <div class="gns-face-topline">
+              <span class="gns-face-brand">GARMIN</span>
+              <button id="av-gns-power" class="av-power-button" type="button" aria-label="Ligar ou desligar GNS 430"><span id="av-gns-status-led" class="av-status-led is-on"></span><span id="av-gns-status">ON</span></button>
+              <h3 id="av-gns-title" class="gns-face-model">GNS 430<span>/430W</span></h3>
+            </div>
+            <div class="gns-left-controls">
+              <div class="gns-volume-deck">
+                <div class="gns-volume-row">
+                  <span class="gns-volume-rail" aria-hidden="true"></span>
+                  <button class="gns-physical-knob gns-volume-knob" type="button" data-av-gns-rotate="left-large:1" aria-label="Aumentar frequência COM ou VLOC">C<small>VOL<br>/SQ</small></button>
+                  <button class="gns-selector-button" type="button" data-av-gns-key="COM_FLIP" aria-label="Trocar frequências COM ativa e standby">C<br>↕</button>
+                </div>
+                <div class="gns-volume-row">
+                  <span class="gns-volume-rail" aria-hidden="true"></span>
+                  <button class="gns-physical-knob gns-volume-knob gns-vloc-volume-knob" type="button" data-av-gns-rotate="left-small:1" aria-label="Aumentar decimal COM ou VLOC">V<small>VOL<br>/SQ</small></button>
+                  <button class="gns-selector-button" type="button" data-av-gns-key="VLOC_FLIP" aria-label="Trocar frequências VLOC ativa e standby">V<br>↕</button>
+                </div>
+              </div>
+              <button id="av-gns-tune-toggle" class="gns-cv-knob" type="button" aria-label="Alternar o cursor de sintonia COM e VLOC"><span class="gns-cv-label">PUSH<br><small>C/V</small></span></button>
+            </div>
+            <div class="gns-center-panel">
+              <div id="av-gns-screen" class="gns-screen" role="region" aria-label="Display Garmin GNS 430 simulado" aria-live="polite"></div>
+              <div class="gns-softkeys">
+                <button class="av-key" type="button" data-av-gns-key="CDI" data-av-help="CDI — alterna a fonte de navegação GPS/VLOC.">CDI</button>
+                <button class="av-key" type="button" data-av-gns-key="OBS" data-av-help="OBS — fixa ou liberta o curso selecionado.">OBS</button>
+                <button class="av-key" type="button" data-av-gns-key="MSG" data-av-help="MSG — mostra mensagens do equipamento.">MSG</button>
+                <button class="av-key" type="button" data-av-gns-key="FPL" data-av-help="FPL — abre o grupo de páginas do plano de voo.">FPL</button>
+                <button class="av-key" type="button" data-av-gns-key="PROC" data-av-help="PROC — abre as páginas de procedimentos.">PROC</button>
+              </div>
+            </div>
+            <div class="gns-right-controls">
+              <div class="gns-range-control">
+                <button class="av-key gns-compact-key" type="button" data-av-gns-key="RNG_DOWN" aria-label="Diminuir alcance">▼</button>
+                <span>RNG</span>
+                <button class="av-key gns-compact-key" type="button" data-av-gns-key="RNG_UP" aria-label="Aumentar alcance">▲</button>
+              </div>
+              <div class="gns-right-key-row">
+                <button class="av-key gns-compact-key" type="button" data-av-gns-key="DIRECT" data-av-help="D→ — prepara uma navegação Direct-to para um waypoint.">D→</button>
+                <button class="av-key gns-compact-key" type="button" data-av-gns-key="MENU" data-av-help="MENU — abre as opções da página atual.">MENU</button>
+              </div>
+              <div class="gns-right-key-row">
+                <button class="av-key gns-compact-key" type="button" data-av-gns-key="CLR" data-av-help="CLR — cancela uma entrada ou sai do cursor.">CLR</button>
+                <button class="av-key gns-compact-key" type="button" data-av-gns-key="ENT" data-av-help="ENT — confirma a seleção ou a entrada.">ENT</button>
+              </div>
+              <div class="gns-side-labels">DEFAULT<br><strong>NAV</strong><span>GPS</span></div>
+              <div class="gns-crsr-control">
+                <button id="av-gns-crsr-knob" class="gns-physical-knob gns-crsr-knob" type="button" aria-label="Pressionar ativa o cursor; arrastar seleciona grupo ou página GNS" data-av-help="CRSR — pressiona para ativar o cursor; arrasta para selecionar grupo ou página do GNS.">PUSH<br><small>CRSR</small></button>
+              </div>
+            </div>
+          </div>
+          <p id="av-gns-readout" class="av-unit-readout mono" aria-live="polite">NAV · GPS · LPPR</p>
+        </article>
+      </div>
+
+      <div class="avionics-console-footer">
+        <div class="av-status-box">
+          <span class="note" data-i18n="av_status_label">Estado</span>
+          <strong id="av-training-status" aria-live="polite" data-i18n="av_status_ready">Pronto. Começa pelo checklist.</strong>
+          <span id="av-instrument-summary" class="mono av-instrument-summary" aria-live="polite">HDG 260 · BUG 270 · CRS 270 · GPS · LPPR</span>
+        </div>
+        <button id="av-reset" class="btn av-reset" type="button" data-i18n="av_reset">Repor exercício</button>
+      </div>
+    </div>
+
+    <section class="av-tutorial" aria-labelledby="av-tutorial-title">
+      <div class="av-tutorial-heading">
+        <div>
+          <p class="avionics-kicker" data-i18n="av_tutorial_kicker">Tutorial prático</p>
+          <h3 id="av-tutorial-title" data-i18n="av_tutorial_title">Aprende com mapa e exercícios</h3>
+          <p class="note" data-i18n="av_tutorial_intro">Vê onde está o avião, define o radial, carrega em GO a 90 KTS e usa ←/→ para virar enquanto acompanhas o G5/GNS.</p>
+        </div>
+        <div id="av-tutorial-progress" class="av-tutorial-progress" aria-live="polite">1 / 5</div>
+      </div>
+
+      <div class="av-tutorial-toolbar">
+        <label class="fpl-field" data-i18n-label="av_tutorial_select">Exemplo
+          <select id="av-tutorial-example" class="select">
+            <option value="free" data-i18n="av_tutorial_free_option">Modo livre · testar instrumentos</option>
+            <option value="vis-to" data-i18n="av_tutorial_vis_to_option">Nível 1 · Viseu VOR — voar TO</option>
+            <option value="vis-from" data-i18n="av_tutorial_vis_from_option">Nível 2 · Viseu VOR — radial FROM</option>
+            <option value="prt-to" data-i18n="av_tutorial_prt_option">Nível 3 · Porto VOR — voar TO</option>
+            <option value="gps-direct" data-i18n="av_tutorial_gps_option">Nível 4 · GPS — Direct-to LPPR</option>
+            <option value="map-page" data-i18n="av_tutorial_map_option">Nível 5 · GNS 430 — Map Page</option>
+          </select>
+        </label>
+        <div class="av-tutorial-actions">
+          <button id="av-tutorial-load" class="btn" type="button" data-i18n="av_tutorial_load">Carregar exercício</button>
+          <button id="av-tutorial-check" class="btn" type="button" data-i18n="av_tutorial_check">Verificar HSI</button>
+          <button id="av-tutorial-next" class="btn" type="button" data-i18n="av_tutorial_next">Próximo exemplo</button>
+        </div>
+      </div>
+
+      <div class="av-tutorial-flight-controls" aria-label="Controlo de voo do tutorial">
+        <div class="av-tutorial-flight-inputs">
+          <label class="av-flight-field">
+            <span class="av-flight-field-head"><span data-i18n="av_tutorial_radial_control">Radial FROM</span><output id="av-tutorial-radial-value" for="av-tutorial-radial">140°</output></span>
+            <input id="av-tutorial-radial" type="range" min="0" max="359" step="1" value="140" aria-label="Radial FROM do avião">
+          </label>
+          <label class="av-flight-field av-flight-distance-field">
+            <span class="av-flight-field-head"><span data-i18n="av_tutorial_distance_control">Distância</span><output for="av-tutorial-distance"><span id="av-tutorial-distance-value">20</span> NM</output></span>
+            <input id="av-tutorial-distance" type="number" min="5" max="80" step="1" value="20" inputmode="numeric" aria-label="Distância do avião à estação em milhas náuticas">
+          </label>
+        </div>
+        <div class="av-tutorial-flight-actions">
+          <div class="av-flight-readout"><span data-i18n="av_tutorial_speed">Velocidade</span><strong id="av-tutorial-speed">90 KTS</strong><span data-i18n="av_tutorial_heading_control">Rumo</span><strong id="av-tutorial-flight-heading">270°</strong><span data-i18n="av_tutorial_time">Tempo</span><strong id="av-tutorial-flight-time">00:00</strong></div>
+          <button id="av-tutorial-turn-left" class="btn av-flight-turn" type="button" aria-label="Virar 5 graus para a esquerda" data-av-help="Virar o avião 5 graus para a esquerda.">←</button>
+          <button id="av-tutorial-flight-toggle" class="btn av-flight-go" type="button" aria-pressed="false" data-i18n="av_tutorial_go">GO</button>
+          <button id="av-tutorial-turn-right" class="btn av-flight-turn" type="button" aria-label="Virar 5 graus para a direita" data-av-help="Virar o avião 5 graus para a direita.">→</button>
+        </div>
+        <p class="note av-tutorial-flight-hint" data-i18n="av_tutorial_flight_hint">Define o radial e a distância, carrega em GO e usa as teclas ←/→ para virar o avião.</p>
+      </div>
+
+      <div class="av-tutorial-layout">
+        <div class="av-tutorial-map-panel">
+          <div id="av-tutorial-map" class="av-tutorial-map" aria-label="Mapa do tutorial de aviónica"></div>
+          <p class="note" data-i18n="av_tutorial_map_hint">A linha liga o avião à referência. A geometria é didática: distância, bearing e radial não representam DME certificado.</p>
+        </div>
+        <article class="av-tutorial-brief">
+          <h4 id="av-tutorial-example-title">Viseu VOR — voar TO</h4>
+          <p id="av-tutorial-briefing" class="note">—</p>
+          <div class="av-tutorial-objective">
+            <span class="note" data-i18n="av_tutorial_objective">Objetivo</span>
+            <strong id="av-tutorial-objective-text">—</strong>
+          </div>
+          <ol id="av-tutorial-steps" class="av-tutorial-steps"></ol>
+          <div class="av-tutorial-readouts">
+            <div><span class="note" data-i18n="av_tutorial_aircraft">Avião</span><strong id="av-tutorial-aircraft">—</strong></div>
+            <div><span class="note" data-i18n="av_tutorial_reference">Referência</span><strong id="av-tutorial-reference">—</strong></div>
+            <div><span class="note" data-i18n="av_tutorial_bearing">Bearing TO</span><strong id="av-tutorial-bearing">—</strong></div>
+            <div><span class="note" data-i18n="av_tutorial_radial">Radial FROM</span><strong id="av-tutorial-radial-readout">—</strong></div>
+          </div>
+          <p id="av-tutorial-status" class="av-tutorial-status" aria-live="polite">—</p>
+        </article>
+      </div>
+    </section>
+
+    <div class="avionics-study-grid">
+      <article class="av-study-card">
+        <h3 data-i18n="av_checklist_title">Checklist de treino</h3>
+        <ol class="av-checklist">
+          <li data-i18n="av_check_1">Liga o GNS e identifica a página NAV.</li>
+          <li data-i18n="av_check_2">Usa o knob esquerdo para selecionar COM ou VLOC e flip-flop para ativar a standby.</li>
+          <li data-i18n="av_check_3">Alterna CDI entre GPS e VLOC; usa OBS para fixar o curso selecionado.</li>
+          <li data-i18n="av_check_4">No G5, lê a fonte, o CDI, o heading e o heading bug antes de corrigir.</li>
+        </ol>
+      </article>
+      <article class="av-study-card">
+        <h3 data-i18n="av_manual_title">Manuais e limites</h3>
+        <p class="note" data-i18n="av_manual_note">Os manuais oficiais dos instrumentos presentes ficam reunidos aqui para consulta durante o treino. A apresentação e a base de dados desta tab são uma implementação independente.</p>
+        <div class="av-source-links">
+          <a class="btn" href="https://www.garmin.com/en-US/c/aviation/pctrainers/" target="_blank" rel="noopener noreferrer" data-i18n="av_official_trainer">PC Trainers oficiais</a>
+          <a class="btn" href="https://static.garmin.com/pumac/190-01112-12_f.pdf" target="_blank" rel="noopener noreferrer" data-i18n="av_g5_manual">Manual Garmin G5</a>
+          <a class="btn" href="https://static.garmin.com/pumac/GNS430_PilotsGuide.pdf" target="_blank" rel="noopener noreferrer" data-i18n="av_gns_manual">Manual Garmin GNS 430/430W</a>
+          <a class="btn" href="https://www8.garmin.com/specs/gi102a_106a.pdf" target="_blank" rel="noopener noreferrer" data-i18n="av_gi106_manual">Referência Garmin GI-106A</a>
+          <a class="btn" href="https://static.garmin.com/pumac/190-01182-01_e.pdf" target="_blank" rel="noopener noreferrer" data-i18n="av_gnc255_manual">Manual Garmin GNC 255</a>
+        </div>
+      </article>
+    </div>
+    </div>
+
+    <div id="av-setup-2" class="av-setup-panel" role="tabpanel" aria-labelledby="av-setup-2-tab" hidden>
+      <div class="avionics-layout avionics-layout-setup2">
+        <article class="avionics-unit gi106a-unit" aria-labelledby="setup2-gi-title">
+          <div class="av-setup2-unit-header">
+            <div><span class="av-unit-mark">GARMIN</span><h3 id="setup2-gi-title">GI-106A <small>VOR / LOC</small></h3></div>
+            <button id="setup2-gi-power" class="av-power-button" type="button" aria-label="Ligar ou desligar GI-106A"><span id="setup2-gi-status-led" class="av-status-led is-on"></span><span id="setup2-gi-status">ON</span></button>
+          </div>
+          <div class="gi106a-face">
+            <div class="gi106a-round">
+              <span class="gi106a-screw gi106a-screw-top-left" aria-hidden="true"></span>
+              <span class="gi106a-screw gi106a-screw-top-right" aria-hidden="true"></span>
+              <span class="gi106a-screw gi106a-screw-bottom-left" aria-hidden="true"></span>
+              <span class="gi106a-screw gi106a-screw-bottom-right" aria-hidden="true"></span>
+              <svg class="gi106a-svg" viewBox="0 0 320 320" role="img" aria-label="Indicador Garmin GI-106A VOR LOC simulado">
+              <defs>
+                <radialGradient id="gi106a-bezel" cx="35%" cy="28%">
+                  <stop offset="0" stop-color="#94a3b8" />
+                  <stop offset="0.48" stop-color="#334155" />
+                  <stop offset="1" stop-color="#020617" />
+                </radialGradient>
+                <radialGradient id="gi106a-dial" cx="50%" cy="42%">
+                  <stop offset="0" stop-color="#1e293b" />
+                  <stop offset="1" stop-color="#020617" />
+                </radialGradient>
+              </defs>
+              <rect class="gi106a-bezel" x="10" y="10" width="300" height="300" rx="7" />
+              <circle class="gi106a-dial" cx="160" cy="160" r="121" />
+              <circle class="gi106a-inner-ring" cx="160" cy="160" r="107" />
+              <g class="gi106a-ticks" transform="translate(16 16) scale(0.9)">
+                <line x1="160" y1="31" x2="160" y2="47" />
+                <line x1="160" y1="31" x2="160" y2="42" transform="rotate(10 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(20 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(30 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(40 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(50 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(60 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(70 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(80 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(90 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(100 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(110 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(120 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(130 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(140 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(150 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(160 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(170 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(180 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(190 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(200 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(210 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(220 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(230 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(240 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(250 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(260 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(270 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(280 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(290 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(300 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(310 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(320 160 160)" />
+                <line x1="160" y1="31" x2="160" y2="47" transform="rotate(330 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(340 160 160)" /><line x1="160" y1="31" x2="160" y2="42" transform="rotate(350 160 160)" />
+              </g>
+              <g class="gi106a-ticks gi106a-ticks-fine" transform="translate(16 16) scale(0.9)" aria-hidden="true">
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(5 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(15 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(25 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(35 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(45 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(55 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(65 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(75 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(85 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(95 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(105 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(115 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(125 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(135 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(145 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(155 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(165 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(175 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(185 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(195 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(205 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(215 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(225 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(235 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(245 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(255 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(265 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(275 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(285 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(295 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(305 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(315 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(325 160 160)" />
+                <line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(335 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(345 160 160)" /><line class="gi106a-tick-fine" x1="160" y1="31" x2="160" y2="38" transform="rotate(355 160 160)" />
+              </g>
+              <g class="gi106a-course-scale">
+                <text x="160" y="61">0</text><text x="215" y="76">3</text><text x="254" y="112">6</text><text x="268" y="165">9</text>
+                <text x="254" y="214">12</text><text x="215" y="253">15</text><text x="160" y="269">18</text><text x="105" y="253">21</text>
+                <text x="66" y="214">24</text><text x="52" y="165">27</text><text x="66" y="112">30</text><text x="105" y="76">33</text>
+              </g>
+              <g id="setup2-gi-course-needle" class="gi106a-course-needle" transform="rotate(270 160 160)">
+                <line x1="160" y1="54" x2="160" y2="266" />
+                <g class="gi106a-course-bars" aria-hidden="true">
+                  <line class="gi106a-course-bar" x1="153" y1="84" x2="167" y2="84" /><line class="gi106a-course-bar" x1="153" y1="98" x2="167" y2="98" /><line class="gi106a-course-bar" x1="153" y1="112" x2="167" y2="112" /><line class="gi106a-course-bar" x1="153" y1="126" x2="167" y2="126" /><line class="gi106a-course-bar" x1="153" y1="140" x2="167" y2="140" /><line class="gi106a-course-bar" x1="153" y1="180" x2="167" y2="180" /><line class="gi106a-course-bar" x1="153" y1="194" x2="167" y2="194" /><line class="gi106a-course-bar" x1="153" y1="208" x2="167" y2="208" /><line class="gi106a-course-bar" x1="153" y1="222" x2="167" y2="222" /><line class="gi106a-course-bar" x1="153" y1="236" x2="167" y2="236" />
+                  <line class="gi106a-course-bar" x1="84" y1="153" x2="84" y2="167" /><line class="gi106a-course-bar" x1="98" y1="153" x2="98" y2="167" /><line class="gi106a-course-bar" x1="112" y1="153" x2="112" y2="167" /><line class="gi106a-course-bar" x1="126" y1="153" x2="126" y2="167" /><line class="gi106a-course-bar" x1="140" y1="153" x2="140" y2="167" /><line class="gi106a-course-bar" x1="180" y1="153" x2="180" y2="167" /><line class="gi106a-course-bar" x1="194" y1="153" x2="194" y2="167" /><line class="gi106a-course-bar" x1="208" y1="153" x2="208" y2="167" /><line class="gi106a-course-bar" x1="222" y1="153" x2="222" y2="167" /><line class="gi106a-course-bar" x1="236" y1="153" x2="236" y2="167" />
+                </g>
+                <path d="M160 46 L150 70 L170 70 Z" />
+                <path d="M160 274 L151 250 L169 250 Z" />
+              </g>
+              <line class="gi106a-cdi" x1="84" y1="160" x2="236" y2="160" />
+              <g class="gi106a-cdi-scale"><circle cx="132" cy="160" r="3" /><circle cx="146" cy="160" r="3" /><circle cx="160" cy="160" r="4" /><circle cx="174" cy="160" r="3" /><circle cx="188" cy="160" r="3" /></g>
+              <g class="gi106a-aircraft" aria-hidden="true"><line x1="160" y1="111" x2="160" y2="209" /><line x1="111" y1="160" x2="209" y2="160" /><circle cx="160" cy="160" r="14" /><circle cx="160" cy="160" r="4" /></g>
+              <text id="setup2-gi-tofrom" class="gi106a-flag" x="160" y="108">TO</text>
+              <text id="setup2-gi-loc" class="gi106a-loc" x="160" y="222">VOR</text>
+              <text class="gi106a-brand-label" x="239" y="244">GARMIN</text>
+              </svg>
+            </div>
+            <div class="gi106a-readouts"><span>OBS <strong id="setup2-gi-course-value">270°</strong></span><span>CDI <strong id="setup2-gi-cdi-value">CENTER</strong></span></div>
+          </div>
+          <div class="gi106a-controls">
+            <span class="av-control-caption">COURSE / OBS</span>
+            <button id="setup2-gi-course-knob" class="av-knob gi106a-course-knob" type="button" title="Arrastar horizontalmente ajusta o OBS" aria-label="Arrastar para ajustar o curso OBS">OBS<br><small>270°</small></button>
+            <button id="setup2-gi-tofrom-button" class="av-key gi106a-tofrom-button" type="button" aria-label="Alternar indicação TO e FROM">TO / FROM</button>
+          </div>
+          <p class="av-unit-readout mono">GI-106A · VOR/LOC · <span id="setup2-gi-readout">113.10 · TO</span></p>
+        </article>
+
+        <article class="avionics-unit gnc255-unit" aria-labelledby="setup2-gnc-title">
+          <div class="gnc255-face">
+            <div class="gnc255-topline"><span class="gns-face-brand">GARMIN</span><span class="gnc255-photo-sensor" aria-hidden="true"></span><span class="gnc255-lock-screw" aria-hidden="true"></span><h3 id="setup2-gnc-title">GNC 255<span>A/B</span></h3></div>
+            <div class="gnc255-panel">
+              <div class="gnc255-left-controls" aria-label="Controlos de volume">
+                <div class="gnc255-com-control">
+                  <button id="setup2-gnc-power" class="av-power-button gnc255-volume-knob" type="button" aria-label="Ligar ou desligar GNC 255; volume COM e squelch"><span id="setup2-gnc-status-led" class="av-status-led is-on"></span><span id="setup2-gnc-status">ON</span><small>COM</small><b>PWR VOL</b><em>PUSH SQ</em></button>
+                  <button class="av-key gnc255-mon-key" type="button" aria-label="Monitorizar a frequência COM standby" data-av-help="MON — monitoriza a frequência COM standby.">MON</button>
+                </div>
+                <button class="gnc255-volume-knob gnc255-volume-knob-nav" type="button" aria-label="Controlo de volume NAV e identificação Morse"><small>NAV</small><b>VOL</b><em>PUSH ID</em></button>
+              </div>
+              <div class="gnc255-center-stack">
+                <div class="gnc255-display" role="region" aria-label="Display Garmin GNC 255 simulado" aria-live="polite">
+                  <div class="gnc255-screen-top"><strong id="setup2-gnc-mode">VOR</strong></div>
+                  <div class="gnc255-frequency-pair">
+                    <div class="gnc255-frequency-cell">
+                      <small>ACT</small><strong id="setup2-gnc-active-frequency">113.10</strong><em id="setup2-gnc-id">VIS · ID OK</em>
+                    </div>
+                    <div class="gnc255-frequency-cell">
+                      <small>STB</small><strong id="setup2-gnc-standby-frequency">114.10</strong><em id="setup2-gnc-standby-id">NAV STBY</em>
+                    </div>
+                  </div>
+                </div>
+                <div class="gnc255-button-row">
+                  <button id="setup2-gnc-com-flip" class="av-key" type="button" aria-label="Selecionar NAV ou COM" title="Selecionar NAV ou COM">C/N</button>
+                  <button id="setup2-gnc-cdi-button" class="av-key" type="button" aria-label="Alternar modo VOR e LOC" title="OBS / modo NAV">OBS</button>
+                  <button id="setup2-gnc-tofrom-button" class="av-key" type="button" aria-label="Alternar indicação TO e FROM" title="TO/FROM">T/F</button>
+                  <span class="gnc255-screw-hole" aria-hidden="true"></span>
+                  <button class="av-key gnc255-decorative-key" type="button" aria-label="Abrir funções" title="Funções">FUNC</button>
+                  <button class="av-key gnc255-decorative-key" type="button" aria-label="Limpar entrada" title="Limpar">CLR</button>
+                  <button class="av-key gnc255-decorative-key" type="button" aria-label="Confirmar entrada" title="Confirmar">ENT</button>
+                </div>
+              </div>
+              <div class="gnc255-right-controls" aria-label="Sintonia de frequência">
+                <span class="gnc255-tune-label">TUNE</span>
+                <button id="setup2-gnc-nav-flip" class="av-key gnc255-flip-key" type="button" aria-label="Transferir a frequência standby do alvo selecionado" title="FLIP/FLOP">↔</button>
+                <div class="gnc255-dual-knob" aria-label="Comando concêntrico de frequência">
+                  <button id="setup2-gnc-nav-knob" class="gns-physical-knob gnc255-knob gnc255-outer-knob" type="button" title="Arrastar para ajustar a frequência NAV; clicar seleciona NAV" aria-label="Arrastar para ajustar a frequência NAV"><span class="visually-hidden">TUNE</span></button>
+                  <button id="setup2-gnc-com-knob" class="gns-physical-knob gnc255-knob gnc255-inner-knob" type="button" title="Arrastar para ajustar a frequência COM; clicar seleciona COM" aria-label="Arrastar para ajustar a frequência COM"><span class="visually-hidden">PUSH CRSR</span></button>
+                </div>
+                <span class="gnc255-knob-caption">PUSH<br>CRSR</span>
+              </div>
+            </div>
+          </div>
+          <p class="av-unit-readout mono">GNC 255 · <span id="setup2-gnc-readout">NAV · 113.10 / 114.10</span></p>
+        </article>
+      </div>
+      <div class="avionics-console-footer av-setup2-footer">
+        <div class="av-status-box"><span class="note" data-i18n="av_status_label">Estado</span><strong id="setup2-training-status" aria-live="polite">Configura os instrumentos e pressiona Verificar instrumentos.</strong><span id="setup2-instrument-summary" class="mono av-instrument-summary">OBS 270 · NAV 113.10 · TO · CDI CENTER</span></div>
+        <button id="setup2-reset" class="btn av-reset" type="button" data-i18n="av_setup2_reset">Repor Setup 2</button>
+      </div>
+      <section class="av-tutorial av-setup2-tutorial" aria-labelledby="setup2-tutorial-title">
+        <div class="av-tutorial-heading">
+          <div>
+            <p class="avionics-kicker" data-i18n="av_tutorial_kicker">Tutorial prático</p>
+            <h3 id="setup2-tutorial-title" data-i18n="av_tutorial_title">Aprende com mapa e exercícios</h3>
+            <p class="note" data-i18n="av_setup2_tutorial_intro">Treina tarefas VFR básicas no GNC 255 e no GI-106A. Arrasta o avião ou clica no mapa para comparar posição, radial e indicação do instrumento.</p>
+          </div>
+          <div id="setup2-tutorial-progress" class="av-tutorial-progress" aria-live="polite">1 / 4</div>
+        </div>
+        <div class="av-tutorial-toolbar">
+          <label class="fpl-field" data-i18n-label="av_tutorial_select">Exemplo
+            <select id="setup2-tutorial-example" class="select">
+              <option value="identify" data-i18n="av_setup2_level1_option">Nível 1 · Identificar Viseu VOR</option>
+              <option value="vis-to" data-i18n="av_setup2_level2_option">Nível 2 · Voar TO Viseu</option>
+              <option value="vis-from" data-i18n="av_setup2_level3_option">Nível 3 · Ler radial FROM</option>
+              <option value="prt-to" data-i18n="av_setup2_level4_option">Nível 4 · Mudar para Porto VOR</option>
+            </select>
+          </label>
+          <div class="av-tutorial-actions">
+            <button id="setup2-tutorial-load" class="btn" type="button" data-i18n="av_tutorial_load">Carregar exercício</button>
+            <button id="setup2-tutorial-check" class="btn" type="button" data-i18n="av_setup2_check">Verificar instrumentos</button>
+            <button id="setup2-tutorial-next" class="btn" type="button" data-i18n="av_tutorial_next">Próximo exemplo</button>
+          </div>
+        </div>
+        <div class="av-tutorial-layout">
+          <div class="av-tutorial-map-panel">
+            <div id="setup2-tutorial-map" class="av-tutorial-map" aria-label="Mapa do tutorial Setup 2"></div>
+            <p class="note" data-i18n="av_tutorial_map_hint">A linha liga o avião à referência. A geometria é didática: distância, bearing e radial não representam DME certificado.</p>
+          </div>
+          <article class="av-tutorial-brief">
+            <h4 id="setup2-tutorial-example-title">—</h4>
+            <p id="setup2-tutorial-briefing" class="note">—</p>
+            <div class="av-tutorial-objective"><span class="note" data-i18n="av_tutorial_objective">Objetivo</span><strong id="setup2-tutorial-objective-text">—</strong></div>
+            <ol id="setup2-tutorial-steps" class="av-tutorial-steps"></ol>
+            <div class="av-tutorial-readouts">
+              <div><span class="note" data-i18n="av_tutorial_aircraft">Avião</span><strong id="setup2-tutorial-aircraft">—</strong></div>
+              <div><span class="note" data-i18n="av_tutorial_reference">Referência</span><strong id="setup2-tutorial-reference">—</strong></div>
+              <div><span class="note" data-i18n="av_tutorial_bearing">Bearing TO</span><strong id="setup2-tutorial-bearing">—</strong></div>
+              <div><span class="note" data-i18n="av_tutorial_radial">Radial FROM</span><strong id="setup2-tutorial-radial">—</strong></div>
+            </div>
+            <p id="setup2-tutorial-status" class="av-tutorial-status" aria-live="polite">—</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <section class="av-challenge-checklist-panel" aria-labelledby="av-challenge-checklist-title">
+      <div class="av-challenge-checklist-heading">
+        <div>
+          <p class="avionics-kicker" data-i18n="av_checklist_kicker">Confirmação de desafios</p>
+          <h3 id="av-challenge-checklist-title" data-i18n="av_challenge_checklist_title">Checklist de execução dos níveis</h3>
+          <p class="note" data-i18n="av_challenge_checklist_intro">Abre cada nível, executa os passos e confirma-o quando o objetivo ficar validado. A checklist é apenas desta sessão do navegador.</p>
+        </div>
+        <div id="av-challenge-checklist-progress" class="av-tutorial-progress" aria-live="polite">0 / 9</div>
+      </div>
+      <div class="av-challenge-checklist" id="av-challenge-checklist">
+        <div class="av-challenge-group">
+          <h4 data-i18n="av_checklist_setup1">Setup 1 · G5 + GNS 430/430W</h4>
+          <div class="av-challenge-row" data-challenge-id="setup1-vis-to" data-challenge-setup="av-setup-1" data-challenge-example="vis-to">
+            <div><strong data-i18n="av_tutorial_vis_to_title">Nível 1 · Viseu VOR — voar TO</strong><span data-i18n="av_tutorial_vis_to_objective">113.10 · VLOC · OBS 090° · HDG 090° · indicação TO</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup1-vis-from" data-challenge-setup="av-setup-1" data-challenge-example="vis-from">
+            <div><strong data-i18n="av_tutorial_vis_from_title">Nível 2 · Viseu VOR — radial FROM</strong><span data-i18n="av_tutorial_vis_from_objective">113.10 · VLOC · OBS 090° · HDG 090° · indicação FROM</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup1-prt-to" data-challenge-setup="av-setup-1" data-challenge-example="prt-to">
+            <div><strong data-i18n="av_tutorial_prt_title">Nível 3 · Porto VOR — interceptar TO</strong><span data-i18n="av_tutorial_prt_objective">114.10 · VLOC · OBS 000° · HDG 000° · indicação TO</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup1-gps-direct" data-challenge-setup="av-setup-1" data-challenge-example="gps-direct">
+            <div><strong data-i18n="av_tutorial_gps_title">Nível 4 · GPS — Direct-to LPPR</strong><span data-i18n="av_tutorial_gps_objective">GPS · LPPR · Direct-to · CRS 000° · HDG 000°</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup1-map-page" data-challenge-setup="av-setup-1" data-challenge-example="map-page">
+            <div><strong data-i18n="av_tutorial_map_title">Nível 5 · GNS 430 — Map Page</strong><span data-i18n="av_tutorial_map_objective">MAP · GPS · LPPR · alcance 20 NM · leitura TRK/BRG/DTK/DIS/GS</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+        </div>
+        <div class="av-challenge-group">
+          <h4 data-i18n="av_checklist_setup2">Setup 2 · GI-106A + GNC 255</h4>
+          <div class="av-challenge-row" data-challenge-id="setup2-identify" data-challenge-setup="av-setup-2" data-challenge-example="identify">
+            <div><strong data-i18n="av_setup2_level1_title">Nível 1 · Sintonizar e identificar</strong><span data-i18n="av_setup2_level1_objective">NAV 113.10 ativa · VOR · identificador VIS</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup2-vis-to" data-challenge-setup="av-setup-2" data-challenge-example="vis-to">
+            <div><strong data-i18n="av_setup2_level2_title">Nível 2 · Curso TO Viseu</strong><span data-i18n="av_setup2_level2_objective">NAV 113.10 · OBS 090° · TO · CDI centrado</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup2-vis-from" data-challenge-setup="av-setup-2" data-challenge-example="vis-from">
+            <div><strong data-i18n="av_setup2_level3_title">Nível 3 · Radial FROM Viseu</strong><span data-i18n="av_setup2_level3_objective">NAV 113.10 · OBS 090° · FROM · CDI centrado</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+          <div class="av-challenge-row" data-challenge-id="setup2-prt-to" data-challenge-setup="av-setup-2" data-challenge-example="prt-to">
+            <div><strong data-i18n="av_setup2_level4_title">Nível 4 · Nova estação, mesmo método</strong><span data-i18n="av_setup2_level4_objective">NAV 114.10 · OBS 000° · TO · CDI centrado</span></div>
+            <span class="av-challenge-state" data-challenge-status>Por iniciar</span><button class="btn av-challenge-open" type="button" data-i18n="av_checklist_open">Abrir nível</button><button class="btn av-challenge-confirm" type="button" data-i18n="av_checklist_confirm" disabled>Confirmar execução</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </article>
+</section>
+
+<section id="massbalance" class="fpl-subsection flightplan-submodule">
   <article class="card">
     <h2 data-i18n="mb_title">Massa &amp; Balanceamento</h2>
     <p class="note" data-i18n="mb_note">
@@ -708,5 +1365,7 @@
 <script src="{{ url_for('static', filename='js/vor-indicator.js') }}"></script>
 <script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
 <script src="{{ url_for('static', filename='js/instrument-lab.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vor-trainer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/avionics-simulator.js') }}"></script>
 <script src="{{ url_for('static', filename='js/massbalance.js') }}"></script>
 {% endblock %}

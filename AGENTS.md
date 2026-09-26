@@ -2,8 +2,8 @@
 
 ## Purpose
 
-- MyFlyApp is a Flask/Vercel single-page aviation planning dashboard for Portuguese GA/PPL workflows.
-- The app combines METAR/TAF proxying, external aviation embeds, route/navigation planning, simulation and manual instrument study, mass and balance calculations, and simple navigation PDF export.
+- MyFlyApp is a Flask/Vercel single-page aviation planning dashboard for Portuguese GA/PPL workflows, including an external E6BX flight-computer subtab under Navegações and a Treino tab with Instrumentos and Avionics Simulator submodules.
+- The app combines METAR/TAF proxying, external aviation embeds, route/navigation planning, simulation, manual instrument study, an interactive Porto/Viseu VOR trainer, a local Avionics Simulator with selectable Setup 1 (dual-G5 PFD/HSI + GNS 430/430W) and Setup 2 (GI-106A VOR/LOC + GNC 255), guided exercises, mass and balance calculations, and simple navigation PDF export.
 - Treat all aviation outputs as planning aids only; preserve existing warnings that official sources and pilot responsibility control.
 
 ## Core Contract

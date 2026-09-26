@@ -111,29 +111,34 @@ def _build_simple_pdf(title, sections):
     return out.getvalue()
 
 AERODROMES = [
-    {"icao": "LPPT", "name": "Lisboa Humberto Delgado", "lat": 38.7742, "lon": -9.1342, "atis": "127.125", "main_freq": "118.100"},
+    {"icao": "LPPT", "name": "Lisboa Humberto Delgado", "lat": 38.7742, "lon": -9.1342, "atis": "124.155", "main_freq": "118.105"},
     {"icao": "LPPR", "name": "Porto Francisco Sa Carneiro", "lat": 41.2481, "lon": -8.6814, "atis": "124.305", "main_freq": "120.910"},
-    {"icao": "LPFR", "name": "Faro", "lat": 37.0144, "lon": -7.9659, "atis": "119.150", "main_freq": "118.030"},
-    {"icao": "LPMA", "name": "Madeira Cristiano Ronaldo", "lat": 32.6979, "lon": -16.7745, "atis": "118.875", "main_freq": "118.350"},
-    {"icao": "LPPS", "name": "Porto Santo", "lat": 33.0734, "lon": -16.3495, "atis": "N/A", "main_freq": "118.250"},
-    {"icao": "LPAZ", "name": "Santa Maria", "lat": 36.9714, "lon": -25.1706, "atis": "N/A", "main_freq": "118.650"},
-    {"icao": "LPPD", "name": "Ponta Delgada Joao Paulo II", "lat": 37.7412, "lon": -25.6979, "atis": "126.650", "main_freq": "118.800"},
-    {"icao": "LPLA", "name": "Lajes", "lat": 38.7618, "lon": -27.0908, "atis": "N/A", "main_freq": "118.000"},
-    {"icao": "LPHR", "name": "Horta", "lat": 38.5199, "lon": -28.7159, "atis": "N/A", "main_freq": "118.700"},
-    {"icao": "LPPI", "name": "Pico", "lat": 38.5543, "lon": -28.4413, "atis": "N/A", "main_freq": "118.550"},
-    {"icao": "LPSJ", "name": "Sao Jorge", "lat": 38.6655, "lon": -28.1758, "atis": "N/A", "main_freq": "118.400"},
-    {"icao": "LPFL", "name": "Flores", "lat": 39.4553, "lon": -31.1314, "atis": "N/A", "main_freq": "118.900"},
-    {"icao": "LPCR", "name": "Corvo", "lat": 39.6715, "lon": -31.1136, "atis": "N/A", "main_freq": "118.900"},
-    {"icao": "LPGR", "name": "Graciosa", "lat": 39.0922, "lon": -28.0298, "atis": "N/A", "main_freq": "118.200"},
+    {"icao": "LPFR", "name": "Faro", "lat": 37.0144, "lon": -7.9659, "atis": "124.205", "main_freq": "120.755"},
+    {"icao": "LPMA", "name": "Madeira Cristiano Ronaldo", "lat": 32.6979, "lon": -16.7745, "atis": "130.355", "main_freq": "124.660"},
+    {"icao": "LPPS", "name": "Porto Santo", "lat": 33.0734, "lon": -16.3495, "atis": "N/A", "main_freq": "120.055"},
+    {"icao": "LPAZ", "name": "Santa Maria", "lat": 36.9714, "lon": -25.1706, "atis": "N/A", "main_freq": "118.100"},
+    {"icao": "LPPD", "name": "Ponta Delgada Joao Paulo II", "lat": 37.7412, "lon": -25.6979, "atis": "123.900", "main_freq": "118.300"},
+    {"icao": "LPLA", "name": "Lajes", "lat": 38.7618, "lon": -27.0908, "atis": "120.300", "main_freq": "122.100"},
+    {"icao": "LPHR", "name": "Horta", "lat": 38.5199, "lon": -28.7159, "atis": "121.100", "main_freq": "118.000"},
+    {"icao": "LPPI", "name": "Pico", "lat": 38.5543, "lon": -28.4413, "atis": "N/A", "main_freq": "122.700"},
+    {"icao": "LPSJ", "name": "Sao Jorge", "lat": 38.6655, "lon": -28.1758, "atis": "N/A", "main_freq": "119.800"},
+    {"icao": "LPFL", "name": "Flores", "lat": 39.4553, "lon": -31.1314, "atis": "N/A", "main_freq": "118.800"},
+    {"icao": "LPCR", "name": "Corvo", "lat": 39.6715, "lon": -31.1136, "atis": "N/A", "main_freq": "122.300"},
+    {"icao": "LPGR", "name": "Graciosa", "lat": 39.0922, "lon": -28.0298, "atis": "N/A", "main_freq": "122.900"},
     {"icao": "LPEV", "name": "Evora", "lat": 38.5335, "lon": -7.8896, "atis": "N/A", "main_freq": "122.705"},
-    {"icao": "LPCS", "name": "Cascais", "lat": 38.7250, "lon": -9.3552, "atis": "N/A", "main_freq": "118.700"},
-    {"icao": "LPBJ", "name": "Beja", "lat": 38.0789, "lon": -7.9324, "atis": "N/A", "main_freq": "119.100"},
-    {"icao": "LPMR", "name": "Monte Real", "lat": 39.8283, "lon": -8.8875, "atis": "N/A", "main_freq": "122.100"},
+    {"icao": "LPCS", "name": "Cascais", "lat": 38.7250, "lon": -9.3552, "atis": "N/A", "main_freq": "120.305"},
+    {"icao": "LPBJ", "name": "Beja", "lat": 38.0789, "lon": -7.9324, "atis": "N/A", "main_freq": "130.415"},
+    {"icao": "LPMR", "name": "Monte Real", "lat": 39.8283, "lon": -8.8875, "atis": "N/A", "main_freq": "118.640"},
     {"icao": "LPVL", "name": "Vilar de Luz", "lat": 41.2792, "lon": -8.5172, "atis": "N/A", "main_freq": "122.405"},
-    {"icao": "LPVZ", "name": "Viseu", "lat": 40.7255, "lon": -7.8889, "atis": "N/A", "main_freq": "122.505"},
-    {"icao": "LPBR", "name": "Braga", "lat": 41.5871, "lon": -8.4451, "atis": "N/A", "main_freq": "123.255"},
-    {"icao": "LPVR", "name": "Vila Real", "lat": 41.2743, "lon": -7.7205, "atis": "N/A", "main_freq": "123.505"},
-    {"icao": "LPCH", "name": "Chaves", "lat": 41.7224, "lon": -7.4667, "atis": "N/A", "main_freq": "123.255"},
+    {"icao": "LPVZ", "name": "Viseu", "lat": 40.7255, "lon": -7.8889, "atis": "N/A", "main_freq": "122.710"},
+    {"icao": "LPBR", "name": "Braga", "lat": 41.5871, "lon": -8.4451, "atis": "N/A", "main_freq": "122.005"},
+    {"icao": "LPVR", "name": "Vila Real", "lat": 41.2743, "lon": -7.7205, "atis": "N/A", "main_freq": "124.905"},
+    {"icao": "LPCH", "name": "Chaves", "lat": 41.7224, "lon": -7.4667, "atis": "N/A", "main_freq": "122.705"},
+    # Coordenadas ARP e cartas: NAV Portugal eVFR/AIP; links PT mantêm a edição oficial publicada.
+    {"icao": "LPCO", "name": "Coimbra", "lat": 40.156111, "lon": -8.469167, "atis": "N/A", "main_freq": "122.905", "aip_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/html/eAIP/LP-AD-2.LPCO-pt-PT.html", "adc_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPCO-ADC_pt.pdf", "vac_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPCO-VAC_pt.pdf"},
+    {"icao": "LPMU", "name": "Mogadouro", "lat": 41.394444, "lon": -6.684444, "atis": "N/A", "main_freq": "120.105", "aip_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/html/eAIP/LP-AD-2.LPMU-pt-PT.html", "adc_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPMU-ADC_pt.pdf", "vac_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPMU-VAC_pt.pdf"},
+    {"icao": "LPMI", "name": "Mirandela", "lat": 41.470278, "lon": -7.227778, "atis": "N/A", "main_freq": "122.205", "aip_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/html/eAIP/LP-AD-2.LPMI-pt-PT.html", "adc_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPMI-ADC_pt.pdf", "vac_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPMI-VAC_pt.pdf"},
+    {"icao": "LPBG", "name": "Bragança", "lat": 41.856667, "lon": -6.707500, "atis": "N/A", "main_freq": "122.305", "aip_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/html/eAIP/LP-AD-2.LPBG-pt-PT.html", "adc_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPBG-ADC_pt.pdf", "vac_pdf_url": "https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_LPBG-VAC_pt.pdf"},
 ]
 
 
@@ -402,9 +407,9 @@ def index():
         aerodromes=[
             {
                 **ad,
-                "aip_url": f"https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/html/eAIP/LP-AD-2.{ad['icao']}-en-GB.html",
-                "adc_pdf_url": f"https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_{ad['icao']}-ADC_en.pdf",
-                "vac_pdf_url": f"https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_{ad['icao']}-VAC_en.pdf",
+                "aip_url": ad.get("aip_url") or f"https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/html/eAIP/LP-AD-2.{ad['icao']}-en-GB.html",
+                "adc_pdf_url": ad.get("adc_pdf_url") or f"https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_{ad['icao']}-ADC_en.pdf",
+                "vac_pdf_url": ad.get("vac_pdf_url") or f"https://ais.nav.pt/wp-content/uploads/AIS_Files/eVFR_Current/eVFR_Online/eAIP/graphics/eAIP/LP_AD_2_{ad['icao']}-VAC_en.pdf",
             }
             for ad in AERODROMES
         ],
