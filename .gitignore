@@ -5,3 +5,5 @@ __pycache__/
 .env
 .vercel/
 Backup/
+tmp/
+.claude/settings.local.json

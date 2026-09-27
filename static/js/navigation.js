@@ -11,6 +11,23 @@ let navReferenceMarkers = [];
 let navMode = "route";
 let navLegAltitudes = {};
 let navLanguage = "pt";
+let navSimMap = null;
+let navSimRouteLine = null;
+let navSimDirectLine = null;
+let navSimPlaneMarker = null;
+let navSimTargetMarker = null;
+let navSimHsi = null;
+let navSimRmi = null;
+let navSimVor = null;
+let navSimRoute = [];
+let navSimLegs = [];
+let navSimTotalNm = 0;
+let navSimDistanceNm = 0;
+let navSimElapsedSeconds = 0;
+let navSimPlaying = false;
+let navSimFrame = null;
+let navSimLastFrameTime = null;
+let navSimRouteSignature = "";
 
 const NAV_I18N = {
   pt: {
@@ -41,11 +58,18 @@ Object.assign(NAV_I18N.pt, {
   app_title: "MyFlyApp",
   tab_dashboard: "Dashboard",
   tab_flightplan: "Plano de voo",
+  tab_training: "Treino",
   tab_navigation: "Navegações",
+  tab_e6b: "E6B",
+  tab_instruments: "Instrumentos",
+  tab_avionics: "Avionics Simulator",
   tab_massbalance: "Massa & Balanceamento",
   freq_title: "Frequências",
-  freq_warning: "Aviso: frequências informativas e podem não estar atualizadas.",
+  freq_warning: "⚠️ Aviso: estas frequências são apenas informativas e podem estar incorretas ou desatualizadas. Confirma sempre na carta/eAIP e NOTAM atuais.",
   atis_selected: "ATIS (aeroporto selecionado)",
+  lisboa_information: "Lisboa Information",
+  freq_aerodrome: "Aeródromo",
+  select_aerodrome: "Seleciona um aeródromo",
   custom_icao: "ICAO manual",
   view_btn: "Ver",
   wind_label: "Vento",
@@ -59,6 +83,8 @@ Object.assign(NAV_I18N.pt, {
   notam_map_title: "Mapa NOTAM",
   notam_embed_unavailable: "NOTAM indisponível no embed",
   open_notam_viewer: "Abrir visualizador NOTAM",
+  five_letter_map_title: "Mapa 5-letter code",
+  open_five_letter_map: "Abrir no Google My Maps",
   flyweather_cameras_title: "Câmaras Flyweather (LPVL)",
   open_flyweather: "Abrir no Flyweather",
   civil_aerodromes_title: "Aeródromos civis de Portugal",
@@ -121,6 +147,80 @@ Object.assign(NAV_I18N.pt, {
   mode_alternate: "Alternante",
   mode_reference: "Referência",
   save_pdf: "Guardar PDF",
+  simulate_btn: "Simular",
+  sim_title: "Simulação da navegação",
+  sim_note: "Simulação educativa simplificada; não representa sensores certificados nem substitui treino de voo.",
+  sim_close: "Fechar simulação",
+  sim_guidance_mode: "Referência dos instrumentos",
+  sim_mode_breakpoints: "Próximo breaking point",
+  sim_mode_destination: "Só destino final",
+  sim_playback_speed: "Velocidade da reprodução",
+  sim_play: "▶ Play",
+  sim_pause: "❚❚ Pausa",
+  sim_reset: "Reiniciar",
+  sim_ready: "Pronto para iniciar.",
+  sim_need_route: "Cria primeiro uma rota com pelo menos dois pontos.",
+  sim_route_changed: "A rota mudou. A simulação foi reiniciada.",
+  sim_running: "Em voo: perna {leg}, referência {target}.",
+  sim_target_point: "ponto {point}",
+  sim_target_destination: "destino final",
+  sim_paused: "Simulação em pausa.",
+  sim_complete: "Destino alcançado. Simulação concluída.",
+  sim_drag_hint: "Arrasta o avião no mapa para avançar ou recuar na simulação.",
+  sim_dragging: "Ajusta a posição do avião ao longo da rota.",
+  sim_dragged: "Posição ajustada manualmente.",
+  sim_drag_aircraft: "Arrastar avião ao longo da rota",
+  instrument_lab_title: "Estudo manual de instrumentos",
+  instrument_lab_note: "O laboratório começa com um exemplo aleatório. Altera os valores para observar o HSI, RMI e VOR; não usar para navegação real.",
+  instrument_heading: "Rumo HDG (°)",
+  instrument_course: "Curso CRS (°)",
+  instrument_cdi: "CDI (-2 esq. / +2 dir.)",
+  instrument_vor_bearing: "Bearing VOR (°)",
+  instrument_adf_bearing: "Bearing ADF (°)",
+  instrument_obs: "OBS (°)",
+  instrument_flag: "Indicador TO/FROM",
+  vor_trainer_kicker: "Treino interativo",
+  vor_trainer_title: "Navegação VOR — Porto e Viseu",
+  vor_trainer_intro: "Sintoniza uma frequência, posiciona o avião e roda o OBS para perceber radiais, CDI e a indicação TO/FROM.",
+  vor_trainer_disclaimer: "Demonstração educativa simplificada. Não usar para navegação real: confirma sempre frequências, disponibilidade, cobertura e limitações no AIP/eAIP e NOTAM atuais.",
+  vor_frequency: "Frequência NAV (MHz)",
+  vor_tune: "Sintonizar",
+  vor_frequency_help: "Experimenta 114.10 para PRT ou 113.10 para VIS.",
+  aircraft_heading: "Rumo do avião (HDG)",
+  set_direct_heading: "Apontar à estação",
+  vor_obs_course: "Curso selecionado (OBS)",
+  center_to: "Centrar TO",
+  center_from: "Centrar FROM",
+  vor_map_hint: "Arrasta o avião ou clica no mapa para mudar a posição.",
+  random_position: "Nova posição",
+  classic_vor: "VOR clássico",
+  position_analysis: "Leitura da posição",
+  tuned_station: "Estação sintonizada",
+  distance_dme: "Distância geométrica",
+  radial_from: "Radial FROM",
+  bearing_to: "Bearing TO",
+  what_instruments_say: "O que os instrumentos dizem",
+  to_legend: "curso selecionado leva à estação",
+  from_legend: "curso selecionado afasta-se da estação",
+  cdi_legend: "voa para a agulha para intercetar o curso",
+  vor_source_prefix: "Dados das estações:",
+  vor_declination_note: "O cálculo aplica a declinação VOR publicada de 02° W (época 2020); DME e cobertura são apenas aproximados/não simulados.",
+  vor_not_tuned: "Sintoniza uma frequência VOR válida para começar.",
+  vor_not_tuned_explanation: "O instrumento mostra NAV/OFF quando a frequência não corresponde a PRT ou VIS.",
+  vor_station_tuned: "{id} sintonizado. Estás no radial {radial}°; a estação fica no bearing {bearing}°.",
+  vor_to_guidance: "TO · {needle}",
+  vor_from_guidance: "FROM · {needle}",
+  vor_off_guidance: "NAV/OFF · zona de ambiguidade TO/FROM.",
+  vor_to_explanation: "O curso {obs}° aponta para a estação. {turn}",
+  vor_from_explanation: "O curso {obs}° segue para fora da estação pelo radial selecionado. Para navegar até ela, usa Centrar TO.",
+  vor_off_explanation: "Perto da estação ou a cerca de 90° do curso selecionado, a indicação TO/FROM torna-se ambígua.",
+  vor_needle_centered: "CDI centrado: mantém o curso selecionado",
+  vor_needle_left: "agulha à esquerda: interceta para a esquerda",
+  vor_needle_right: "agulha à direita: interceta para a direita",
+  vor_turn_left: "A estação está {degrees}° à esquerda do rumo atual.",
+  vor_turn_right: "A estação está {degrees}° à direita do rumo atual.",
+  vor_heading_aligned: "O rumo está alinhado com a estação.",
+  vor_geometric_distance: "geométrica; não substitui DME",
   nav_help: "Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternante: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.",
   undo_point: "Desfazer ponto",
   clear_route: "Limpar rota",
@@ -153,6 +253,11 @@ Object.assign(NAV_I18N.pt, {
   alternate_need_route: "Define primeiro pelo menos um ponto de destino na rota.",
   alternate_manual: "Alternante manual",
   e6b_title: "E6B rápido",
+  e6b_tab_kicker: "Calculadora externa",
+  e6b_tab_title: "E6BX Flight Computer",
+  e6b_tab_intro: "Calculadora E6B online para cálculos de voo, conversões e planeamento.",
+  e6b_open: "Abrir E6BX numa nova janela",
+  e6b_tab_note: "Ferramenta externa fornecida por e6bx.com. Se não carregar dentro da tab, usa o botão para abrir a calculadora numa nova janela.",
   distance_nm: "Distância (NM)",
   gs_speed: "Velocidade GS (kt)",
   fuel_burn: "Consumo (gal/h)",
@@ -197,17 +302,204 @@ Object.assign(NAV_I18N.pt, {
   chart_preview: "Pré-visualização da carta",
   notam_text: "Texto NOTAM",
   close_btn: "Fechar",
+  av_kicker: "Treino de aviónica",
+  av_title: "Avionics Simulator",
+  av_intro: "Treina os fluxos básicos de um Garmin G5 ligado a um GNS 430/430W: sintonização, navegação GPS/VLOC, OBS, Direct-to e leitura do HSI.",
+  av_helper_button: "Helper",
+  av_setup1_devices: "2× G5 + GNS 430/430W",
+  av_setup2_devices: "GI-106A VOR/LOC + GNC 255",
+  av_setup2_reset: "Repor Setup 2",
+  av_setup2_tutorial_intro: "Quatro níveis VFR básicos: frequência, TO, FROM e mudança de estação. Arrasta o avião ou clica no mapa para comparar a geometria. No equipamento real, TO/FROM resulta do sinal e do OBS; o botão T/F aqui é apenas didático.",
+  av_setup2_check: "Verificar instrumentos",
+  av_setup2_tutorial_ready: "Os passos ficam verdes automaticamente ao configurares os instrumentos corretamente.",
+  av_setup2_tutorial_success: "Nível concluído. Compara agora o GI-106A com o mapa.",
+  av_setup2_tutorial_power: "Liga o GI-106A e o GNC 255 antes de verificar.",
+  av_setup2_tutorial_position: "O avião afastou-se da posição inicial deste nível. Recarrega o exercício ou aproxima-o no mapa.",
+  av_setup2_tutorial_frequency: "Seleciona NAV/VOR, ativa a frequência pedida e confirma o identificador da estação.",
+  av_setup2_tutorial_course: "Confere o curso OBS no GI-106A; arrasta o botão OBS ou usa ←/→ quando estiver focado.",
+  av_setup2_tutorial_tofrom: "Confere a indicação TO/FROM do simulador com o objetivo e o mapa.",
+  av_setup2_tutorial_cdi: "A agulha CDI ainda não está centrada. Compara curso, posição e radial no mapa.",
+  av_setup2_level1_option: "Nível 1 · Identificar Viseu VOR",
+  av_setup2_level1_title: "Nível 1 · Sintonizar e identificar",
+  av_setup2_level1_briefing: "O avião está a oeste de Viseu. Aprende a transferir uma frequência NAV em standby para ativa e a ler o identificador VIS.",
+  av_setup2_level1_objective: "NAV 113.10 ativa · VOR · identificador VIS",
+  av_setup2_level1_step1: "Seleciona NAV no GNC 255 com C/N, se necessário.",
+  av_setup2_level1_step2: "Confirma 113.10 na frequência standby e usa ↔ (FLIP/FLOP).",
+  av_setup2_level1_step3: "Lê VIS · ID OK no visor; compara a estação com o mapa.",
+  av_setup2_level2_option: "Nível 2 · Voar TO Viseu",
+  av_setup2_level2_title: "Nível 2 · Curso TO Viseu",
+  av_setup2_level2_briefing: "A oeste do Viseu VOR, o bearing aproximado para a estação é 090°. Treina frequência, curso e leitura do CDI.",
+  av_setup2_level2_objective: "NAV 113.10 · OBS 090° · TO · CDI centrado",
+  av_setup2_level2_step1: "Ativa 113.10 no GNC 255 e confirma VIS.",
+  av_setup2_level2_step2: "Ajusta OBS para 090° no GI-106A; o botão aceita arrasto ou ←/→.",
+  av_setup2_level2_step3: "Compara TO e CDI centrado com o bearing TO no mapa.",
+  av_setup2_level3_option: "Nível 3 · Ler radial FROM",
+  av_setup2_level3_title: "Nível 3 · Radial FROM Viseu",
+  av_setup2_level3_briefing: "O avião está a leste de Viseu, na radial aproximada 090°. Compara a direção para fora da estação com a indicação FROM.",
+  av_setup2_level3_objective: "NAV 113.10 · OBS 090° · FROM · CDI centrado",
+  av_setup2_level3_step1: "Ativa 113.10 e confirma o identificador VIS.",
+  av_setup2_level3_step2: "Ajusta OBS para 090° e compara com a radial FROM do mapa.",
+  av_setup2_level3_step3: "Neste simulador, usa T/F para mostrar FROM e confirma o CDI centrado.",
+  av_setup2_level4_option: "Nível 4 · Mudar para Porto VOR",
+  av_setup2_level4_title: "Nível 4 · Nova estação, mesmo método",
+  av_setup2_level4_briefing: "O avião está a sul do Porto VOR. Repete o processo com outra frequência e um curso aproximado 000° para a estação.",
+  av_setup2_level4_objective: "NAV 114.10 · OBS 000° · TO · CDI centrado",
+  av_setup2_level4_step1: "Transfere 114.10 para NAV ativa e confirma PRT · ID OK.",
+  av_setup2_level4_step2: "Ajusta OBS para 000° no GI-106A.",
+  av_setup2_level4_step3: "Compara TO, CDI centrado e bearing TO no mapa.",
+  av_local_badge: "SIMULAÇÃO LOCAL",
+  av_disclaimer: "Simulador educativo simplificado. Não é uma cópia certificada do Garmin PC Trainer, não usa uma base de dados aeronáutica oficial e não substitui o manual, treino aprovado, checklist, AIP/eAIP, NOTAM ou a responsabilidade do piloto.",
+  av_flight_state: "Estado do voo",
+  av_flight_state_note: "Altera estes valores para observar a resposta dos instrumentos.",
+  av_heading_label: "Rumo magnético (HDG)",
+  av_course_label: "Curso / OBS",
+  av_source_label: "Fonte NAV",
+  av_source_gps: "GPS",
+  av_source_vloc: "VLOC",
+  av_waypoint_label: "Waypoint GPS",
+  av_sync_heading: "Sincronizar HDG bug",
+  av_sync_course: "Centrar curso",
+  av_status_label: "Estado",
+  av_status_ready: "Pronto. Começa pelo checklist.",
+  av_scenario_label: "Exercício guiado",
+  av_scenario_basic: "1 · Sintonizar ecrã NAV",
+  av_scenario_vor: "2 · Intercetar radial VLOC",
+  av_scenario_direct: "3 · Direct-to GPS",
+  av_scenario_basic_instruction: "Liga o GNS, seleciona NAV e verifica a frequência standby antes de a ativar.",
+  av_scenario_vor_instruction: "Seleciona VLOC, ativa uma frequência NAV e roda OBS para comparar o curso com a indicação CDI.",
+  av_scenario_direct_instruction: "Seleciona o waypoint, pressiona D→ e confirma com ENT para praticar um Direct-to.",
+  av_reset: "Repor exercício",
+  av_checklist_title: "Checklist de treino",
+  av_check_1: "Liga o GNS e identifica a página NAV.",
+  av_check_2: "Usa o knob esquerdo para selecionar COM ou VLOC e flip-flop para ativar a standby.",
+  av_check_3: "Alterna CDI entre GPS e VLOC; usa OBS para fixar o curso selecionado.",
+  av_check_4: "No G5, lê a fonte, o CDI, o heading e o heading bug antes de corrigir.",
+  av_manual_title: "Manuais e limites",
+  av_manual_note: "Os manuais oficiais dos instrumentos presentes ficam reunidos aqui para consulta durante o treino. A apresentação e a base de dados desta tab são uma implementação independente.",
+  av_official_trainer: "PC Trainers oficiais",
+  av_g5_manual: "Manual Garmin G5",
+  av_gns_manual: "Manual Garmin GNS 430/430W",
+  av_gi106_manual: "Referência Garmin GI-106A",
+  av_gnc255_manual: "Manual Garmin GNC 255",
+  av_tutorial_kicker: "Tutorial prático",
+  av_tutorial_title: "Aprende com mapa e exercícios",
+  av_tutorial_intro: "Escolhe um exercício ou o Modo livre. Clica/arrasta o avião, carrega em GO a 90 KTS e usa ←/→ para virar enquanto acompanhas o G5/GNS.",
+  av_tutorial_select: "Exercício / modo",
+  av_tutorial_free_option: "Modo livre · testar instrumentos",
+  av_tutorial_vis_to_option: "Nível 1 · Viseu VOR — voar TO",
+  av_tutorial_vis_from_option: "Nível 2 · Viseu VOR — radial FROM",
+  av_tutorial_prt_option: "Nível 3 · Porto VOR — voar TO",
+  av_tutorial_gps_option: "Nível 4 · GPS — Direct-to LPPR",
+  av_tutorial_map_option: "Nível 5 · GNS 430 — Map Page",
+  av_tutorial_load: "Carregar exercício",
+  av_tutorial_check: "Verificar HSI",
+  av_tutorial_next: "Próximo exemplo",
+  av_tutorial_free_badge: "MODO LIVRE",
+  av_tutorial_load_free: "Carregar modo livre",
+  av_tutorial_radial_control: "Radial FROM",
+  av_tutorial_distance_control: "Distância",
+  av_tutorial_speed: "Velocidade",
+  av_tutorial_heading_control: "Rumo",
+  av_tutorial_time: "Tempo",
+  av_tutorial_go: "GO",
+  av_tutorial_pause: "PAUSA",
+  av_tutorial_flight_hint: "Clica no mapa para posicionar o avião. Usa ←/→ para mudar o rumo, mesmo em pausa; mantém a tecla premida para continuar a virar. GO inicia o voo a 90 KTS.",
+  av_tutorial_flight_running: "Voo em curso",
+  av_tutorial_map_hint: "A linha liga o avião à referência. A geometria é didática: distância, bearing e radial não representam DME certificado.",
+  av_tutorial_objective: "Objetivo",
+  av_tutorial_aircraft: "Avião",
+  av_tutorial_reference: "Referência",
+  av_tutorial_bearing: "Bearing TO",
+  av_tutorial_radial: "Radial FROM",
+  av_tutorial_ready: "Os passos ficam verdes automaticamente quando a configuração está correta. Podes usar Verificar HSI para confirmar o conjunto.",
+  av_tutorial_step_done: "Passo correto",
+  av_tutorial_step_pending: "Passo por concluir",
+  av_tutorial_step_note: "Dica de leitura — sem validação automática",
+  av_g5_menu_heading: "Heading",
+  av_g5_menu_course: "Course",
+  av_g5_menu_back: "Voltar a HDG",
+  av_g5_menu_hint: "Arrasta o botão para escolher; pressiona para selecionar.",
+  av_g5_heading_help: "Arrasta para ajustar o heading bug. Clica para abrir o menu; mantém premido para sincronizar com o rumo atual.",
+  av_g5_course_help: "Arrasta para ajustar CRS/OBS. Pressiona o botão para confirmar e voltar a HDG.",
+  av_g5_course_unavailable: "Ativa VLOC ou OBS no GNS para ajustar o curso.",
+  av_tutorial_success: "Exercício concluído. Compara agora o teu HSI com a leitura do mapa.",
+  av_tutorial_not_yet: "Ainda não. Confere a fonte NAV, a frequência ativa, o OBS/curso e o heading.",
+  av_tutorial_free_title: "Modo livre — testar instrumentos",
+  av_tutorial_free_briefing: "Coloca o avião onde quiseres no mapa e experimenta os instrumentos sem um objetivo ou resposta certa. O Viseu VOR fica disponível como referência visual.",
+  av_tutorial_free_objective: "Posição livre · GO a 90 KTS · curvas com ←/→",
+  av_tutorial_free_step1: "Clica numa posição do mapa ou arrasta o avião azul para o local de partida.",
+  av_tutorial_free_step2: "Carrega em GO para começar a avançar a 90 KTS.",
+  av_tutorial_free_step3: "Usa ←/→ ou os botões laterais para virar 5° de cada vez e observa o G5/GNS.",
+  av_tutorial_free_ready: "Modo livre pronto. Posiciona o avião, configura os instrumentos e carrega em GO.",
+  av_tutorial_vis_to_title: "Viseu VOR — voar TO",
+  av_tutorial_vis_to_briefing: "O avião está a oeste do Viseu VOR. Queremos voar para a estação usando o GNS em VLOC e o G5 como HSI.",
+  av_tutorial_vis_to_objective: "113.10 · VLOC · OBS 090° · HDG 090° · indicação TO",
+  av_tutorial_vis_to_step1: "No GNS, seleciona VLOC e faz flip-flop de 113.10 para a frequência ativa.",
+  av_tutorial_vis_to_step2: "Pressiona CDI até o G5/GNS mostrarem VLOC; confirma o identificador Viseu.",
+  av_tutorial_vis_to_step3: "No G5 HSI, pressiona o botão, seleciona Course e arrasta até CRS 090°. Pressiona para confirmar.",
+  av_tutorial_vis_to_step4: "Com o botão do G5 HSI em HDG, arrasta até BUG 090° e confirma TO com a CDI centrada.",
+  av_tutorial_vis_from_title: "Viseu VOR — radial FROM",
+  av_tutorial_vis_from_briefing: "O avião está a este do Viseu VOR. Pratica a diferença entre radial FROM e curso TO: o radial é 090°, mas o curso para a estação seria 270°.",
+  av_tutorial_vis_from_objective: "113.10 · VLOC · OBS 090° · HDG 090° · indicação FROM",
+  av_tutorial_vis_from_step1: "Ativa VLOC 113.10 e seleciona VLOC como fonte CDI.",
+  av_tutorial_vis_from_step2: "No menu do G5 HSI, seleciona Course, ajusta CRS 090° e pressiona para confirmar: é o radial que sai da estação.",
+  av_tutorial_vis_from_step3: "Com o botão do G5 HSI em HDG, ajusta BUG 090°; confirma FROM com a CDI centrada.",
+  av_tutorial_vis_from_step4: "Para voar de volta à estação, usa Centrar TO mentalmente: o curso seria 270°.",
+  av_tutorial_prt_title: "Porto VOR — interceptar TO",
+  av_tutorial_prt_briefing: "O avião está a sul do Porto VOR. Usa um curso norte para intercetar a estação e pratica a leitura TO no HSI.",
+  av_tutorial_prt_objective: "114.10 · VLOC · OBS 000° · HDG 000° · indicação TO",
+  av_tutorial_prt_step1: "Ativa 114.10 no VLOC e confirma que o CDI está em VLOC.",
+  av_tutorial_prt_step2: "No menu do G5 HSI, seleciona Course, ajusta CRS 000° e pressiona para confirmar: o curso aponta para o Porto VOR.",
+  av_tutorial_prt_step3: "Com o botão do G5 HSI em HDG, ajusta BUG 000° e confirma TO com a CDI centrada.",
+  av_tutorial_prt_step4: "Compara bearing TO e radial FROM no mapa; não confundas os dois valores.",
+  av_tutorial_gps_title: "GPS — Direct-to LPPR",
+  av_tutorial_gps_briefing: "O avião está a sul de LPPR. Pratica um Direct-to GPS e confirma no G5 que a fonte é GPS, não VLOC.",
+  av_tutorial_gps_objective: "GPS · LPPR · Direct-to · CRS 000° · HDG 000°",
+  av_tutorial_gps_step1: "Seleciona GPS como fonte CDI e LPPR como waypoint.",
+  av_tutorial_gps_step2: "Pressiona D→ no GNS, confirma LPPR com ENT e regressa à página NAV.",
+  av_tutorial_gps_step3: "Ativa OBS no GNS. No menu do G5 HSI, seleciona OBS, ajusta CRS 000° e pressiona para confirmar.",
+  av_tutorial_gps_step4: "Com o botão do G5 HSI em HDG, ajusta BUG 000°; observa a CDI antes de iniciar o voo.",
+  av_tutorial_map_title: "Nível 5 · GNS 430 — Map Page",
+  av_tutorial_map_briefing: "Usa a página MAP do GNS 430 para ligar o símbolo do avião ao waypoint LPPR e interpretar o alcance, o track e os campos de navegação.",
+  av_tutorial_map_objective: "MAP · GPS · LPPR · alcance 20 NM · leitura TRK/BRG/DTK/DIS/GS",
+  av_tutorial_map_step1: "Pressiona CRSR para ativar o cursor e arrasta o knob CRSR até a página MAP do grupo NAV.",
+  av_tutorial_map_step2: "Usa RNG− uma vez para selecionar 20 NM e confirma que a fonte GPS e o waypoint LPPR estão visíveis.",
+  av_tutorial_map_step3: "Lê os campos TRK, BRG, DTK, DIS e GS; compara a linha/avião/waypoint do GNS com o mapa do tutorial.",
+  av_tutorial_map_step4: "No G5, ajusta o heading bug para 035° e compara o bug com o BRG/DTK apresentados na Map Page.",
+  av_checklist_kicker: "Confirmação de desafios",
+  av_challenge_checklist_title: "Checklist de execução dos níveis",
+  av_challenge_checklist_intro: "Abre cada nível, executa os passos e confirma-o quando o objetivo ficar validado. A checklist é apenas desta sessão do navegador.",
+  av_checklist_setup1: "Setup 1 · G5 + GNS 430/430W",
+  av_checklist_setup2: "Setup 2 · GI-106A + GNC 255",
+  av_checklist_open: "Abrir nível",
+  av_checklist_confirm: "Confirmar execução",
+  av_checklist_confirmed_button: "Confirmado",
+  av_checklist_pending: "Por iniciar",
+  av_checklist_in_progress: "Em execução",
+  av_checklist_ready: "Objetivo atingido",
+  av_checklist_confirmed: "✓ Confirmado",
+  av_checklist_confirmation_saved: "Execução confirmada na checklist.",
+  av_tutorial_station: "Estação",
+  av_tutorial_waypoint: "Waypoint",
+  av_tutorial_position: "posição didática",
 });
 
 Object.assign(NAV_I18N.en, {
   app_title: "MyFlyApp",
   tab_dashboard: "Dashboard",
   tab_flightplan: "Flight Plan",
+  tab_training: "Training",
   tab_navigation: "Navigation",
+  tab_e6b: "E6B",
+  tab_instruments: "Instruments",
+  tab_avionics: "Avionics Simulator",
   tab_massbalance: "Mass & Balance",
   freq_title: "Frequencies",
-  freq_warning: "Warning: frequencies are informational and may not be current.",
+  freq_warning: "⚠️ Warning: these frequencies are informational only and may be incorrect or out of date. Always confirm them in the current chart/eAIP and NOTAMs.",
   atis_selected: "ATIS (selected airport)",
+  lisboa_information: "Lisboa Information",
+  freq_aerodrome: "Aerodrome",
+  select_aerodrome: "Select an aerodrome",
   custom_icao: "Custom ICAO",
   view_btn: "View",
   wind_label: "Wind",
@@ -221,6 +513,8 @@ Object.assign(NAV_I18N.en, {
   notam_map_title: "NOTAM Map",
   notam_embed_unavailable: "NOTAM embed unavailable",
   open_notam_viewer: "Open NOTAM Viewer",
+  five_letter_map_title: "5-letter code map",
+  open_five_letter_map: "Open in Google My Maps",
   flyweather_cameras_title: "Flyweather Cameras (LPVL)",
   open_flyweather: "Open on Flyweather",
   civil_aerodromes_title: "Portugal Civil Aerodromes",
@@ -283,6 +577,80 @@ Object.assign(NAV_I18N.en, {
   mode_alternate: "Alternate",
   mode_reference: "Reference",
   save_pdf: "Save PDF",
+  simulate_btn: "Simulate",
+  sim_title: "Navigation simulation",
+  sim_note: "Simplified educational simulation; it does not represent certified sensors or replace flight training.",
+  sim_close: "Close simulation",
+  sim_guidance_mode: "Instrument reference",
+  sim_mode_breakpoints: "Next breaking point",
+  sim_mode_destination: "Final destination only",
+  sim_playback_speed: "Playback speed",
+  sim_play: "▶ Play",
+  sim_pause: "❚❚ Pause",
+  sim_reset: "Reset",
+  sim_ready: "Ready to start.",
+  sim_need_route: "Create a route with at least two points first.",
+  sim_route_changed: "The route changed. The simulation was reset.",
+  sim_running: "In flight: leg {leg}, reference {target}.",
+  sim_target_point: "point {point}",
+  sim_target_destination: "final destination",
+  sim_paused: "Simulation paused.",
+  sim_complete: "Destination reached. Simulation complete.",
+  sim_drag_hint: "Drag the aircraft on the map to move forward or backward in the simulation.",
+  sim_dragging: "Adjust the aircraft position along the route.",
+  sim_dragged: "Position adjusted manually.",
+  sim_drag_aircraft: "Drag aircraft along the route",
+  instrument_lab_title: "Manual instrument study",
+  instrument_lab_note: "The lab starts with a random example. Change the values to observe the HSI, RMI, and VOR; do not use for real navigation.",
+  instrument_heading: "Heading HDG (°)",
+  instrument_course: "Course CRS (°)",
+  instrument_cdi: "CDI (-2 left / +2 right)",
+  instrument_vor_bearing: "VOR bearing (°)",
+  instrument_adf_bearing: "ADF bearing (°)",
+  instrument_obs: "OBS (°)",
+  instrument_flag: "TO/FROM indicator",
+  vor_trainer_kicker: "Interactive training",
+  vor_trainer_title: "VOR navigation — Porto and Viseu",
+  vor_trainer_intro: "Tune a frequency, position the aircraft, and turn the OBS to understand radials, CDI deflection, and the TO/FROM indication.",
+  vor_trainer_disclaimer: "Simplified educational demonstration. Do not use for real navigation: always confirm frequencies, serviceability, coverage, and limitations in the current AIP/eAIP and NOTAMs.",
+  vor_frequency: "NAV frequency (MHz)",
+  vor_tune: "Tune",
+  vor_frequency_help: "Try 114.10 for PRT or 113.10 for VIS.",
+  aircraft_heading: "Aircraft heading (HDG)",
+  set_direct_heading: "Point at station",
+  vor_obs_course: "Selected course (OBS)",
+  center_to: "Centre TO",
+  center_from: "Centre FROM",
+  vor_map_hint: "Drag the aircraft or click the map to change position.",
+  random_position: "New position",
+  classic_vor: "Classic VOR",
+  position_analysis: "Position readout",
+  tuned_station: "Tuned station",
+  distance_dme: "Geometric distance",
+  radial_from: "Radial FROM",
+  bearing_to: "Bearing TO",
+  what_instruments_say: "What the instruments say",
+  to_legend: "the selected course leads to the station",
+  from_legend: "the selected course leads away from the station",
+  cdi_legend: "fly towards the needle to intercept the course",
+  vor_source_prefix: "Station data:",
+  vor_declination_note: "The calculation applies the published 02° W VOR declination (2020 epoch); DME and coverage are approximate/not simulated.",
+  vor_not_tuned: "Tune a valid VOR frequency to begin.",
+  vor_not_tuned_explanation: "The instrument shows NAV/OFF when the frequency does not match PRT or VIS.",
+  vor_station_tuned: "{id} tuned. You are on radial {radial}°; the station is on bearing {bearing}°.",
+  vor_to_guidance: "TO · {needle}",
+  vor_from_guidance: "FROM · {needle}",
+  vor_off_guidance: "NAV/OFF · TO/FROM ambiguity zone.",
+  vor_to_explanation: "Course {obs}° points towards the station. {turn}",
+  vor_from_explanation: "Course {obs}° leads away from the station along the selected radial. To navigate to it, use Centre TO.",
+  vor_off_explanation: "Close to the station or about 90° from the selected course, the TO/FROM indication becomes ambiguous.",
+  vor_needle_centered: "CDI centred: maintain the selected course",
+  vor_needle_left: "needle left: intercept to the left",
+  vor_needle_right: "needle right: intercept to the right",
+  vor_turn_left: "The station is {degrees}° left of the current heading.",
+  vor_turn_right: "The station is {degrees}° right of the current heading.",
+  vor_heading_aligned: "The heading is aligned with the station.",
+  vor_geometric_distance: "geometric; not a DME substitute",
   undo_point: "Undo point",
   clear_route: "Clear route",
   fit_route: "Fit route",
@@ -309,6 +677,11 @@ Object.assign(NAV_I18N.en, {
   alternate_none: "No alternate selected.",
   alternate_manual: "Manual alternate",
   e6b_title: "Quick E6B",
+  e6b_tab_kicker: "External calculator",
+  e6b_tab_title: "E6BX Flight Computer",
+  e6b_tab_intro: "Online E6B calculator for flight calculations, conversions, and planning.",
+  e6b_open: "Open E6BX in a new window",
+  e6b_tab_note: "External tool provided by e6bx.com. If it does not load inside the tab, use the button to open the calculator in a new window.",
   distance_nm: "Distance (NM)",
   gs_speed: "GS speed (kt)",
   fuel_burn: "Fuel burn (gal/h)",
@@ -352,6 +725,186 @@ Object.assign(NAV_I18N.en, {
   chart_preview: "Chart Preview",
   notam_text: "NOTAM Text",
   close_btn: "Close",
+  av_kicker: "Avionics training",
+  av_title: "Avionics Simulator",
+  av_intro: "Practice the basic flows of a Garmin G5 connected to a GNS 430/430W: tuning, GPS/VLOC navigation, OBS, Direct-to, and HSI interpretation.",
+  av_helper_button: "Helper",
+  av_setup1_devices: "2× G5 + GNS 430/430W",
+  av_setup2_devices: "GI-106A VOR/LOC + GNC 255",
+  av_setup2_reset: "Reset Setup 2",
+  av_setup2_tutorial_intro: "Four basic VFR levels: frequency, TO, FROM, and changing stations. Drag the aircraft or click the map to compare geometry. On real equipment, TO/FROM follows the signal and OBS; the T/F button here is only a teaching control.",
+  av_setup2_check: "Check instruments",
+  av_setup2_tutorial_ready: "Steps turn green automatically as you configure the instruments correctly.",
+  av_setup2_tutorial_success: "Level complete. Compare the GI-106A with the map.",
+  av_setup2_tutorial_power: "Power on the GI-106A and GNC 255 before checking.",
+  av_setup2_tutorial_position: "The aircraft has moved away from this level's starting position. Reload the exercise or move it closer on the map.",
+  av_setup2_tutorial_frequency: "Select NAV/VOR, activate the requested frequency, and confirm the station identifier.",
+  av_setup2_tutorial_course: "Check the GI-106A OBS course; drag the OBS knob or use ←/→ while it is focused.",
+  av_setup2_tutorial_tofrom: "Compare the simulator's TO/FROM indication with the objective and map.",
+  av_setup2_tutorial_cdi: "The CDI is not centered yet. Compare course, position, and radial on the map.",
+  av_setup2_level1_option: "Level 1 · Identify Viseu VOR",
+  av_setup2_level1_title: "Level 1 · Tune and identify",
+  av_setup2_level1_briefing: "The aircraft is west of Viseu. Practice transferring a standby NAV frequency to active and reading the VIS identifier.",
+  av_setup2_level1_objective: "NAV 113.10 active · VOR · VIS identifier",
+  av_setup2_level1_step1: "Select NAV on the GNC 255 with C/N if needed.",
+  av_setup2_level1_step2: "Confirm 113.10 in standby and press ↔ (FLIP/FLOP).",
+  av_setup2_level1_step3: "Read VIS · ID OK on the display; compare the station with the map.",
+  av_setup2_level2_option: "Level 2 · Fly TO Viseu",
+  av_setup2_level2_title: "Level 2 · TO course for Viseu",
+  av_setup2_level2_briefing: "West of Viseu VOR, the approximate bearing to the station is 090°. Practice frequency, course, and CDI reading.",
+  av_setup2_level2_objective: "NAV 113.10 · OBS 090° · TO · centered CDI",
+  av_setup2_level2_step1: "Activate 113.10 on the GNC 255 and confirm VIS.",
+  av_setup2_level2_step2: "Set OBS to 090° on the GI-106A; drag the knob or use ←/→.",
+  av_setup2_level2_step3: "Compare TO and centered CDI with the bearing TO on the map.",
+  av_setup2_level3_option: "Level 3 · Read a FROM radial",
+  av_setup2_level3_title: "Level 3 · FROM radial at Viseu",
+  av_setup2_level3_briefing: "The aircraft is east of Viseu, near the 090° radial. Compare the direction away from the station with FROM.",
+  av_setup2_level3_objective: "NAV 113.10 · OBS 090° · FROM · centered CDI",
+  av_setup2_level3_step1: "Activate 113.10 and confirm the VIS identifier.",
+  av_setup2_level3_step2: "Set OBS to 090° and compare it with the map's FROM radial.",
+  av_setup2_level3_step3: "In this simulator, use T/F to show FROM and confirm the centered CDI.",
+  av_setup2_level4_option: "Level 4 · Change to Porto VOR",
+  av_setup2_level4_title: "Level 4 · New station, same method",
+  av_setup2_level4_briefing: "The aircraft is south of Porto VOR. Repeat the process with another frequency and an approximate 000° course to the station.",
+  av_setup2_level4_objective: "NAV 114.10 · OBS 000° · TO · centered CDI",
+  av_setup2_level4_step1: "Transfer 114.10 into active NAV and confirm PRT · ID OK.",
+  av_setup2_level4_step2: "Set OBS to 000° on the GI-106A.",
+  av_setup2_level4_step3: "Compare TO, centered CDI, and bearing TO on the map.",
+  av_local_badge: "LOCAL SIMULATION",
+  av_disclaimer: "Simplified educational simulator. It is not a certified copy of the Garmin PC Trainer, does not use an official aeronautical database, and does not replace the manual, approved training, checklist, AIP/eAIP, NOTAMs, or pilot responsibility.",
+  av_flight_state: "Flight state",
+  av_flight_state_note: "Change these values to observe the instrument response.",
+  av_heading_label: "Magnetic heading (HDG)",
+  av_course_label: "Course / OBS",
+  av_source_label: "NAV source",
+  av_source_gps: "GPS",
+  av_source_vloc: "VLOC",
+  av_waypoint_label: "GPS waypoint",
+  av_sync_heading: "Sync HDG bug",
+  av_sync_course: "Centre course",
+  av_status_label: "Status",
+  av_status_ready: "Ready. Start with the checklist.",
+  av_scenario_label: "Guided exercise",
+  av_scenario_basic: "1 · Tune and view NAV",
+  av_scenario_vor: "2 · Intercept a VLOC radial",
+  av_scenario_direct: "3 · GPS Direct-to",
+  av_scenario_basic_instruction: "Power the GNS, select NAV, and check the standby frequency before activating it.",
+  av_scenario_vor_instruction: "Select VLOC, activate a NAV frequency, and turn OBS to compare the course with CDI guidance.",
+  av_scenario_direct_instruction: "Select the waypoint, press D→, and confirm with ENT to practice a Direct-to.",
+  av_reset: "Reset exercise",
+  av_checklist_title: "Training checklist",
+  av_check_1: "Power the GNS and identify the NAV page.",
+  av_check_2: "Use the left knob to select COM or VLOC and flip-flop to activate standby.",
+  av_check_3: "Toggle CDI between GPS and VLOC; use OBS to set the selected course.",
+  av_check_4: "On the G5, read the source, CDI, heading, and heading bug before correcting.",
+  av_manual_title: "Manuals and limits",
+  av_manual_note: "The official manuals for the instruments present are gathered here for use during training. This tab's presentation and database are an independent implementation.",
+  av_official_trainer: "Official PC Trainers",
+  av_g5_manual: "Garmin G5 manual",
+  av_gns_manual: "Garmin GNS 430/430W manual",
+  av_gi106_manual: "Garmin GI-106A reference",
+  av_gnc255_manual: "Garmin GNC 255 manual",
+  av_tutorial_kicker: "Practical tutorial",
+  av_tutorial_title: "Learn with a map and exercises",
+  av_tutorial_intro: "Choose an exercise or Free mode. Click/drag the aircraft, press GO at 90 KTS, and use ←/→ to turn while watching the G5/GNS.",
+  av_tutorial_select: "Exercise / mode",
+  av_tutorial_vis_to_option: "Level 1 · Viseu VOR — fly TO",
+  av_tutorial_vis_from_option: "Level 2 · Viseu VOR — FROM radial",
+  av_tutorial_prt_option: "Level 3 · Porto VOR — fly TO",
+  av_tutorial_gps_option: "Level 4 · GPS — Direct-to LPPR",
+  av_tutorial_map_option: "Level 5 · GNS 430 — Map Page",
+  av_tutorial_load: "Load exercise",
+  av_tutorial_check: "Check HSI",
+  av_tutorial_next: "Next example",
+  av_tutorial_free_option: "Free mode · test instruments",
+  av_tutorial_free_badge: "FREE MODE",
+  av_tutorial_load_free: "Load free mode",
+  av_tutorial_radial_control: "FROM radial",
+  av_tutorial_distance_control: "Distance",
+  av_tutorial_speed: "Speed",
+  av_tutorial_heading_control: "Heading",
+  av_tutorial_time: "Time",
+  av_tutorial_go: "GO",
+  av_tutorial_pause: "PAUSE",
+  av_tutorial_flight_hint: "Click the map to position the aircraft. Use ←/→ to change heading, even while paused; hold a key to keep turning. GO starts flight at 90 KTS.",
+  av_tutorial_flight_running: "Flight in progress",
+  av_tutorial_map_hint: "The line connects the aircraft to the reference. Geometry is educational: distance, bearing, and radial are not certified DME.",
+  av_tutorial_objective: "Objective",
+  av_tutorial_aircraft: "Aircraft",
+  av_tutorial_reference: "Reference",
+  av_tutorial_bearing: "Bearing TO",
+  av_tutorial_radial: "Radial FROM",
+  av_tutorial_ready: "Steps turn green automatically when the configuration is correct. Use Check HSI to check the full exercise.",
+  av_tutorial_step_done: "Step correct",
+  av_tutorial_step_pending: "Step pending",
+  av_tutorial_step_note: "Reading tip — not automatically assessed",
+  av_g5_menu_heading: "Heading",
+  av_g5_menu_course: "Course",
+  av_g5_menu_back: "Return to HDG",
+  av_g5_menu_hint: "Drag the knob to highlight an option; press to select.",
+  av_g5_heading_help: "Drag to adjust the heading bug. Click to open the menu; press and hold to synchronize with the current heading.",
+  av_g5_course_help: "Drag to adjust CRS/OBS. Press the knob to confirm and return to HDG.",
+  av_g5_course_unavailable: "Activate VLOC or OBS on the GNS to adjust the course.",
+  av_tutorial_success: "Exercise complete. Now compare your HSI with the map readout.",
+  av_tutorial_not_yet: "Not yet. Check NAV source, active frequency, OBS/course, and heading.",
+  av_tutorial_free_title: "Free mode — test instruments",
+  av_tutorial_free_briefing: "Place the aircraft anywhere on the map and experiment without a fixed objective or right answer. Viseu VOR remains available as a visual reference.",
+  av_tutorial_free_objective: "Free position · GO at 90 KTS · turns with ←/→",
+  av_tutorial_free_step1: "Click a map position or drag the blue aircraft to the desired starting point.",
+  av_tutorial_free_step2: "Press GO to start moving at 90 KTS.",
+  av_tutorial_free_step3: "Use ←/→ or the side buttons to turn 5° at a time and watch the G5/GNS.",
+  av_tutorial_free_ready: "Free mode ready. Position the aircraft, configure the instruments, and press GO.",
+  av_tutorial_vis_to_title: "Viseu VOR — fly TO",
+  av_tutorial_vis_to_briefing: "The aircraft is west of Viseu VOR. Fly to the station using the GNS in VLOC and the G5 as an HSI.",
+  av_tutorial_vis_to_objective: "113.10 · VLOC · OBS 090° · HDG 090° · TO indication",
+  av_tutorial_vis_to_step1: "On the GNS, select VLOC and flip-flop 113.10 into the active frequency.",
+  av_tutorial_vis_to_step2: "Press CDI until the G5/GNS show VLOC; confirm the Viseu identifier.",
+  av_tutorial_vis_to_step3: "On the G5 HSI, press the knob, select Course and drag to CRS 090°. Press to confirm.",
+  av_tutorial_vis_to_step4: "With the G5 HSI knob in HDG, drag to BUG 090° and confirm TO with a centered CDI.",
+  av_tutorial_vis_from_title: "Viseu VOR — FROM radial",
+  av_tutorial_vis_from_briefing: "The aircraft is east of Viseu VOR. Practice the difference between a FROM radial and a TO course: the radial is 090°, while the course to the station would be 270°.",
+  av_tutorial_vis_from_objective: "113.10 · VLOC · OBS 090° · HDG 090° · FROM indication",
+  av_tutorial_vis_from_step1: "Activate VLOC 113.10 and select VLOC as the CDI source.",
+  av_tutorial_vis_from_step2: "In the G5 HSI menu, select Course, set CRS 090° and press to confirm: this is the radial leaving the station.",
+  av_tutorial_vis_from_step3: "With the G5 HSI knob in HDG, set BUG 090°; confirm FROM with a centered CDI.",
+  av_tutorial_vis_from_step4: "To fly back to the station, use Centre TO mentally: the course would be 270°.",
+  av_tutorial_prt_title: "Porto VOR — intercept TO",
+  av_tutorial_prt_briefing: "The aircraft is south of Porto VOR. Use a northbound course to intercept the station and practice reading TO on the HSI.",
+  av_tutorial_prt_objective: "114.10 · VLOC · OBS 000° · HDG 000° · TO indication",
+  av_tutorial_prt_step1: "Activate 114.10 on VLOC and confirm that CDI is on VLOC.",
+  av_tutorial_prt_step2: "In the G5 HSI menu, select Course, set CRS 000° and press to confirm: the course points toward Porto VOR.",
+  av_tutorial_prt_step3: "With the G5 HSI knob in HDG, set BUG 000° and confirm TO with a centered CDI.",
+  av_tutorial_prt_step4: "Compare bearing TO and radial FROM on the map; do not confuse the two values.",
+  av_tutorial_gps_title: "GPS — Direct-to LPPR",
+  av_tutorial_gps_briefing: "The aircraft is south of LPPR. Practice a GPS Direct-to and confirm on the G5 that the source is GPS, not VLOC.",
+  av_tutorial_gps_objective: "GPS · LPPR · Direct-to · CRS 000° · HDG 000°",
+  av_tutorial_gps_step1: "Select GPS as CDI source and LPPR as the waypoint.",
+  av_tutorial_gps_step2: "Press D→ on the GNS, confirm LPPR with ENT, and return to the NAV page.",
+  av_tutorial_gps_step3: "Activate OBS on the GNS. In the G5 HSI menu, select OBS, set CRS 000° and press to confirm.",
+  av_tutorial_gps_step4: "With the G5 HSI knob in HDG, set BUG 000°; observe the CDI before starting flight.",
+  av_tutorial_map_title: "Level 5 · GNS 430 — Map Page",
+  av_tutorial_map_briefing: "Use the GNS 430 MAP page to connect the aircraft symbol to LPPR and interpret range, track, and navigation data fields.",
+  av_tutorial_map_objective: "MAP · GPS · LPPR · 20 NM range · read TRK/BRG/DTK/DIS/GS",
+  av_tutorial_map_step1: "Press CRSR to activate the cursor and drag the CRSR knob until the NAV group shows the MAP page.",
+  av_tutorial_map_step2: "Press RNG− once to select 20 NM and confirm that GPS source and the LPPR waypoint are visible.",
+  av_tutorial_map_step3: "Read TRK, BRG, DTK, DIS, and GS; compare the GNS aircraft/line/waypoint with the tutorial map.",
+  av_tutorial_map_step4: "On the G5, set the heading bug to 035° and compare the bug with the BRG/DTK shown on the Map Page.",
+  av_checklist_kicker: "Challenge confirmation",
+  av_challenge_checklist_title: "Level execution checklist",
+  av_challenge_checklist_intro: "Open each level, perform its steps, and confirm it when the objective is validated. The checklist only lasts for this browser session.",
+  av_checklist_setup1: "Setup 1 · G5 + GNS 430/430W",
+  av_checklist_setup2: "Setup 2 · GI-106A + GNC 255",
+  av_checklist_open: "Open level",
+  av_checklist_confirm: "Confirm execution",
+  av_checklist_confirmed_button: "Confirmed",
+  av_checklist_pending: "Not started",
+  av_checklist_in_progress: "In progress",
+  av_checklist_ready: "Objective reached",
+  av_checklist_confirmed: "✓ Confirmed",
+  av_checklist_confirmation_saved: "Execution confirmed in the checklist.",
+  av_tutorial_station: "Station",
+  av_tutorial_waypoint: "Waypoint",
+  av_tutorial_position: "educational position",
 });
 
 function navToRad(value) {
@@ -717,6 +1270,7 @@ function navRenderRoute() {
   navSetText("nav-leg-count", String(legs.length));
   navSyncDistanceToE6B(totalNm);
   navRenderAlternateSummary();
+  navUpdateSimulationAvailability();
 }
 
 function navRenderAltitudeCell(leg) {
@@ -1182,6 +1736,359 @@ function navSetMode(mode) {
   document.getElementById("nav-mode-reference")?.classList.toggle("active", navMode === "reference");
 }
 
+function navGetRouteSignature(points = navGetRoutePoints()) {
+  return points.map((point) => `${Number(point.lat).toFixed(6)},${Number(point.lng).toFixed(6)}`).join("|");
+}
+
+function navSetSimulationStatus(message) {
+  navSetText("nav-sim-status", message);
+}
+
+function navUpdateSimulationPlayButton() {
+  const button = document.getElementById("nav-sim-play");
+  if (!button) return;
+  button.textContent = navT(navSimPlaying ? "sim_pause" : "sim_play");
+}
+
+function navStopSimulation() {
+  navSimPlaying = false;
+  navSimLastFrameTime = null;
+  if (navSimFrame !== null) {
+    window.cancelAnimationFrame(navSimFrame);
+    navSimFrame = null;
+  }
+  navUpdateSimulationPlayButton();
+}
+
+function navUpdateSimulationAvailability() {
+  const button = document.getElementById("nav-simulate");
+  if (button) button.disabled = navMarkers.length < 2;
+  const panel = document.getElementById("nav-simulator");
+  if (!panel || panel.hidden || !navSimRouteSignature) return;
+  const signature = navGetRouteSignature();
+  if (signature !== navSimRouteSignature) {
+    navStopSimulation();
+    if (navMarkers.length >= 2) {
+      navPrepareSimulation();
+      navSetSimulationStatus(navT("sim_route_changed"));
+    } else {
+      panel.hidden = true;
+    }
+  }
+}
+
+function navSimulationAircraftIcon() {
+  return L.divIcon({
+    className: "",
+    html: '<div class="nav-sim-aircraft"><span>▲</span></div>',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
+function navSimulationTargetIcon() {
+  return L.divIcon({
+    className: "nav-sim-target",
+    html: "◎",
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
+
+function navInitSimulationMap() {
+  if (navSimMap || !window.L) return;
+  navSimMap = L.map("nav-sim-map", { zoomControl: true }).setView(NAV_DEFAULT_CENTER, 8);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(navSimMap);
+  navSimRouteLine = L.polyline([], { color: "#f59e0b", weight: 4, opacity: 0.95 }).addTo(navSimMap);
+  navSimDirectLine = L.polyline([], { color: "#60a5fa", weight: 2, opacity: 0.75, dashArray: "7 7" }).addTo(navSimMap);
+  navSimPlaneMarker = L.marker(NAV_DEFAULT_CENTER, {
+    icon: navSimulationAircraftIcon(),
+    zIndexOffset: 800,
+    draggable: true,
+    autoPan: false,
+    keyboard: true,
+    riseOnHover: true,
+    title: navT("sim_drag_aircraft"),
+    alt: navT("sim_drag_aircraft"),
+  }).addTo(navSimMap);
+  navSimPlaneMarker.on("dragstart", navHandleSimulationDragStart);
+  navSimPlaneMarker.on("drag", navHandleSimulationDrag);
+  navSimPlaneMarker.on("dragend", navHandleSimulationDragEnd);
+  navUpdateSimulationMarkerLabel();
+  navSimTargetMarker = L.marker(NAV_DEFAULT_CENTER, { icon: navSimulationTargetIcon(), zIndexOffset: 700 }).addTo(navSimMap);
+}
+
+function navInitSimulationInstruments() {
+  if (!navSimHsi && window.HSIInstrument) {
+    navSimHsi = new window.HSIInstrument(document.getElementById("nav-sim-hsi"));
+  }
+  if (!navSimRmi && window.RMIInstrument) {
+    navSimRmi = new window.RMIInstrument(document.getElementById("nav-sim-rmi"));
+  }
+  if (!navSimVor && window.VORIndicator) {
+    navSimVor = new window.VORIndicator(document.getElementById("nav-sim-vor"));
+  }
+}
+
+function navBuildSimulationLegs(points) {
+  let distance = 0;
+  return points.slice(1).map((to, index) => {
+    const from = points[index];
+    const nm = navDistanceNm(from, to);
+    const leg = {
+      index,
+      from,
+      to,
+      nm,
+      heading: navBearingDeg(from, to),
+      startNm: distance,
+      endNm: distance + nm,
+    };
+    distance += nm;
+    return leg;
+  }).filter((leg) => leg.nm > 0.001);
+}
+
+function navInterpolateLatLng(from, to, fraction) {
+  const t = Math.max(0, Math.min(1, fraction));
+  return L.latLng(from.lat + (to.lat - from.lat) * t, from.lng + (to.lng - from.lng) * t);
+}
+
+function navOffsetLatLng(point, bearing, distanceNm) {
+  const angle = navToRad(bearing);
+  const lat = point.lat + (distanceNm * Math.cos(angle)) / 60;
+  const longitudeScale = Math.max(0.2, Math.cos(navToRad(point.lat)));
+  const lng = point.lng + (distanceNm * Math.sin(angle)) / (60 * longitudeScale);
+  return L.latLng(lat, lng);
+}
+
+function navSimulationAngleDelta(value, reference) {
+  return ((Number(value) - Number(reference) + 540) % 360) - 180;
+}
+
+function navSimulationFormatTime(seconds) {
+  const total = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function navFindSimulationLeg(distanceNm) {
+  if (!navSimLegs.length) return null;
+  return navSimLegs.find((leg) => distanceNm < leg.endNm) || navSimLegs[navSimLegs.length - 1];
+}
+
+function navUpdateSimulationMarkerLabel() {
+  const element = navSimPlaneMarker?.getElement();
+  if (!element) return;
+  const label = navT("sim_drag_aircraft");
+  element.setAttribute("title", label);
+  element.setAttribute("aria-label", label);
+}
+
+function navSimulationDistanceAtLatLng(latlng) {
+  if (!navSimMap || !navSimLegs.length) return navSimDistanceNm;
+  const draggedPoint = navSimMap.latLngToLayerPoint(latlng);
+  let bestPixelDistance = Number.POSITIVE_INFINITY;
+  let bestRouteDistance = navSimDistanceNm;
+
+  navSimLegs.forEach((leg) => {
+    const start = navSimMap.latLngToLayerPoint(leg.from);
+    const end = navSimMap.latLngToLayerPoint(leg.to);
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const lengthSquared = dx * dx + dy * dy;
+    const fraction = lengthSquared > 0
+      ? Math.max(0, Math.min(1, ((draggedPoint.x - start.x) * dx + (draggedPoint.y - start.y) * dy) / lengthSquared))
+      : 0;
+    const projectedX = start.x + dx * fraction;
+    const projectedY = start.y + dy * fraction;
+    const pixelDistance = (draggedPoint.x - projectedX) ** 2 + (draggedPoint.y - projectedY) ** 2;
+    const routeDistance = leg.startNm + leg.nm * fraction;
+    const closerToPointer = pixelDistance < bestPixelDistance - 0.01;
+    const sameTrack = Math.abs(pixelDistance - bestPixelDistance) <= 0.01;
+    const closerToCurrentPosition = Math.abs(routeDistance - navSimDistanceNm) < Math.abs(bestRouteDistance - navSimDistanceNm);
+    if (closerToPointer || (sameTrack && closerToCurrentPosition)) {
+      bestPixelDistance = pixelDistance;
+      bestRouteDistance = routeDistance;
+    }
+  });
+
+  return Math.max(0, Math.min(navSimTotalNm, bestRouteDistance));
+}
+
+function navHandleSimulationDragStart() {
+  navStopSimulation();
+  navSimPlaneMarker?.getElement()?.querySelector(".nav-sim-aircraft")?.classList.add("is-dragging");
+  navSetSimulationStatus(navT("sim_dragging"));
+}
+
+function navHandleSimulationDrag(event) {
+  const distance = navSimulationDistanceAtLatLng(event.target.getLatLng());
+  const groundSpeed = Math.max(1, Number(document.getElementById("nav-e6b-speed")?.value || 90));
+  navSimDistanceNm = distance;
+  navSimElapsedSeconds = (distance / groundSpeed) * 3600;
+  navRenderSimulationAtDistance(distance);
+}
+
+function navHandleSimulationDragEnd(event) {
+  navHandleSimulationDrag(event);
+  navSimPlaneMarker?.getElement()?.querySelector(".nav-sim-aircraft")?.classList.remove("is-dragging");
+  navSetSimulationStatus(navT("sim_dragged"));
+}
+
+function navRenderSimulationAtDistance(distanceNm) {
+  const boundedDistance = Math.max(0, Math.min(navSimTotalNm, distanceNm));
+  const leg = navFindSimulationLeg(boundedDistance);
+  if (!leg || !navSimRoute.length) return;
+  navSimDistanceNm = boundedDistance;
+  const fraction = leg.nm > 0 ? Math.max(0, Math.min(1, (boundedDistance - leg.startNm) / leg.nm)) : 1;
+  const basePosition = navInterpolateLatLng(leg.from, leg.to, fraction);
+  const driftNm = Math.sin(fraction * Math.PI * 2) * Math.min(0.1, leg.nm * 0.015);
+  const position = navOffsetLatLng(basePosition, leg.heading + 90, driftNm);
+  const heading = navNormalizeHeading(leg.heading + Math.cos(fraction * Math.PI * 2) * 2);
+  const mode = document.getElementById("nav-sim-mode")?.value || "breakpoints";
+  const destination = navSimRoute[navSimRoute.length - 1];
+  const target = mode === "destination" ? destination : leg.to;
+  const targetLabel = mode === "destination"
+    ? navT("sim_target_destination")
+    : navTf("sim_target_point", { point: leg.index + 2 });
+  const course = mode === "destination"
+    ? navBearingDeg(navSimRoute[0], destination)
+    : leg.heading;
+  const bearingToTarget = navBearingDeg(position, target);
+  const adfTarget = mode === "destination" ? navSimRoute[0] : destination;
+  const adfBearing = navBearingDeg(position, adfTarget);
+  const cdi = Math.max(-2, Math.min(2, navSimulationAngleDelta(bearingToTarget, course) / 5));
+  const complete = boundedDistance >= navSimTotalNm;
+
+  navSimPlaneMarker?.setLatLng(position);
+  const plane = navSimPlaneMarker?.getElement()?.querySelector("span");
+  if (plane) plane.style.transform = `rotate(${heading}deg)`;
+  navSimTargetMarker?.setLatLng(target);
+  navSimDirectLine?.setLatLngs([position, target]);
+
+  navSimHsi?.setState({ heading, course, deviation: cdi });
+  navSimRmi?.setState({ heading, vorBearing: bearingToTarget, adfBearing });
+  navSimVor?.setState({ course, deviation: cdi, flag: complete ? "FROM" : "TO" });
+
+  const progress = navSimTotalNm > 0 ? (boundedDistance / navSimTotalNm) * 100 : 0;
+  navSetText("nav-sim-progress", `${Math.round(progress)}%`);
+  navSetText("nav-sim-time", navSimulationFormatTime(navSimElapsedSeconds));
+  navSetText("nav-sim-hsi-readout", `HDG ${String(heading).padStart(3, "0")} · CRS ${String(course).padStart(3, "0")} · CDI ${cdi.toFixed(1)}`);
+  navSetText("nav-sim-rmi-readout", `VOR ${String(bearingToTarget).padStart(3, "0")} · ADF ${String(adfBearing).padStart(3, "0")}`);
+  navSetText("nav-sim-vor-readout", `OBS ${String(course).padStart(3, "0")} · ${complete ? "FROM" : "TO"}`);
+
+  if (!complete && navSimPlaying) {
+    navSetSimulationStatus(navTf("sim_running", { leg: `${leg.index + 1}/${navSimLegs.length}`, target: targetLabel }));
+  }
+}
+
+function navPrepareSimulation() {
+  if (!window.L || navMarkers.length < 2) return false;
+  const route = navGetRoutePoints().map((point) => L.latLng(point.lat, point.lng));
+  const legs = navBuildSimulationLegs(route);
+  if (!legs.length || !window.HSIInstrument || !window.RMIInstrument || !window.VORIndicator) return false;
+
+  navStopSimulation();
+  navSimRoute = route;
+  navSimLegs = legs;
+  navSimTotalNm = legs.reduce((sum, leg) => sum + leg.nm, 0);
+  navSimDistanceNm = 0;
+  navSimElapsedSeconds = 0;
+  navSimRouteSignature = navGetRouteSignature(route);
+  navInitSimulationMap();
+  navInitSimulationInstruments();
+  navSimRouteLine?.setLatLngs(route);
+  navRenderSimulationAtDistance(0);
+  navSetSimulationStatus(navT("sim_ready"));
+  navUpdateSimulationPlayButton();
+  window.setTimeout(() => {
+    navSimMap?.invalidateSize();
+    if (navSimMap && route.length) navSimMap.fitBounds(L.latLngBounds(route).pad(0.2));
+  }, 80);
+  return true;
+}
+
+function navSimulationTick(timestamp) {
+  if (!navSimPlaying) return;
+  if (navSimLastFrameTime === null) navSimLastFrameTime = timestamp;
+  const deltaSeconds = Math.min(0.25, Math.max(0, (timestamp - navSimLastFrameTime) / 1000));
+  navSimLastFrameTime = timestamp;
+  const playbackRate = Number(document.getElementById("nav-sim-rate")?.value || 60);
+  const groundSpeed = Math.max(1, Number(document.getElementById("nav-e6b-speed")?.value || 90));
+  const simulatedSeconds = deltaSeconds * playbackRate;
+  navSimElapsedSeconds += simulatedSeconds;
+  navSimDistanceNm = Math.min(navSimTotalNm, navSimDistanceNm + (groundSpeed * simulatedSeconds) / 3600);
+  navRenderSimulationAtDistance(navSimDistanceNm);
+
+  if (navSimDistanceNm >= navSimTotalNm) {
+    navStopSimulation();
+    navSetSimulationStatus(navT("sim_complete"));
+    return;
+  }
+  navSimFrame = window.requestAnimationFrame(navSimulationTick);
+}
+
+function navToggleSimulationPlayback() {
+  if (navSimRouteSignature !== navGetRouteSignature() || !navSimLegs.length) {
+    if (!navPrepareSimulation()) {
+      navSetSimulationStatus(navT("sim_need_route"));
+      return;
+    }
+  }
+  if (navSimPlaying) {
+    navStopSimulation();
+    navSetSimulationStatus(navT("sim_paused"));
+    return;
+  }
+  if (navSimDistanceNm >= navSimTotalNm) {
+    navSimDistanceNm = 0;
+    navSimElapsedSeconds = 0;
+    navRenderSimulationAtDistance(0);
+  }
+  navSimPlaying = true;
+  navSimLastFrameTime = null;
+  navUpdateSimulationPlayButton();
+  navSimFrame = window.requestAnimationFrame(navSimulationTick);
+}
+
+function navResetSimulation() {
+  navStopSimulation();
+  navSimDistanceNm = 0;
+  navSimElapsedSeconds = 0;
+  navRenderSimulationAtDistance(0);
+  navSetSimulationStatus(navT("sim_ready"));
+}
+
+function navOpenSimulation() {
+  if (navMarkers.length < 2) {
+    navSetPrintStatus(navT("sim_need_route"));
+    return;
+  }
+  const panel = document.getElementById("nav-simulator");
+  if (!panel) return;
+  panel.hidden = false;
+  if (!navPrepareSimulation()) {
+    panel.hidden = true;
+    navSetPrintStatus(navT("sim_need_route"));
+    return;
+  }
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function navCloseSimulation() {
+  navStopSimulation();
+  const panel = document.getElementById("nav-simulator");
+  if (panel) panel.hidden = true;
+}
+
 function navApplyLanguage(lang) {
   navLanguage = lang === "en" ? "en" : "pt";
   try {
@@ -1211,6 +2118,8 @@ function navApplyLanguage(lang) {
   navRenderRoute();
   navRenderReferences();
   navRenderAlternateSummary();
+  navUpdateSimulationPlayButton();
+  navUpdateSimulationMarkerLabel();
   window.MyFlyI18n = { language: navLanguage, t: navT };
   window.dispatchEvent(new CustomEvent("myflyapp:language", { detail: { language: navLanguage } }));
 }
@@ -1400,6 +2309,11 @@ function initNavigation() {
     document.getElementById(id)?.addEventListener("change", (event) => navHandleAlternateSelect(event.target.value));
   });
   document.getElementById("nav-print-pdf")?.addEventListener("click", navPrintPdf);
+  document.getElementById("nav-simulate")?.addEventListener("click", navOpenSimulation);
+  document.getElementById("nav-sim-play")?.addEventListener("click", navToggleSimulationPlayback);
+  document.getElementById("nav-sim-reset")?.addEventListener("click", navResetSimulation);
+  document.getElementById("nav-sim-close")?.addEventListener("click", navCloseSimulation);
+  document.getElementById("nav-sim-mode")?.addEventListener("change", () => navRenderSimulationAtDistance(navSimDistanceNm));
   document.getElementById("nav-legs-body")?.addEventListener("input", navHandleAltitudeInput);
   document.getElementById("nav-references-list")?.addEventListener("input", navHandleReferenceInput);
   document.getElementById("nav-references-list")?.addEventListener("click", navHandleReferenceAction);

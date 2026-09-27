@@ -1,4 +1,7 @@
-const TAB_NAMES = ["dashboard", "flightplan", "navigation", "massbalance"];
+const TAB_NAMES = ["dashboard", "flightplan", "training"];
+const FLIGHTPLAN_SUBMODULES = new Set(["navigation", "massbalance"]);
+const NAVIGATION_SUBMODULES = new Set(["route", "e6b"]);
+const TRAINING_SUBMODULES = new Set(["instruments", "avionics"]);
 
 let activeTab = "dashboard";
 let aerodromeMapReady = false;
@@ -187,6 +190,14 @@ function lazyLoadWindy() {
   if (src) frame.setAttribute("src", src);
 }
 
+function lazyLoadE6B() {
+  const frame = document.getElementById("e6b-frame");
+  if (!frame || frame.getAttribute("src")) return;
+
+  const src = frame.getAttribute("data-e6b-src");
+  if (src) frame.setAttribute("src", src);
+}
+
 function buildAerodromeMap(mapId) {
   const mapEl = document.getElementById(mapId);
   if (!mapEl || !window.L) return;
@@ -284,6 +295,7 @@ function initFrequencyBoard() {
 
   if (selectedEl) selectedEl.addEventListener("change", renderSelectedAtis);
   customBtn.addEventListener("click", renderCustom);
+  customInputEl.addEventListener("change", renderCustom);
   customInputEl.addEventListener("keydown", (event) => {
     if (event.key === "Enter") renderCustom();
   });
@@ -718,27 +730,104 @@ function initFlightPlanProgressiveView() {
 
 function initFlightPlanSubtabs() {
   const buttons = document.querySelectorAll("[data-fpl-tab]");
+  const navigationButtons = document.querySelectorAll("[data-nav-tab]");
   const sections = {
     preflight: document.getElementById("fpl-tab-preflight"),
     createplan: document.getElementById("fpl-tab-createplan"),
+    navigation: document.getElementById("navigation"),
+    massbalance: document.getElementById("massbalance"),
   };
-  if (!buttons.length || !sections.preflight || !sections.createplan) return;
+  const navigationSections = {
+    route: document.getElementById("nav-tab-route"),
+    e6b: document.getElementById("nav-tab-e6b"),
+  };
+  if (!buttons.length || !sections.preflight || !sections.createplan || !sections.navigation || !sections.massbalance || !navigationSections.route || !navigationSections.e6b) return;
 
-  const activate = (name) => {
-    buttons.forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-fpl-tab") === name));
-    Object.entries(sections).forEach(([key, section]) => {
-      section.classList.toggle("active", key === name);
+  const activateNavigationSubtab = (name) => {
+    const activeName = navigationSections[name] ? name : "route";
+    navigationButtons.forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-nav-tab") === activeName));
+    Object.entries(navigationSections).forEach(([key, section]) => {
+      section.classList.toggle("active", key === activeName);
     });
-    if (name === "preflight") initAerodromeMapFpl();
-    if (name === "createplan" && fplRouteMap) {
+    if (activeName === "route") {
+      window.MyFlyNavigation?.ensureReady?.();
+    } else {
+      lazyLoadE6B();
+    }
+  };
+
+  const activate = (name, navigationSubtab = "route") => {
+    const activeName = sections[name] ? name : "preflight";
+    buttons.forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-fpl-tab") === activeName));
+    Object.entries(sections).forEach(([key, section]) => {
+      section.classList.toggle("active", key === activeName);
+    });
+    document.getElementById("flightplan")?.classList.toggle("has-active-submodule", FLIGHTPLAN_SUBMODULES.has(activeName));
+    if (activeName === "preflight") initAerodromeMapFpl();
+    if (activeName === "createplan" && fplRouteMap) {
       setTimeout(() => fplRouteMap.invalidateSize(), 120);
     }
+    if (activeName === "navigation") activateNavigationSubtab(navigationSubtab);
+  };
+
+  window.MyFlyFlightPlan = {
+    activateSubtab: activate,
+    activateNavigationSubtab,
+    hideSubmodules: () => {
+      [sections.navigation, sections.massbalance].forEach((section) => section.classList.remove("active"));
+      document.getElementById("flightplan")?.classList.remove("has-active-submodule");
+    },
   };
 
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => activate(btn.getAttribute("data-fpl-tab")));
   });
-  activate("preflight");
+  navigationButtons.forEach((btn) => {
+    btn.addEventListener("click", () => activateNavigationSubtab(btn.getAttribute("data-nav-tab")));
+  });
+  const initialHash = window.location.hash.replace("#", "").toLowerCase();
+  const initialFlightPlanSubtab = FLIGHTPLAN_SUBMODULES.has(initialHash) ? initialHash : initialHash === "e6b" ? "navigation" : "preflight";
+  activate(initialFlightPlanSubtab, initialHash === "e6b" ? "e6b" : "route");
+}
+
+function initTrainingSubtabs() {
+  const buttons = document.querySelectorAll("[data-training-tab]");
+  const sections = {
+    instruments: document.getElementById("instruments"),
+    avionics: document.getElementById("avionics"),
+  };
+  if (!buttons.length || !sections.instruments || !sections.avionics) return;
+
+  const activate = (name) => {
+    const activeName = sections[name] ? name : "instruments";
+    buttons.forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-training-tab") === activeName));
+    Object.entries(sections).forEach(([key, section]) => {
+      section.classList.toggle("active", key === activeName);
+    });
+    if (activeName === "instruments") {
+      window.MyFlyVorTrainer?.ensureReady?.();
+    } else {
+      window.MyFlyAvionics?.ensureReady?.();
+    }
+  };
+
+  window.MyFlyTraining = {
+    activateSubtab: activate,
+    hideSubmodules: () => {
+      Object.values(sections).forEach((section) => section.classList.remove("active"));
+    },
+  };
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => activate(btn.getAttribute("data-training-tab")));
+  });
+
+  const initialHash = window.location.hash.replace("#", "").toLowerCase();
+  if (initialHash === "training" || TRAINING_SUBMODULES.has(initialHash)) {
+    activate(TRAINING_SUBMODULES.has(initialHash) ? initialHash : "instruments");
+  } else {
+    window.MyFlyTraining.hideSubmodules();
+  }
 }
 
 function renderRouteMap(geojson) {
@@ -834,10 +923,13 @@ function initNotamModal() {
 
 function normalizeTab(hashValue) {
   const raw = (hashValue || "").replace("#", "").toLowerCase();
+  if (FLIGHTPLAN_SUBMODULES.has(raw) || raw === "e6b") return "flightplan";
+  if (TRAINING_SUBMODULES.has(raw)) return "training";
   return TAB_NAMES.includes(raw) ? raw : "dashboard";
 }
 
 function activateTab(tabName, updateHash = false) {
+  const requested = (tabName || "").replace("#", "").toLowerCase();
   const name = normalizeTab(tabName);
   activeTab = name;
 
@@ -853,8 +945,18 @@ function activateTab(tabName, updateHash = false) {
     window.location.hash = name;
   }
 
-  if (name === "navigation" && window.MyFlyNavigation?.ensureReady) {
-    window.MyFlyNavigation.ensureReady();
+  if (name === "flightplan") {
+    const submodule = FLIGHTPLAN_SUBMODULES.has(requested) ? requested : requested === "e6b" ? "navigation" : "preflight";
+    window.MyFlyFlightPlan?.activateSubtab?.(submodule, requested === "e6b" ? "e6b" : "route");
+  } else {
+    window.MyFlyFlightPlan?.hideSubmodules?.();
+  }
+
+  if (name === "training") {
+    const submodule = TRAINING_SUBMODULES.has(requested) ? requested : "instruments";
+    window.MyFlyTraining?.activateSubtab?.(submodule);
+  } else {
+    window.MyFlyTraining?.hideSubmodules?.();
   }
 }
 
@@ -891,6 +993,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initFplBriefingHelper();
   initFlightPlanProgressiveView();
   initFlightPlanSubtabs();
+  initTrainingSubtabs();
 
   const icao = window.HOME_ICAO || "LPPR";
   loadMetar(icao, "metar");
