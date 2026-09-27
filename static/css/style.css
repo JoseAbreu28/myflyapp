@@ -641,6 +641,15 @@ body {
   .gnc255-frequency-pair { gap: 0.28rem; }
   .gnc255-frequency-cell strong { font-size: 0.85rem; }
   .gnc255-button-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gnc255-panel { grid-template-columns: 1fr; gap: 0.5rem; align-items: stretch; }
+  .gnc255-left-controls { grid-row: 1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; justify-items: stretch; min-height: 0; gap: 0.35rem; padding: 0.1rem 0 0; }
+  .gnc255-com-control { gap: 0.25rem; }
+  .gnc255-volume-knob { width: 48px; height: 48px; }
+  .gnc255-volume-knob-nav { justify-self: end; }
+  .gnc255-center-stack { grid-row: 2; }
+  .gnc255-display { min-height: 70px; }
+  .gnc255-right-controls { grid-row: 3; min-height: 82px; }
+  .gnc255-right-controls .gnc255-flip-key { top: 29px; }
   .gns-face { grid-template-columns: 94px minmax(0, 1fr) 88px; min-height: 190px; padding: 0.3rem; gap: 0.25rem; border-width: 5px; }
   .gns-volume-row { grid-template-columns: 8px minmax(0, 1fr) 27px; min-height: 45px; gap: 0.12rem; }
   .gns-volume-rail { width: 8px; }

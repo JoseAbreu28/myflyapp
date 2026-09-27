@@ -1470,7 +1470,11 @@
   function rotateGns(kind, direction) {
     if (kind === "left-large" || kind === "left-small") adjustGnsFrequency(kind, direction);
     if (kind === "right-large") {
-      const selectingDirectWaypoint = state.directToArmed && state.gnsCursor && state.gnsGroup === "WPT" && state.gnsPageIndex === 2;
+      // The Garmin Direct-to page uses the small knob to edit the identifier
+      // and the large knob to move between identifier positions. This
+      // simulator exposes the known local waypoints as a compact selector, so
+      // keep the large-knob selection active for the whole Direct-to page.
+      const selectingDirectWaypoint = state.directToArmed && state.gnsGroup === "WPT" && state.gnsPageIndex === 2;
       if (selectingDirectWaypoint) {
         const waypointIds = Object.keys(WAYPOINTS);
         const currentIndex = Math.max(0, waypointIds.indexOf(state.directEntry || state.waypoint));
@@ -1715,12 +1719,13 @@
       drag.lastX = event.clientX;
       drag.remainder += delta;
       if (Math.abs(drag.remainder) > 5) drag.moved = true;
+      const selectingDirectWaypoint = state.directToArmed && state.gnsGroup === "WPT" && state.gnsPageIndex === 2;
       while (drag.remainder >= threshold) {
-        rotateGns(state.gnsCursor ? "right-small" : "right-large", 1);
+        rotateGns(selectingDirectWaypoint ? "right-large" : state.gnsCursor ? "right-small" : "right-large", 1);
         drag.remainder -= threshold;
       }
       while (drag.remainder <= -threshold) {
-        rotateGns(state.gnsCursor ? "right-small" : "right-large", -1);
+        rotateGns(selectingDirectWaypoint ? "right-large" : state.gnsCursor ? "right-small" : "right-large", -1);
         drag.remainder += threshold;
       }
       event.preventDefault();
