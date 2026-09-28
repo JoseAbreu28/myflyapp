@@ -901,7 +901,7 @@
   }
 
   function setup2TutorialReference() {
-    if (state.setup2SelectedReferenceId) {
+    if (state.setup2TutorialId === "free" && state.setup2SelectedReferenceId) {
       return TUTORIAL_REFERENCES[state.setup2SelectedReferenceId] || NAV_AIDS.VIS;
     }
     return findNavStation(state.setup2.navActive) || TUTORIAL_REFERENCES[setup2TutorialExample().reference];
@@ -938,7 +938,7 @@
     const hasVorSignal = Number.isFinite(reference.frequency);
     if (setupId === "av-setup-2") {
       const position = setup2TutorialPosition || setup2TutorialExample().start;
-      state.setup2SelectedReferenceId = hasVorSignal ? null : reference.id;
+      state.setup2SelectedReferenceId = state.setup2TutorialId === "free" && !hasVorSignal ? reference.id : null;
       state.setup2.tuningTarget = "NAV";
       if (hasVorSignal) {
         const previousActive = state.setup2.navActive;
