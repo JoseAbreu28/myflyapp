@@ -27,4 +27,5 @@
 
 ## Child DOX Index
 
+- `mockups/AGENTS.md` covers standalone, non-served avionics interface mockups.
 - `plans/AGENTS.md` covers dated planning documents.

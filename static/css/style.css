@@ -38,7 +38,7 @@ body {
   gap: 1rem;
 }
 
-.avionics-heading-tools { display: flex; align-items: flex-start; gap: 0.5rem; flex: 0 0 auto; }
+.avionics-heading-tools { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem; flex: 0 0 auto; }
 .avionics-helper-toggle { border: 1px solid #38bdf8; border-radius: 999px; padding: 0.42rem 0.72rem; background: rgba(14,116,144,0.16); color: #bae6fd; font: 800 0.72rem "Consolas", monospace; cursor: pointer; }
 .avionics-helper-toggle:hover, .avionics-helper-toggle[aria-pressed="true"] { border-color: #facc15; background: rgba(250,204,21,0.14); color: #fef3c7; }
 .avionics-helper-toggle[aria-pressed="true"] { box-shadow: 0 0 0 2px rgba(250,204,21,0.12); }
@@ -66,12 +66,55 @@ body {
 .avionics-subtab.is-active strong, .avionics-subtab.is-active span { color: #fef3c7; }
 .av-setup-panel[hidden] { display: none; }
 
+.av-tofrom-guide {
+  margin: 0.9rem 0 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(56,189,248,0.38);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(8,47,73,0.42), rgba(15,23,42,0.58));
+}
+.av-tofrom-guide-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 1rem; }
+.av-tofrom-guide-heading h3 { margin: 0 0 0.3rem; color: #e0f2fe; }
+.av-tofrom-guide-heading .note { margin: 0; }
+.av-tofrom-memory { display: grid; grid-template-columns: auto minmax(110px, auto); gap: 0.22rem 0.5rem; align-items: center; padding: 0.55rem 0.7rem; border: 1px solid #155e75; border-radius: 8px; background: rgba(2,6,23,0.42); font-size: 0.76rem; }
+.av-tofrom-memory strong { color: #67e8f9; font: 900 0.82rem "Consolas", monospace; }
+.av-tofrom-memory span { color: #cbd5e1; }
+.av-tofrom-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.8rem; }
+.av-tofrom-card { min-width: 0; padding: 0.65rem; border: 1px solid var(--line); border-radius: 8px; background: rgba(2,6,23,0.3); }
+.av-tofrom-card-to { border-color: rgba(34,197,94,0.45); }
+.av-tofrom-card-from { border-color: rgba(245,158,11,0.5); }
+.av-tofrom-card h4 { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.35rem; color: #f8fafc; font-size: 0.9rem; }
+.av-tofrom-card p { margin: 0; color: #cbd5e1; font-size: 0.78rem; line-height: 1.4; }
+.av-tofrom-pill { display: inline-grid; place-items: center; min-width: 3.7rem; padding: 0.22rem 0.4rem; border-radius: 4px; font: 900 0.74rem "Consolas", monospace; letter-spacing: 0.08em; }
+.av-tofrom-card-to .av-tofrom-pill { color: #bbf7d0; background: rgba(22,101,52,0.42); }
+.av-tofrom-card-from .av-tofrom-pill { color: #fef3c7; background: rgba(146,64,14,0.42); }
+.av-tofrom-reading-list { display: grid; gap: 0.35rem; margin: 0.6rem 0 0; }
+.av-tofrom-reading-list > div { display: grid; grid-template-columns: minmax(80px, 0.42fr) minmax(0, 1fr); gap: 0.45rem; padding-top: 0.35rem; border-top: 1px solid rgba(148,163,184,0.18); }
+.av-tofrom-reading-list dt { color: var(--muted); font-size: 0.7rem; }
+.av-tofrom-reading-list dd { margin: 0; color: #f8fafc; font: 700 0.7rem/1.35 "Consolas", monospace; }
+.av-tofrom-checklist { margin-top: 0.8rem; padding: 0.65rem 0.75rem; border: 1px solid rgba(148,163,184,0.25); border-radius: 8px; background: rgba(2,6,23,0.24); }
+.av-tofrom-checklist h4, .av-tofrom-setup-readings h4 { margin: 0 0 0.35rem; color: #f8fafc; font-size: 0.84rem; }
+.av-tofrom-checklist ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; margin: 0; padding-left: 1.25rem; color: #cbd5e1; font-size: 0.76rem; line-height: 1.35; }
+.av-tofrom-checklist li { padding-left: 0.15rem; }
+.av-tofrom-setup-readings { display: grid; gap: 0.25rem; margin-top: 0.8rem; padding: 0.65rem 0.75rem; border-left: 3px solid #38bdf8; background: rgba(14,116,144,0.12); }
+.av-tofrom-setup-readings p { margin: 0; color: #cbd5e1; font-size: 0.76rem; line-height: 1.4; }
+.av-tofrom-setup-readings strong { color: #e0f2fe; }
+.av-tofrom-example { margin-top: 0.8rem; padding: 0.65rem 0.75rem; border-left: 3px solid var(--accent); background: rgba(245,158,11,0.09); color: #fde68a; font-size: 0.76rem; line-height: 1.4; }
+.av-tofrom-example > strong { display: block; margin-bottom: 0.25rem; color: #fef3c7; }
+.av-tofrom-example p { margin: 0.2rem 0 0; }
+.av-tofrom-example-label { color: #fff; font-weight: 800; }
+.av-tofrom-heading-note { margin: 0.7rem 0 0; font-size: 0.75rem; }
+.av-tofrom-heading-note strong { color: #fef3c7; }
+
 .avionics-layout.avionics-layout-setup2 { display: grid; grid-template-columns: minmax(270px, 0.68fr) minmax(500px, 1.32fr); gap: 1rem; align-items: stretch; padding: 0.85rem; border: 7px solid #07090b; border-radius: 4px; background: linear-gradient(135deg, #30363a 0%, #171b1f 18%, #090b0d 70%, #1d2226 100%); box-shadow: inset 0 0 0 1px #596168, inset 0 0 0 3px #111417, 0 12px 24px rgba(0,0,0,0.42); }
+.avionics-layout-setup2 > .gi106a-unit { grid-column: 1; grid-row: 1 / span 2; }
+.avionics-layout-setup2 > .gnc255-unit { grid-column: 2; grid-row: 1; }
+.avionics-layout-setup2 > .av-tutorial-map-panel { grid-column: 2; grid-row: 2; }
 .avionics-layout-setup2 > .avionics-unit { border: 1px solid #343c43; border-radius: 3px; padding: 0.7rem; background: linear-gradient(145deg, #242a2e 0%, #101316 42%, #080a0c 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 5px 12px rgba(0,0,0,0.52); }
 .av-setup2-unit-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin: -0.7rem -0.7rem 0.6rem; padding: 0.5rem 0.65rem; color: #f8fafc; border-bottom: 1px solid #3b4247; background: linear-gradient(#30363b, #171b1f); }
 .av-setup2-unit-header h3 { margin: 0.12rem 0 0; font-size: 1.08rem; letter-spacing: 0.04em; }
 .av-setup2-unit-header h3 small { color: #94a3b8; font-size: 0.64em; }
-.gi106a-face { display: grid; place-items: center; min-height: 0; padding: 0.55rem; border: 7px solid #050708; border-radius: 3px; background: linear-gradient(145deg, #1c2227, #07090b 72%); box-shadow: inset 0 0 0 1px #525b61, inset 0 0 0 3px #111417, 0 4px 8px rgba(0,0,0,0.64); }
+.gi106a-face { position: relative; display: grid; place-items: center; align-content: start; min-height: 0; padding: 0.55rem; border: 7px solid #050708; border-radius: 3px; background: linear-gradient(145deg, #1c2227, #07090b 72%); box-shadow: inset 0 0 0 1px #525b61, inset 0 0 0 3px #111417, 0 4px 8px rgba(0,0,0,0.64); }
 .gi106a-round { position: relative; display: grid; place-items: center; width: min(100%, 320px); aspect-ratio: 1; padding: 0; border: 6px solid #060809; border-radius: 5px; background: linear-gradient(145deg, #3a4247 0%, #151a1d 20%, #050708 72%); box-shadow: inset 0 0 0 1px #879398, inset 0 0 0 3px #171b1f, 0 6px 12px rgba(0,0,0,0.72); overflow: hidden; }
 .gi106a-svg { position: relative; z-index: 1; display: block; width: 100%; height: 100%; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.72)); }
 .gi106a-screw { position: absolute; z-index: 2; width: 14px; height: 14px; border: 2px solid #050708; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #d3d9da 0 13%, #687378 18% 48%, #111518 58% 100%); box-shadow: 0 1px 2px rgba(0,0,0,0.9), inset 0 0 0 1px #8b969b; pointer-events: none; transform: translateZ(1px); }
@@ -97,21 +140,22 @@ body {
 .gi106a-brand-label { fill: #e5e7eb; font: 700 8px Arial, sans-serif; letter-spacing: 0.05em; text-anchor: middle; opacity: 0.92; }
 .gi106a-readouts { display: flex; justify-content: space-between; width: min(100%, 320px); margin-top: 0.35rem; color: #cbd5e1; font: 700 0.7rem "Consolas", monospace; }
 .gi106a-readouts strong { color: #facc15; }
-.gi106a-controls { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0.65rem; margin-top: 0.65rem; }
+.gi106a-controls { position: absolute; right: 0.65rem; bottom: 0.55rem; z-index: 3; display: grid; justify-items: center; gap: 0.22rem; margin: 0; }
+.gi106a-controls .av-control-caption { display: none; }
 .av-control-caption { color: #94a3b8; font: 800 0.68rem "Consolas", monospace; letter-spacing: 0.1em; }
-.gi106a-course-knob { width: 64px; height: 64px; border-width: 4px; font-size: 0.62rem; line-height: 1.05; }
+.gi106a-controls .gi106a-course-knob { width: 52px; height: 52px; border-width: 4px; font-size: 0.62rem; line-height: 1.05; }
 .gi106a-course-knob small { color: #e5e7eb; font-size: 0.62rem; }
-.gi106a-tofrom-button { min-height: 38px; }
+.gi106a-tofrom-button { display: none; }
 .gi106a-face.is-off, .gnc255-face.is-off { filter: saturate(0.15); opacity: 0.72; }
 
-.gnc255-face { min-height: 0; padding: 0.34rem 0.48rem 0.44rem; border: 8px solid #07090b; border-radius: 2px; background: linear-gradient(145deg, #2a3034 0%, #111518 45%, #050708 100%); box-shadow: inset 0 0 0 1px #566066, inset 0 0 0 3px #111416, 0 5px 10px rgba(0,0,0,0.68); }
+.gnc255-face { min-height: 0; padding: 0.44rem 0.58rem 0.52rem; border: 8px solid #07090b; border-radius: 2px; background: linear-gradient(145deg, #2a3034 0%, #111518 45%, #050708 100%); box-shadow: inset 0 0 0 1px #566066, inset 0 0 0 3px #111416, 0 5px 10px rgba(0,0,0,0.68); }
 .gnc255-topline { display: grid; grid-template-columns: 1fr auto auto 1fr; align-items: center; min-height: 18px; gap: 0.45rem; color: #e5e7eb; }
 .gnc255-topline .gns-face-brand { justify-self: start; font-size: 0.62rem; }
 .gnc255-topline h3 { justify-self: end; margin: 0; color: #f8fafc; font: 800 0.66rem "Arial Narrow", Arial, sans-serif; }
 .gnc255-topline h3 span { color: #9ca3af; font-size: 0.76em; }
 .gnc255-photo-sensor { width: 7px; height: 7px; border: 1px solid #4b5563; border-radius: 50%; background: #111827; box-shadow: inset 0 0 0 1px #020617; }
 .gnc255-lock-screw { width: 8px; height: 8px; border: 1px solid #aeb7bb; border-radius: 50%; background: #343b3f; box-shadow: inset 0 0 0 2px #0d1012; }
-.gnc255-panel { display: grid; grid-template-columns: 96px minmax(0, 1fr) 108px; align-items: end; gap: 0.52rem; margin-top: 0.2rem; }
+.gnc255-panel { display: grid; grid-template-columns: 96px minmax(0, 1fr) 108px; align-items: end; gap: 0.52rem; margin-top: 0.34rem; }
 .gnc255-left-controls { display: grid; align-content: space-between; justify-items: start; gap: 0.45rem; min-height: 100%; padding: 0.25rem 0 0.1rem; }
 .gnc255-com-control { display: flex; align-items: center; gap: 0.42rem; }
 .gnc255-mon-key { width: 38px; min-height: 28px !important; padding: 0.15rem 0.2rem !important; border-color: #596267 !important; background: linear-gradient(#373c3f, #0d0f11) !important; color: #f1f5f5 !important; box-shadow: 0 2px 0 #050607, inset 0 1px rgba(255,255,255,0.12) !important; font-size: 0.5rem !important; }
@@ -124,15 +168,25 @@ body {
 .gnc255-volume-knob > .av-status-led { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; }
 .gnc255-volume-knob > #setup2-gnc-status { position: absolute; top: 5px; left: 5px; color: #b9c3c7; font-size: 0.34rem; }
 .gnc255-center-stack { min-width: 0; }
-.gnc255-display { min-height: 76px; padding: 0.28rem 0.42rem 0.26rem; border: 3px solid #060809; border-radius: 2px; background: linear-gradient(180deg, #061222 0%, #02060b 100%); color: #edf4f3; box-shadow: inset 0 0 0 1px #647077, inset 0 0 12px rgba(56,189,248,0.1); font: 0.68rem "Consolas", monospace; }
-.gnc255-screen-top { display: flex; justify-content: center; min-height: 0.7rem; padding-bottom: 0.15rem; border-bottom: 1px solid #526066; color: #dff6ff; }
-.gnc255-screen-top strong { color: #e5f7ff; font-size: 0.7rem; letter-spacing: 0.08em; }
+.gnc255-display { min-height: 104px; padding: 0.34rem 0.5rem 0.4rem; border: 3px solid #060809; border-radius: 2px; background: radial-gradient(circle at 50% 18%, #173a31 0%, #071712 52%, #020806 100%); color: #d8fff2; box-shadow: inset 0 0 0 1px #6e817d, inset 0 0 14px rgba(61, 224, 172, 0.14), 0 0 7px rgba(48, 214, 163, 0.12); font: 0.68rem "Consolas", monospace; }
+.gnc255-screen-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 0.82rem; padding-bottom: 0.2rem; border-bottom: 1px solid #55776d; color: #8fcbb7; font-size: 0.5rem; letter-spacing: 0.08em; }
+.gnc255-screen-top > span:last-child { justify-self: end; }
+.gnc255-screen-top strong { color: #ddfff3; font-size: 0.7rem; letter-spacing: 0.08em; }
 .gnc255-frequency-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0.2rem; }
+.gnc255-nav-detail { min-height: 0.78rem; margin-top: 0.2rem; padding-top: 0.16rem; border-top: 1px dotted rgba(125, 224, 187, 0.45); color: #b5f5df; font: 700 0.56rem "Consolas", monospace; text-align: center; }
 .gnc255-frequency-cell { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 0.32rem; min-width: 0; padding: 0.08rem 0.25rem 0.03rem; }
 .gnc255-frequency-cell + .gnc255-frequency-cell { border-left: 1px solid #344b57; }
-.gnc255-frequency-cell small { color: #8fc4d8; font-size: 0.5rem; }
-.gnc255-frequency-cell strong { color: #e8f8ff; font-size: 1.25rem; letter-spacing: 0.035em; text-shadow: 0 0 6px rgba(56,189,248,0.32); white-space: nowrap; }
-.gnc255-frequency-cell em { grid-column: 2; color: #a4c5cf; font-size: 0.52rem; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gnc255-frequency-cell small { color: #8fcbb7; font-size: 0.5rem; }
+.gnc255-frequency-cell strong { color: #e2fff5; font-size: 1.28rem; letter-spacing: 0.035em; text-shadow: 0 0 6px rgba(102, 245, 193, 0.28); white-space: nowrap; }
+.gnc255-frequency-cell em { grid-column: 2; color: #a3d7c4; font-size: 0.52rem; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gnc255-screen-bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 0.5rem; min-height: 0.95rem; margin-top: 0.18rem; padding-top: 0.2rem; border-top: 1px solid rgba(115, 187, 160, 0.42); color: #8fcbb7; font-size: 0.48rem; }
+.gnc255-volume-readout { min-width: 0; }
+.gnc255-volume-readout small, .gnc255-reference-cell small { display: block; color: #8fcbb7; font-size: 0.45rem; letter-spacing: 0.05em; }
+.gnc255-volume-rail { display: flex; gap: 2px; align-items: center; height: 5px; margin-top: 3px; }
+.gnc255-volume-rail i { display: block; width: 9px; height: 4px; border: 1px solid #78c7a9; background: #428d72; box-shadow: 0 0 3px rgba(82, 225, 164, 0.22); }
+.gnc255-volume-rail i:nth-last-child(-n + 2) { background: transparent; box-shadow: none; }
+.gnc255-reference-cell { min-width: 48px; text-align: right; }
+.gnc255-reference-cell strong { display: block; color: #d8fff2; font-size: 0.72rem; line-height: 1; letter-spacing: 0.02em; }
 .gnc255-button-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.24rem; margin-top: 0.42rem; }
 .gnc255-button-row .av-key { min-height: 25px; padding: 0.18rem 0.15rem; border-color: #596267; border-radius: 3px; background: linear-gradient(#373c3f, #0d0f11); color: #f1f5f5; box-shadow: 0 2px 0 #050607, inset 0 1px rgba(255,255,255,0.12); font-size: 0.52rem; }
 .gnc255-button-row .av-key:hover { background: #343d42; }
@@ -141,11 +195,19 @@ body {
 .gnc255-tune-label { position: absolute; top: 0; right: 15px; color: #cbd5e1; font: 800 0.5rem "Consolas", monospace; letter-spacing: 0.08em; }
 .gnc255-right-controls .gnc255-flip-key { position: absolute; top: 38px; left: 0; width: 31px; min-height: 23px; padding: 0.05rem; border-color: #596267; background: linear-gradient(#373c3f, #0d0f11); color: #f1f5f5; box-shadow: 0 2px 0 #050607, inset 0 1px rgba(255,255,255,0.12); font-size: 0.95rem !important; line-height: 1; }
 .gnc255-right-controls .gnc255-flip-key:hover { background: #343d42; }
-.gnc255-dual-knob { position: absolute; top: 26px; right: 0; width: 72px; height: 72px; }
-.gnc255-knob { position: absolute; display: grid; place-items: center; padding: 0; border: 3px solid #69757b; border-radius: 50%; background: radial-gradient(circle at 34% 24%, #7e898d 0%, #3b454a 34%, #080a0c 76%); color: #e5edf0; font: 800 0.42rem "Consolas", monospace; line-height: 1; cursor: pointer; box-shadow: inset 0 0 0 2px #090b0d, 0 3px 6px rgba(0,0,0,0.72); }
+.gnc255-dual-knob { position: absolute; top: 26px; right: 0; width: 72px; height: 72px; isolation: isolate; }
+.gnc255-knob { position: absolute; display: grid; place-items: center; padding: 0; border: 3px solid #69757b; border-radius: 50%; background: radial-gradient(circle at 34% 24%, #7e898d 0%, #3b454a 34%, #080a0c 76%); color: #e5edf0; font: 800 0.42rem "Consolas", monospace; line-height: 1; cursor: pointer; box-shadow: inset 0 0 0 2px #090b0d, 0 3px 6px rgba(0,0,0,0.72); transition: border-color 120ms ease, filter 120ms ease; }
 .gnc255-knob:hover { border-color: var(--accent); }
-.gnc255-outer-knob { inset: 0; width: 72px; height: 72px; z-index: 1; font-size: 0; }
-.gnc255-inner-knob { top: 16px; left: 16px; width: 40px; height: 40px; z-index: 2; border: 0; background: transparent; box-shadow: none; opacity: 0; }
+.gnc255-outer-knob { inset: 0; width: 72px; height: 72px; z-index: 1; border-width: 3px; font-size: 0; }
+.gnc255-outer-knob::before { position: absolute; inset: 15px; border: 2px solid #89979a; border-radius: 50%; background: radial-gradient(circle at 34% 25%, #a0abad 0%, #4c595d 40%, #111618 78%); box-shadow: inset 0 0 0 2px #111517, 0 2px 4px rgba(0,0,0,0.74); content: ""; pointer-events: none; }
+.gnc255-outer-knob::after { position: absolute; top: 7px; left: 50%; width: 2px; height: 8px; border-radius: 2px; background: #e1e9ea; box-shadow: 0 0 4px rgba(225,233,234,0.35); content: ""; transform: translateX(-50%); pointer-events: none; }
+.gnc255-inner-knob { top: 15px; left: 15px; width: 42px; height: 42px; z-index: 2; border: 0; background: transparent; box-shadow: none; color: transparent; }
+.gnc255-inner-knob:hover { border-color: transparent; background: transparent; filter: none; }
+.gnc255-inner-knob:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* The shared physical-knob rule must not flatten the GNC's concentric control. */
+.gnc255-face .gnc255-outer-knob { width: 72px; height: 72px; border-width: 3px; background: radial-gradient(circle at 34% 24%, #7e898d 0%, #3b454a 34%, #080a0c 76%); }
+.gnc255-face .gnc255-inner-knob { width: 42px; height: 42px; border: 0; background: transparent; box-shadow: none; color: transparent; }
+.gnc255-face .gnc255-inner-knob:hover { border-color: transparent; background: transparent; filter: none; }
 .gnc255-knob-caption { position: absolute; right: 13px; bottom: 0; color: #aeb8ba; text-align: center; font: 800 0.43rem "Consolas", monospace; letter-spacing: 0.06em; line-height: 1.1; }
 .av-setup2-footer { margin-top: 0.8rem; }
 .avionics-badge {
@@ -236,35 +298,42 @@ body {
 
 /* G5 bezel: square instrument face with integrated brand, screen, power key and knob. */
 .g5-unit { min-width: 0; border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
-.g5-face { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; aspect-ratio: 1; padding: 0.5rem; border: 7px solid #05070a; border-radius: 8px; background: linear-gradient(145deg, #181b20 0%, #050608 62%, #000 100%); box-shadow: inset 0 0 0 2px #374151, 0 5px 10px rgba(0,0,0,0.65); }
+.g5-face { display: grid; grid-template-rows: auto auto auto; width: 100%; padding: 0.75rem 0.85rem 0.55rem; border: 3px solid #08090a; border-radius: 16px; background: linear-gradient(130deg, #303235, #111214 55%, #202124); box-shadow: inset 0 0 0 2px #45474a, 0 8px 16px #0006; }
 .g5-face-topline { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 21px; color: #f8fafc; }
-.g5-face-topline .g5-brand { grid-column: 2; color: #e5e7eb; font: 800 0.66rem Arial, sans-serif; letter-spacing: 0.04em; text-align: center; }
+.g5-face-topline .g5-brand { grid-column: 2; color: #f7fafc; font: 700 0.95rem Arial, sans-serif; letter-spacing: 0.06em; text-align: center; }
 .g5-face-topline h3 { grid-column: 3; margin: 0; color: #94a3b8; font: 800 0.56rem "Consolas", monospace; letter-spacing: 0.1em; text-align: right; }
 .g5-face-topline h3 small { color: #cbd5e1; font-size: 0.95em; }
-.g5-display-shell { min-height: 0; aspect-ratio: 1; margin: 0.2rem 0; border-width: 5px; border-color: #020304; border-radius: 4px; box-shadow: inset 0 0 0 1px #64748b, 0 3px 7px rgba(0,0,0,0.7); }
-.g5-display-shell canvas { display: block; width: 100%; height: 100%; aspect-ratio: 1; }
+.g5-display-shell { position: relative; min-height: 0; aspect-ratio: 4 / 3; margin: 0.5rem 0; overflow: hidden; border-width: 5px; border-color: #020304; border-radius: 3px; box-shadow: inset 0 0 0 1px #64748b; }
+.g5-display-shell canvas { display: block; width: 100%; height: 100%; aspect-ratio: auto; }
 .g5-bottom-controls { display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; min-height: 41px; }
 .g5-power-control { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 2px solid #4b5563; border-radius: 50%; background: radial-gradient(circle at 35% 28%, #9ca3af 0%, #374151 42%, #030405 75%); color: #f8fafc; cursor: pointer; box-shadow: inset 0 0 0 2px #111827, 0 2px 4px rgba(0,0,0,0.65); }
 .g5-power-control:hover { border-color: var(--accent); }
 .g5-power-control > span:last-child { display: none; }
 .g5-power-control .av-status-led { width: auto; height: auto; background: transparent; box-shadow: none; color: #e5e7eb; font-size: 1.05rem; line-height: 1; }
-.g5-power-control .g5-power-symbol { display: grid; place-items: center; width: 18px; height: 18px; font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif; font-size: 1.18rem; font-weight: 700; line-height: 1; }
+.g5-power-control .g5-power-symbol { display: block; position: relative; width: 18px; height: 18px; font-size: 0; }
+.g5-power-symbol::before { content: ""; position: absolute; inset: 2px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; }
+.g5-power-symbol::after { content: ""; position: absolute; top: 0; left: 8px; width: 2px; height: 9px; background: currentColor; }
 .g5-power-control .av-status-led.is-on { background: transparent; box-shadow: none; color: #d1d5db; }
 .g5-power-control .av-status-led.is-off { background: transparent; box-shadow: none; color: #ef4444; }
-.g5-ambient-sensor { width: 13px; height: 13px; margin-left: 0.3rem; border: 2px solid #cbd5e1; border-radius: 50%; background: #d1d5db; box-shadow: inset 0 0 0 3px #6b7280; }
+.g5-ambient-sensor { width: 10px; height: 10px; margin-left: 0.3rem; border: 1px solid #4b4c4e; border-radius: 50%; background: #060707; }
 .g5-page-label { flex: 1; color: #9ca3af; font: 800 0.55rem "Consolas", monospace; letter-spacing: 0.1em; }
 .g5-physical-knob { width: 40px; height: 40px; border-width: 3px; font-size: 0.5rem; }
-.g5-menu-control { min-width: 42px; min-height: 25px; padding: 0.15rem; font-size: 0.54rem; }
 .g5-unit > .av-unit-readout { display: none; }
 .g5-unit-hsi .g5-display-shell { position: relative; }
 .g5-unit-hsi .g5-bottom-controls { position: relative; z-index: 3; }
-.g5-hsi-options { position: absolute; z-index: 2; right: 4%; bottom: 18%; width: 68%; padding: 0.45rem; border: 1px solid #94a3b8; background: #07131c; box-shadow: 0 3px 12px #000; color: #f8fafc; font: 700 0.78rem Consolas, monospace; }
+.g5-hsi-options { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 23%; min-height: 48px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 4px; border: 1px solid #9c9d9f; background: #17191b; color: #f8fafc; font: 600 clamp(0.6rem, 0.85vw, 0.8rem) Consolas, monospace; }
 .g5-hsi-options[hidden] { display: none; }
-.g5-hsi-options > strong { display: block; margin-bottom: 0.3rem; text-align: center; }
-.g5-hsi-options button { display: block; width: 100%; margin: 0.2rem 0; padding: 0.38rem; border: 1px solid #64748b; border-radius: 3px; background: #182636; color: #f8fafc; font: inherit; text-align: left; cursor: pointer; }
-.g5-hsi-options button.is-selected, .g5-hsi-options button:focus-visible { border-color: #7dd3fc; background: #164e63; outline: 1px solid #7dd3fc; }
+.g5-hsi-options.g5-setup-options { height: auto; min-height: 58%; grid-template-columns: 1fr; background: #090a0c; }
+.g5-hsi-options.g5-setup-options > strong { position: static; width: auto; height: auto; clip-path: none; text-align: center; padding: 3px; }
+.g5-setup-options button { min-height: 28px; font-size: 0.72rem; }
+.g5-setup-options button[data-g5-menu-choice="BACK"] { order: 10 !important; min-height: 22px; }
+.g5-hsi-options > strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.g5-hsi-options button { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; min-width: 0; min-height: 36px; margin: 0; padding: 2px; border: 1px solid #8a8d90; border-radius: 0; background: linear-gradient(#5d5f60, #151617); color: #f8fafc; font: inherit; text-align: center; cursor: pointer; overflow-wrap: anywhere; }
+.g5-menu-value { color: #65e4f1; }
+.g5-hsi-options button[hidden] { display: none; }
+.g5-hsi-options button.is-selected, .g5-hsi-options button:focus-visible { border-color: #65e4f1; outline: 1px solid #65e4f1; outline-offset: -2px; }
 .g5-hsi-options button:disabled { opacity: 0.45; cursor: default; }
-.g5-hsi-options p { margin: 0.4rem 0 0; color: #cbd5e1; font: 0.65rem/1.35 "Segoe UI", sans-serif; }
+.g5-hsi-options p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 .avionics-unit {
   min-width: 0;
@@ -314,7 +383,7 @@ body {
   overflow: hidden;
 }
 
-.g5-display-shell canvas { display: block; width: 100%; height: 100%; aspect-ratio: 1; }
+.g5-display-shell canvas { display: block; width: 100%; height: 100%; aspect-ratio: 4 / 3; }
 .av-unit-toolbar { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.55rem; }
 .av-toolbar-spacer { flex: 1; }
 .av-key {
@@ -366,8 +435,13 @@ body {
 .gns-screen-top { border-bottom: 1px solid #4ade80; padding-bottom: 0.28rem; }
 .gns-screen-top strong { color: #facc15; }
 .gns-frequency-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid #93c5fd; border-radius: 2px; padding: 0.3rem; background: linear-gradient(180deg, #1474e8, #0644a5); color: #fff; }
-.gns-frequency-strip span { display: grid; gap: 0.08rem; font-size: 0.72rem; line-height: 1.05; }
-.gns-frequency-strip em { color: #b9f3ff; font-size: 1.08em; font-style: normal; }
+.gns-frequency-cell { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.08rem 0.3rem; align-items: center; min-width: 0; font-size: 0.72rem; line-height: 1.05; }
+.gns-frequency-cell > strong { grid-row: 1 / span 2; align-self: center; color: #fff; }
+.gns-frequency-input-wrap { display: flex; align-items: center; gap: 0.18rem; min-width: 0; }
+.gns-frequency-input-wrap > span { color: #dbeafe; font-size: 0.56rem; }
+.gns-frequency-input { width: 100%; min-width: 0; padding: 0.05rem 0.08rem; border: 1px solid transparent; border-bottom-color: rgba(191, 219, 254, 0.5); border-radius: 2px; background: transparent; color: #fff; font: inherit; font-size: 0.78rem; text-align: right; }
+.gns-frequency-input[data-gns-frequency-role="standby"] { color: #b9f3ff; }
+.gns-frequency-input:focus { outline: 1px solid #facc15; border-bottom-color: #facc15; background: rgba(2, 6, 23, 0.35); }
 .gns-screen-body { min-height: 270px; padding: 0.7rem 0.25rem 0.25rem; }
 .gns-screen-footer { border-top: 1px solid #365314; padding-top: 0.28rem; color: #86efac; }
 .gns-line { margin: 0.65rem 0; line-height: 1.25; }
@@ -461,6 +535,54 @@ body {
 .gns-crsr-knob small { font-size: 0.72rem; }
 .gns-crsr-knob { touch-action: none; user-select: none; cursor: ew-resize; }
 .gns-crsr-knob.is-dragging { border-color: var(--accent); box-shadow: inset 0 0 0 2px #0b0f14, 0 0 0 3px rgba(245,158,11,0.2), 0 3px 5px rgba(0,0,0,0.65); }
+.gns-live-controls { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.55rem; }
+.gns-live-controls label { display: grid; gap: 0.2rem; color: var(--muted); font-size: 0.7rem; }
+.gns-live-controls .select { min-width: 105px; font-size: 0.75rem; }
+.gns-live-controls .note, .gns-live-note { font-size: 0.7rem; margin: 0; }
+.gns-live-note { margin-top: 0.5rem; }
+.gns-unit .gns-screen { display: block; padding: 0; width: 100%; height: auto; min-height: 0; aspect-ratio: 240 / 128; align-self: center; background: #000; }
+.gns-live-display { position: relative; width: 100%; height: 100%; container-type: inline-size; overflow: hidden; filter: brightness(var(--gns-backlight, 1)) contrast(var(--gns-contrast, 1)); }
+.gns-live-svg { display: block; width: 100%; height: 100%; font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+.gns-live-display .gns-live-radio-input { position: absolute; left: 0.85%; width: 21.4%; height: 15%; padding: 0; border: 0; border-radius: 0; background: transparent; font: 700 5cqw/1 Consolas, "Courier New", monospace; letter-spacing: -0.05em; text-align: left; }
+.gns-live-com-active { top: 8.4%; }
+.gns-live-com-standby { top: 22.2%; }
+.gns-live-vloc-active { top: 43.5%; }
+.gns-live-vloc-standby { top: 58.2%; }
+.gns-live-display .gns-live-radio-input.is-selected { background: #164f96; box-shadow: inset 0 0 0 1px #86d9ff; }
+.gns-live-display .gns-live-radio-input:focus { outline: 1px solid #a4f7ff; background: #1b467d; }
+.gns-live-ident { position: absolute; left: 26.9%; top: 23.8%; width: 38.5%; height: 15%; padding: 0; border: 0; border-radius: 0; background: #173969; color: #b9faff; font: 700 6cqw/1 Consolas, monospace; text-transform: uppercase; }
+.gns-live-ident:focus { outline: 1px solid #b9faff; }
+.gns-live-menu-hit { position: absolute; left: 26.2%; width: 70.8%; padding: 0; border: 0; border-radius: 0; color: transparent; background: transparent; font-size: 0; cursor: pointer; }
+.gns-live-menu-hit:focus-visible { outline: 1px solid #b9faff; }
+.gns-nav-dual-knob, .gns-tune-dual-knob { position: relative; width: 86px; height: 86px; }
+.gns-tune-dual-knob { width: 76px; height: 76px; align-self: center; }
+.gns-unit .gns-nav-outer, .gns-unit .gns-tune-outer { width: 100%; height: 100%; touch-action: none; cursor: ew-resize; }
+.gns-unit .gns-nav-dual-knob .gns-crsr-knob, .gns-unit .gns-tune-dual-knob .gns-cv-knob { position: absolute; width: 66%; height: 66%; inset: 17%; border-width: 2px; font-size: 0.62rem; touch-action: none; cursor: ew-resize; }
+.gns-unit .gns-nav-dual-knob .gns-crsr-knob small, .gns-unit .gns-cv-knob small { font-size: 0.56rem; }
+.gns-physical-knob:focus-visible, .gns-cv-knob:focus-visible { outline: 2px solid #86d9ff; outline-offset: 2px; }
+.gns-face button:disabled { opacity: 0.45; cursor: default; }
+.gns-unit .gns-face { grid-template-columns: 95px minmax(0, 1fr) 96px; }
+.gns-unit .gns-volume-row { grid-template-columns: 10px minmax(0, 1fr) 28px; }
+.gns-unit .gns-selector-button { width: 28px; }
+.gns-unit .gns-off-screen { min-height: 160px; }
+.gns-portugal-map { background: #030708; }
+.gns-portugal-map .gns-geography { fill: #172319; stroke: #69807d; stroke-width: 1.2; }
+.gns-portugal-map .gns-geography-portugal { fill: #202c1e; stroke: #8da7a0; }
+.gns-portugal-map .gns-geography-label { fill: #99a691; font: 12px Consolas, monospace; }
+.gns-portugal-map .gns-map-place { fill: #abdee0; }
+.gns-portugal-map .gns-map-place-label { fill: #cfe9e8; font: bold 10px Consolas, monospace; paint-order: stroke; stroke: #030708; stroke-width: 3px; }
+.gns-portugal-map .gns-map-range-label { text-anchor: start; }
+.gns-geography-credit { margin: 0.25rem 0 0; font-size: 0.65rem; }
+@media (max-width: 650px) {
+  .gns-unit .gns-face { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem; }
+  .gns-unit .gns-center-panel { grid-column: 1 / -1; grid-row: 2; }
+  .gns-unit .gns-left-controls { grid-column: 1; grid-row: 3; }
+  .gns-unit .gns-right-controls { grid-column: 2; grid-row: 3; }
+  .gns-unit .gns-side-labels { display: none; }
+  .gns-unit .gns-screen { min-height: 0; }
+  .gns-nav-dual-knob { width: 68px; height: 68px; }
+  .gns-unit .gns-center-panel .gns-softkeys .av-key { padding: 0.25rem 0.1rem; font-size: 0.64rem; }
+}
 .gns-map-view { position: relative; width: 100%; height: 100%; min-height: 96px; margin: 0; border: 1px solid #0ea5e9; border-radius: 0; overflow: hidden; background: #030a12; box-shadow: inset 0 0 0 1px #1e3a5f; }
 .gns-map-page { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 0.22rem; height: 100%; min-height: 0; }
 .gns-map-data-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.16rem 0.32rem; padding: 0.2rem 0.28rem; border: 1px solid #1e4354; background: rgba(3, 10, 18, 0.92); color: #d1fae5; font-size: 0.58rem; line-height: 1.1; }
@@ -490,7 +612,10 @@ body {
 .gns-map-range-label { fill: #facc15; text-anchor: end; }
 
 .avionics-layout-instrument-only { display: block; }
-.avionics-layout-instrument-only .avionics-rack { grid-template-columns: minmax(330px, 0.72fr) minmax(520px, 1.28fr); }
+.avionics-layout-instrument-only .avionics-rack { grid-template-columns: minmax(320px, 0.72fr) minmax(500px, 1.28fr); grid-template-rows: auto auto; align-items: start; }
+.avionics-layout-instrument-only .g5-stack { grid-column: 1; grid-row: 1 / span 2; }
+.avionics-layout-instrument-only .gns-unit { grid-column: 2; grid-row: 1; }
+.avionics-layout-instrument-only .av-tutorial-map-panel { grid-column: 2; grid-row: 2; }
 .avionics-console-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.7rem; align-items: center; margin-top: 0.8rem; }
 .avionics-console-footer .av-status-box { margin: 0; }
 .av-instrument-summary { display: block; margin-top: 0.3rem; color: #cbd5e1; font-size: 0.74rem; }
@@ -546,29 +671,23 @@ body {
 .av-tutorial-toolbar .fpl-field { width: min(340px, 100%); }
 .av-tutorial-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .av-tutorial-actions .btn { font-size: 0.78rem; }
-.av-tutorial-flight-controls { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(330px, auto); gap: 0.75rem 1rem; align-items: center; margin: 0 0 0.75rem; padding: 0.7rem 0.75rem; border: 1px solid rgba(59,130,246,0.42); border-radius: 9px; background: linear-gradient(135deg, rgba(15,23,42,0.78), rgba(8,15,29,0.92)); }
-.av-tutorial-flight-inputs { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 0.8rem; align-items: center; }
-.av-flight-field { display: grid; gap: 0.35rem; min-width: 0; color: #cbd5e1; font: 700 0.68rem "Consolas", monospace; }
-.av-flight-field-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.av-flight-field output { color: #facc15; font: 800 0.74rem "Consolas", monospace; }
-.av-flight-field input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
-.av-flight-distance-field input[type="number"] { width: 100%; min-height: 31px; border: 1px solid #475569; border-radius: 5px; padding: 0.28rem 0.4rem; background: #0b1220; color: #f8fafc; font: 800 0.76rem "Consolas", monospace; }
-.av-flight-distance-field input[type="number"]:focus, .av-flight-field input[type="range"]:focus-visible { outline: 2px solid rgba(56,189,248,0.75); outline-offset: 2px; }
-.av-flight-field input:disabled { opacity: 0.55; cursor: not-allowed; }
-.av-tutorial-flight-actions { display: grid; grid-template-columns: minmax(140px, 1fr) 36px 72px 36px; gap: 0.38rem; align-items: center; }
-.av-flight-readout { display: grid; grid-template-columns: auto auto auto auto auto auto; gap: 0.12rem 0.32rem; align-items: baseline; color: #94a3b8; font: 700 0.58rem "Consolas", monospace; white-space: nowrap; }
-.av-flight-readout strong { color: #e2e8f0; font-size: 0.68rem; }
-.av-flight-go { min-height: 34px; border-color: var(--accent); color: #111827; background: linear-gradient(#facc15, #d97706); font-size: 0.7rem; font-weight: 900; }
+.av-flight-go { min-height: 34px; border-color: var(--accent); color: #111827; background: linear-gradient(#facc15, #d97706); font-weight: 900; white-space: nowrap; }
 .av-flight-go:hover { background: #fde047; }
 .av-flight-go[aria-pressed="true"] { color: #f8fafc; background: linear-gradient(#b91c1c, #7f1d1d); border-color: #fca5a5; }
-.av-flight-turn { min-width: 36px; min-height: 34px; padding: 0.15rem; color: #f8fafc; background: linear-gradient(#334155, #111827); font-size: 1.05rem; }
-.av-flight-turn:hover { background: #475569; }
-.av-tutorial-flight-hint { grid-column: 1 / -1; margin: 0; font-size: 0.72rem; }
 .av-tutorial-layout { display: grid; grid-template-columns: minmax(380px, 1.2fr) minmax(300px, 0.8fr); gap: 0.8rem; }
+.av-tutorial-layout.av-tutorial-brief-only { display: block; }
+.av-tutorial-layout[hidden] { display: none !important; }
 .av-tutorial-map-panel, .av-tutorial-brief { min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: rgba(15,23,42,0.45); }
 .av-tutorial-map-panel { padding: 0.45rem; }
 .av-tutorial-map { height: 430px; border-radius: 8px; overflow: hidden; background: #0b1220; }
 .av-tutorial-map-panel > .note { margin: 0.45rem 0.25rem 0.1rem; font-size: 0.76rem; }
+.av-navaid-catalog { margin: 0.65rem 0.25rem 0.25rem; font-size: 0.78rem; }
+.av-navaid-catalog summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.av-navaid-catalog .note { font-size: 0.76rem; }
+.av-navaid-table { max-width: 100%; overflow-x: auto; margin-bottom: 0.5rem; }
+.av-navaid-table .btn { padding: 0.25rem 0.45rem; font-size: 0.78rem; }
+.av-navaid-table td { vertical-align: top; }
+.av-navaid-table small { color: var(--muted); white-space: nowrap; }
 .av-tutorial-brief { padding: 0.8rem; }
 .av-tutorial-brief h4 { margin: 0 0 0.35rem; color: #f8fafc; font-size: 1rem; }
 .av-tutorial-brief > .note { margin: 0; }
@@ -597,23 +716,31 @@ body {
 .av-tutorial-reference-marker span { color: #cbd5e1; font: 700 0.62rem "Consolas", monospace; }
 .av-tutorial-reference-marker.is-active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(245,158,11,0.35), 0 2px 8px rgba(15,23,42,0.6); }
 
-@media (max-width: 1050px) {
+@media (max-width: 1250px) {
   .avionics-layout { grid-template-columns: 1fr; }
+  .avionics-layout.avionics-layout-setup2 { grid-template-columns: 1fr; }
   .avionics-rack { grid-template-columns: minmax(300px, 0.82fr) minmax(440px, 1.18fr); }
+  .avionics-layout-setup2 > .gi106a-unit,
+  .avionics-layout-setup2 > .gnc255-unit,
+  .avionics-layout-setup2 > .av-tutorial-map-panel { grid-column: 1; grid-row: auto; }
 }
 
 @media (max-width: 840px) {
   .avionics-heading { flex-direction: column; }
+  .av-tofrom-guide-heading { grid-template-columns: 1fr; }
+  .av-tofrom-memory { justify-self: start; }
+  .av-tofrom-cards { grid-template-columns: 1fr; }
+  .av-tofrom-checklist ol { grid-template-columns: 1fr; }
   .avionics-rack, .avionics-study-grid { grid-template-columns: 1fr; }
   .avionics-layout-instrument-only .avionics-rack { grid-template-columns: 1fr; }
+  .avionics-layout-instrument-only .g5-stack,
+  .avionics-layout-instrument-only .gns-unit,
+  .avionics-layout-instrument-only .av-tutorial-map-panel { grid-column: 1; grid-row: auto; }
   .avionics-console-footer { grid-template-columns: 1fr; }
   .avionics-console-footer .av-reset { width: 100%; }
   .av-tutorial-heading, .av-tutorial-toolbar { flex-direction: column; align-items: stretch; }
   .av-tutorial-toolbar .fpl-field { width: 100%; }
   .av-tutorial-actions .btn { flex: 1; }
-  .av-tutorial-flight-controls { grid-template-columns: 1fr; }
-  .av-tutorial-flight-inputs { grid-template-columns: 1fr 110px; }
-  .av-tutorial-flight-actions { grid-template-columns: 1fr 36px 72px 36px; }
   .av-tutorial-layout { grid-template-columns: 1fr; }
   .av-challenge-checklist { grid-template-columns: 1fr; }
   .gns-face { grid-template-columns: 126px minmax(0, 1fr) 122px; }
@@ -625,19 +752,35 @@ body {
   .gi106a-face, .gnc255-face { min-height: 0; }
 }
 
+@media (max-width: 560px) {
+  .gnc255-panel { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; align-items: stretch; }
+  .gnc255-left-controls { grid-row: 1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; justify-items: stretch; min-height: 0; gap: 0.35rem; padding: 0.1rem 0 0; }
+  .gnc255-com-control { gap: 0.25rem; }
+  .gnc255-volume-knob { width: 48px; height: 48px; }
+  .gnc255-volume-knob-nav { justify-self: end; }
+  .gnc255-center-stack { grid-row: 2; }
+  .gnc255-display { min-height: 92px; }
+  .gnc255-frequency-cell strong { font-size: 0.96rem; }
+  .gnc255-right-controls { grid-row: 3; min-height: 82px; }
+  .gnc255-right-controls .gnc255-flip-key { top: 29px; }
+}
+
 @media (max-width: 480px) {
   .avionics-subtabs { display: grid; }
   .avionics-subtab { min-width: 0; }
-  .gi106a-controls { grid-template-columns: 1fr auto; }
-  .av-control-caption { grid-column: 1 / -1; }
-  .av-tutorial-flight-inputs { grid-template-columns: 1fr; }
+  .av-tofrom-guide { padding: 0.7rem; }
+  .av-tofrom-memory { grid-template-columns: auto minmax(0, 1fr); width: 100%; }
+  .av-tofrom-reading-list > div { grid-template-columns: 1fr; gap: 0.1rem; }
+  .gi106a-face { min-height: 22rem; }
+  .gi106a-controls { right: 0.45rem; bottom: 0.4rem; grid-template-columns: 1fr; }
+  .gi106a-controls .av-control-caption { display: none; }
+  .gi106a-controls .gi106a-course-knob { width: 50px; height: 50px; }
   .av-challenge-checklist-heading { flex-direction: column; }
   .av-challenge-row { grid-template-columns: 1fr auto; }
   .av-challenge-row .av-challenge-state { grid-column: 1 / -1; justify-self: start; text-align: left; }
   .av-challenge-row .av-challenge-open, .av-challenge-row .av-challenge-confirm { width: 100%; }
   .av-challenge-row .av-challenge-confirm { grid-column: 1 / -1; }
   .gns-map-data-grid { font-size: 0.52rem; }
-  .av-flight-readout { grid-column: 1 / -1; justify-content: space-between; white-space: normal; }
   .gnc255-frequency-pair { gap: 0.28rem; }
   .gnc255-frequency-cell strong { font-size: 0.85rem; }
   .gnc255-button-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -660,7 +803,8 @@ body {
   .gns-crsr-knob { width: 56px; height: 56px; font-size: 0.56rem; }
   .gns-crsr-knob small { font-size: 0.62rem; }
   .gns-step-button { min-width: 14px; }
-  .gns-frequency-strip span { font-size: 0.58rem; }
+  .gns-frequency-cell { font-size: 0.58rem; }
+  .gns-frequency-input { font-size: 0.62rem; }
   .gns-map-svg { min-height: 72px; }
   .av-display-shell { border-width: 5px; }
   .g5-unit { padding: 0.45rem; }
@@ -669,6 +813,65 @@ body {
   .av-round-control { width: 24px; }
   .av-tune-toggle { width: 34px; font-size: 0.5rem; }
 }
+
+/* Mobile mode is opt-in: preserve the normal rack at every viewport by default. */
+.avionics-mobile-toggle { white-space: nowrap; }
+.av-touch-rotary { display: contents; }
+.av-touch-step, .av-touch-rotary-caption, .av-touch-flight, .av-touch-hint { display: none; }
+#avionics-trainer .av-rotary-touch-target { touch-action: none; user-select: none; -webkit-user-select: none; }
+
+#avionics-trainer.av-mobile-mode button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#avionics-trainer.av-mobile-mode .av-rotary-touch-target,
+#avionics-trainer.av-mobile-mode .av-touch-step,
+#avionics-trainer.av-mobile-mode [data-av-aircraft-turn] { touch-action: none; }
+#avionics-trainer.av-mobile-mode :is(.av-key, .btn, .avionics-subtab, .avionics-helper-toggle, .av-power-button, .g5-power-control, .g5-menu-choice) { min-width: 44px; min-height: 44px; }
+#avionics-trainer.av-mobile-mode :is(.av-key, .btn) { font-size: 0.8rem; }
+#avionics-trainer.av-mobile-mode .av-touch-hint { display: block; margin: 0.7rem 0; }
+#avionics-trainer.av-mobile-mode .av-touch-rotary { display: grid; grid-template-columns: 44px minmax(52px, 1fr) 44px; gap: 0.25rem; align-items: center; min-width: 148px; }
+#avionics-trainer.av-mobile-mode .av-touch-rotary-caption { display: block; grid-column: 1 / -1; text-align: center; color: #cbd5e1; font: 700 0.7rem Consolas, monospace; }
+#avionics-trainer.av-mobile-mode .av-touch-step { display: block; min-width: 44px; min-height: 44px; padding: 0.25rem; font-size: 1.3rem; }
+#avionics-trainer.av-mobile-mode .av-touch-rotary > .av-rotary-touch-target { position: static; inset: auto; justify-self: center; width: 52px; height: 52px; min-height: 52px; opacity: 1; font-size: 0.65rem; }
+#avionics-trainer.av-mobile-mode .g5-bottom-controls { flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+#avionics-trainer.av-mobile-mode .g5-bottom-controls .av-touch-rotary-caption { display: none; }
+#avionics-trainer.av-mobile-mode .g5-power-control { min-width: 44px; }
+#avionics-trainer.av-mobile-mode .gns-unit .gns-face { grid-template-columns: minmax(0, 1fr); gap: 0.65rem; }
+#avionics-trainer.av-mobile-mode .gns-face-topline { grid-column: 1; grid-row: 1; }
+#avionics-trainer.av-mobile-mode .gns-face-topline .av-power-button { width: 44px; min-height: 44px; }
+#avionics-trainer.av-mobile-mode .gns-center-panel { grid-column: 1; grid-row: 2; width: 100%; max-width: 600px; justify-self: center; }
+#avionics-trainer.av-mobile-mode .gns-left-controls { grid-column: 1; grid-row: 3; }
+#avionics-trainer.av-mobile-mode .gns-right-controls { grid-column: 1; grid-row: 4; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; justify-content: stretch; }
+#avionics-trainer.av-mobile-mode .gns-softkeys { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#avionics-trainer.av-mobile-mode .gns-range-control { grid-template-columns: 44px 1fr 44px; }
+#avionics-trainer.av-mobile-mode .gns-volume-row { grid-template-columns: 10px minmax(0, 1fr) 44px; }
+#avionics-trainer.av-mobile-mode .gns-selector-button { width: 44px; min-height: 44px; font-size: 0.7rem; }
+#avionics-trainer.av-mobile-mode .gns-volume-knob { width: 52px; height: 52px; }
+#avionics-trainer.av-mobile-mode :is(.gns-tune-dual-knob, .gns-nav-dual-knob, .gnc255-dual-knob) { position: static; display: grid; gap: 0.5rem; width: 100%; height: auto; }
+#avionics-trainer.av-mobile-mode .gns-crsr-control { width: 100%; }
+#avionics-trainer.av-mobile-mode .gns-side-labels { display: none; }
+#avionics-trainer.av-mobile-mode :is(.gns-nav-outer, .gns-tune-outer, .gnc255-outer-knob)::after { content: "↔"; }
+#avionics-trainer.av-mobile-mode .gi106a-controls { grid-template-columns: minmax(0, 1fr); }
+#avionics-trainer.av-mobile-mode .gi106a-controls > * { grid-column: 1; }
+#avionics-trainer.av-mobile-mode .gnc255-panel { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+#avionics-trainer.av-mobile-mode .gnc255-left-controls { grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; min-height: 0; }
+#avionics-trainer.av-mobile-mode .gnc255-volume-knob-nav { flex-shrink: 0; margin-left: auto; width: 48px; height: 48px; }
+#avionics-trainer.av-mobile-mode .gnc255-center-stack { grid-row: 2; }
+#avionics-trainer.av-mobile-mode .gnc255-button-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#avionics-trainer.av-mobile-mode .gnc255-button-row .av-key { width: 100%; min-height: 44px; font-size: 0.75rem; }
+#avionics-trainer.av-mobile-mode .gnc255-button-row .gnc255-screw-hole { display: none; }
+#avionics-trainer.av-mobile-mode .gnc255-mon-key { min-height: 44px !important; width: 44px; font-size: 0.65rem !important; }
+#avionics-trainer.av-mobile-mode .gnc255-right-controls { grid-row: 3; display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 0.5rem; min-height: 0; }
+#avionics-trainer.av-mobile-mode .gnc255-tune-label { position: static; align-self: center; font-size: 0.7rem; }
+#avionics-trainer.av-mobile-mode .gnc255-right-controls .gnc255-flip-key { position: static; width: 44px; min-height: 44px; }
+#avionics-trainer.av-mobile-mode .gnc255-dual-knob { grid-column: 1 / -1; }
+#avionics-trainer.av-mobile-mode .gnc255-inner-knob { border: 3px solid #94a3b8; background: radial-gradient(circle at 34% 25%, #aeb8c5, #111827 72%); }
+#avionics-trainer.av-mobile-mode .gnc255-knob-caption { display: none; }
+#avionics-trainer.av-mobile-mode .av-touch-flight { display: grid; grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr); gap: 0.4rem; align-items: center; margin: 0.55rem 0; }
+#avionics-trainer.av-mobile-mode .av-touch-flight output { color: #bae6fd; font-size: 0.8rem; text-align: center; }
+#avionics-trainer.av-mobile-mode .av-touch-flight [data-av-map-flight],
+#avionics-trainer.av-mobile-mode .av-touch-flight .note { grid-column: 1 / -1; margin: 0; }
+#avionics-trainer.av-mobile-mode .av-tutorial-aircraft-marker { width: 44px; height: 44px; margin: -3px; }
+#avionics-trainer.av-mobile-mode .av-tutorial-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; }
+
 
 h1 { margin: 0; font-size: 1.25rem; }
 .subtitle { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GNC 255A/B · Mockup standalone</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="mockup-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">GNC 255A / GNC 255B · PILOT'S GUIDE REV. E</p>
+        <h1>Mockup standalone do painel e funções</h1>
+        <p class="lede">Uma prancha visual para rever layouts, estados e fluxos de operação sem alterar o site MyFlyApp.</p>
+      </div>
+      <div class="header-meta">
+        <span class="pill pill-green">MOCKUP LOCAL</span>
+        <a href="https://static.garmin.com/pumac/190-01182-01_e.pdf" target="_blank" rel="noreferrer">Abrir manual de referência ↗</a>
+      </div>
+    </header>
+
+    <nav class="quick-nav" aria-label="Estados rápidos">
+      <span class="quick-label">Ver estado:</span>
+      <button class="quick-state is-active" data-screen="main" data-mode="COM">COM</button>
+      <button class="quick-state" data-screen="main" data-mode="NAV">NAV</button>
+      <button class="quick-state" data-screen="obs">OBS / CDI</button>
+      <button class="quick-state" data-screen="tf">TO / FROM + DST</button>
+      <button class="quick-state" data-screen="functions">FUNC</button>
+      <button class="quick-state" data-screen="timers">TIMERS</button>
+      <button class="quick-state" data-screen="messages">MENSAGENS</button>
+      <button class="quick-state" data-screen="database">DATABASE</button>
+    </nav>
+
+    <section class="workbench" aria-label="Prancha de mockups GNC 255">
+      <div class="instrument-column">
+        <div class="instrument-caption">
+          <span><b>FRONT PANEL</b> · interação demonstrativa</span>
+          <span id="screen-caption">COM RADIO</span>
+        </div>
+
+        <section class="radio-unit" aria-label="Mockup físico GNC 255">
+          <div class="unit-topline">
+            <span class="unit-series">GNC 255</span>
+            <span class="unit-brand">GARMIN</span>
+            <span class="unit-model">VHF NAV/COM</span>
+          </div>
+
+          <div class="unit-face">
+            <div class="left-controls">
+              <div class="hardware-control">
+                <button class="knob knob-large" data-action="power" aria-label="Ligar ou desligar e volume COM"><span>COM</span></button>
+                <small>PWR<br>VOL<br><i>PUSH SQ</i></small>
+              </div>
+              <div class="hardware-control">
+                <button class="knob knob-large" data-action="nav-id" aria-label="Volume NAV e identificação"><span>NAV</span></button>
+                <small>VOL<br><i>PUSH ID</i></small>
+              </div>
+            </div>
+
+            <div class="display-frame">
+              <div class="display-glass" id="display" aria-live="polite"></div>
+              <div class="display-glow"></div>
+            </div>
+
+            <div class="tune-controls">
+              <button class="knob knob-dual" data-action="tune-up" aria-label="Aumentar sintonia"><span>◒</span><b>TUNE</b><i>PUSH<br>CRSR</i></button>
+              <button class="hardware-key flip-key" data-action="flip" aria-label="Transferir frequência">↔</button>
+              <small>OUTER + INNER<br>FREQUENCY ADJUST</small>
+            </div>
+          </div>
+
+          <div class="key-row">
+            <button class="av-key" data-action="cn">C/N</button>
+            <button class="av-key" data-action="obs">OBS</button>
+            <button class="av-key" data-action="tf">T/F</button>
+            <button class="av-key" data-action="func">FUNC</button>
+            <button class="av-key" data-action="clr">CLR</button>
+            <button class="av-key" data-action="ent">ENT</button>
+            <button class="av-key" data-action="mon">MON</button>
+          </div>
+          <div class="unit-footline">
+            <span>USB</span>
+            <span class="screw-hole"></span>
+            <span id="power-status">POWER ON · LOCAL STATE</span>
+            <span class="screw-hole"></span>
+            <span>USB 2.0 / FAT32</span>
+          </div>
+        </section>
+
+        <div class="under-unit-grid">
+          <section class="panel-card control-card">
+            <div class="card-heading"><span class="section-kicker">CONTROLOS</span><span class="hint">clique para demonstrar</span></div>
+            <div class="control-grid">
+              <button data-action="volume-down">COM volume −</button>
+              <button data-action="volume-up">COM volume +</button>
+              <button data-action="sq">Auto SQ / SQ</button>
+              <button data-action="save">Guardar standby</button>
+              <button data-action="emergency">Emergency 121.500</button>
+              <button data-action="database">Load database</button>
+              <button data-action="timer-toggle">Start / pause timer</button>
+              <button data-action="timer-reset">Reset timers</button>
+            </div>
+          </section>
+
+          <section class="panel-card status-card">
+            <div class="card-heading"><span class="section-kicker">LEGENDA DE ESTADO</span><span class="status-dot"></span></div>
+            <div class="status-list">
+              <span><b>ACT</b> frequência ativa</span>
+              <span><b id="standby-label">STB</b> frequência standby</span>
+              <span><b id="monitor-label">MON OFF</b> canal standby</span>
+              <span><b id="timer-label">TMR --:--</b> timer visível</span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <aside class="inspection-column">
+        <section class="panel-card inspector-card">
+          <div class="card-heading">
+            <div>
+              <span class="section-kicker">INSPEÇÃO DO MOCKUP</span>
+              <h2 id="inspector-title">COM radio</h2>
+            </div>
+            <span class="revision-badge">RÉPLICA DE LAYOUT</span>
+          </div>
+          <p id="inspector-copy" class="muted-copy">Estado principal de comunicação, com frequência ativa/standby, indicação de modo, volume e identificação da estação.</p>
+          <div class="inspector-stats" id="inspector-stats"></div>
+        </section>
+
+        <section class="panel-card function-card">
+          <div class="card-heading">
+            <div>
+              <span class="section-kicker">FUNCTION TREE</span>
+              <h2>Todos os módulos do manual</h2>
+            </div>
+            <span class="tree-count" id="tree-count">0 estados</span>
+          </div>
+          <p class="muted-copy">Seleciona uma entrada para abrir o seu layout no display verde do painel.</p>
+          <div id="function-tree" class="function-tree"></div>
+        </section>
+
+        <section class="panel-card notes-card">
+          <div class="card-heading"><span class="section-kicker">NOTAS</span><span class="pill pill-amber">EDUCACIONAL</span></div>
+          <ul>
+            <li>Os valores e frequências são fictícios e locais ao protótipo.</li>
+            <li>O mockup não lê GPS, DME, base de dados ou hardware.</li>
+            <li>Para navegação real prevalecem fontes oficiais, POH/AFM, procedimentos e responsabilidade do piloto.</li>
+          </ul>
+        </section>
+      </aside>
+    </section>
+
+    <footer class="page-footer">
+      <span>MYFLYAPP · prancha não servida pelo site</span>
+      <span id="event-log">Pronto para interação.</span>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -82,6 +82,8 @@ Default section order:
 - User-facing copy is primarily Portuguese with optional English i18n coverage where already present.
 - Keep the app lightweight: Python Flask backend, vanilla JS frontend, no database, no frontend framework unless the user explicitly changes direction.
 - Do not store fplbriefing tokens or aviation credentials server-side; caller-supplied tokens remain request-scoped.
+- Setup 1 avionics behavior is approved by the user; preserve it when fixing Setup 2 unless the user explicitly requests a Setup 1 change.
+- Preserve the approved avionics design by default on desktop, tablet and phone. Show supplementary −/+ and aircraft touch controls only after the user enables the small Modo mobile toggle.
 
 ## Child DOX Index
 
@@ -90,6 +92,7 @@ Default section order:
 - `static/AGENTS.md` covers browser assets and delegates CSS/JS details.
   - `static/css/AGENTS.md` covers global styling, responsive layout, and print styles.
   - `static/js/AGENTS.md` covers browser behavior, Leaflet maps, i18n, navigation, and mass/balance logic.
+  - `static/gns430/AGENTS.md` covers GNS 430/430W manual display catalogues and offline Portugal map geography.
 - `docs/AGENTS.md` covers durable project documentation.
   - `docs/plans/AGENTS.md` covers dated feature/deployment plans.
 

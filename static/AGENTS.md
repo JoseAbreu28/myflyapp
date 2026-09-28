@@ -2,12 +2,12 @@
 
 ## Purpose
 
-- Contains browser-side CSS and JavaScript for the MyFlyApp SPA.
+- Contains browser-side CSS, JavaScript, GNS display references and map geography for the MyFlyApp SPA.
 - Assets support METAR/TAF rendering, maps, route planning and simulation, the Plano de voo subtabs (including Navegações and Massa & Balanceamento), the nested Navegações E6B subtab, the Treino subtabs (Instrumentos and Avionics Simulator), the external E6BX flight-computer embed, manual instrument study, interactive VOR training, the two-setup local Avionics Simulator (dual-G5/GNS 430/430W or GI-106A/GNC 255), guided map exercises, PDF export, i18n, and mass/balance calculations.
 
 ## Ownership
 
-- Owns `css/` and `js/` as static browser assets.
+- Owns `css/`, `js/` and `gns430/` as static browser assets.
 - HTML structure is owned by `templates/`; API payload shape is owned by root `app.py`.
 
 ## Local Contracts
@@ -31,3 +31,4 @@
 
 - `css/AGENTS.md` covers styling and print layout.
 - `js/AGENTS.md` covers browser behavior and calculations.
+- `gns430/AGENTS.md` covers model-specific Garmin manual screenshots, catalogue metadata and offline map geography.

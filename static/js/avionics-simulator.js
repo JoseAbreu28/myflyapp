@@ -8,15 +8,27 @@
     LPBR: { name: "Braga", bearing: 12, distance: 27 },
     LPVZ: { name: "Viseu", bearing: 130, distance: 55 },
   };
-  const VLOC_STATIONS = {
-    PRT: { name: "Porto", frequency: 114.10, radial: 270 },
-    VIS: { name: "Viseu", frequency: 113.10, radial: 160 },
+  // NAV Portugal eAIP ENR 4.1, consulted 2026-09-28:
+  // https://ais.nav.pt/wp-content/uploads/AIS_Files/eAIP_Current/eAIP_Online/eAIP/html/eAIP/LP-ENR-4.1-en-GB.html
+  // WGS-84 VOR antenna coordinates (DME antenna for standalone sites).
+  // Published variations have epoch 2020; map geometry remains approximate.
+  // DME channels are not VOR frequencies.
+  // DME-only sites are map/GPS references, never a simulated VOR signal.
+  const NAV_AIDS = {
+    VIS: { id: "VIS", name: "Viseu", type: "DVOR/DME", frequency: 113.10, channel: "78X", lat: 40 + 43 / 60 + 24 / 3600, lng: -(7 + 53 / 60 + 9 / 3600), variation: -2 },
+    PRT: { id: "PRT", name: "Porto", type: "DVOR/DME", frequency: 114.10, channel: "88X", lat: 41 + 16 / 60 + 23 / 3600, lng: -(8 + 41 / 60 + 16 / 3600), variation: -2 },
+    DAR: { id: "DAR", name: "Arouca", type: "DME", channel: "96X", lat: 40 + 56 / 60, lng: -(8 + 13 / 60 + 31 / 3600) },
+    CAS: { id: "CAS", name: "Cascais", type: "DVOR/DME", frequency: 114.30, channel: "90X", lat: 38 + 44 / 60 + 54 / 3600, lng: -(9 + 21 / 60 + 43 / 3600), variation: -3 },
+    VFA: { id: "VFA", name: "Faro", type: "DVOR/DME", frequency: 112.80, channel: "75X", lat: 37 + 49 / 3600, lng: -(7 + 58 / 60 + 30 / 3600), variation: -1 },
+    FTM: { id: "FTM", name: "Fátima", type: "DVOR/DME", frequency: 113.50, channel: "82X", lat: 39 + 39 / 60 + 56 / 3600, lng: -(8 + 29 / 60 + 34 / 3600), variation: -2 },
+    DMR: { id: "DMR", name: "Marão", type: "DME", channel: "93X", lat: 41 + 14 / 60 + 53 / 3600, lng: -(7 + 53 / 60 + 11 / 3600) },
+    LIS: { id: "LIS", name: "Lisboa", type: "DVOR/DME", frequency: 114.80, channel: "95X", lat: 38 + 53 / 60 + 16 / 3600, lng: -(9 + 9 / 60 + 46 / 3600), variation: -2 },
   };
   const TUTORIAL_REFERENCES = {
-    VIS: { id: "VIS", name: "Viseu VOR", frequency: 113.10, lat: 40.723333, lng: -7.885833 },
-    PRT: { id: "PRT", name: "Porto VOR", frequency: 114.10, lat: 41.273056, lng: -8.687778 },
+    ...NAV_AIDS,
     LPPR: { id: "LPPR", name: "Porto airport", lat: 41.2481, lng: -8.6814 },
   };
+  const TOFROM_INTRO_TUTORIAL_ID = "intro-vor";
   const TUTORIAL_EXAMPLES = [
     {
       id: "vis-to",
@@ -131,23 +143,59 @@
   ];
   const PAGE_GROUPS = ["NAV", "WPT", "AUX", "NRST"];
   const PAGES = {
-    NAV: ["NAV 1", "MAP", "NAV/COM"],
-    WPT: ["APT", "VOR", "DIRECT-TO"],
-    AUX: ["FPLN", "UTILITY", "SETUP"],
-    NRST: ["APT", "VOR", "FSS"],
+    NAV: ["NAV 1", "MAP", "TERRAIN", "NAV/COM", "POSITION", "SATELLITE", "VNAV"],
+    WPT: ["APT LOCATION", "APT RUNWAY", "APT FREQ", "APT APPROACH", "APT ARRIVAL", "APT DEPARTURE", "INTERSECTION", "NDB", "VOR", "USER WPT"],
+    AUX: ["FLIGHT PLANNING", "UTILITY", "SETUP 1", "SETUP 2"],
+    NRST: ["AIRPORTS", "INTERSECTIONS", "NDB", "VOR", "USER WPT", "FSS", "ARTCC", "AIRSPACE"],
   };
+  const defaultG5Settings = () => ({ altitude: 2500, pitch: 0, pointers: ["GPS", "None"], menuLevel: "main", pointerIndex: 0 });
+  const g5Settings = { pfd: defaultG5Settings(), hsi: defaultG5Settings() };
   const state = {
     ready: false,
     activeSetup: "av-setup-1",
     g5PfdPower: true,
     g5HsiPower: true,
-    gnsPower: true,
-    g5Menu: false,
+    g5PfdPage: "PFD",
+    g5HsiPage: "HSI",
+    g5PfdMode: "HDG",
     g5HsiMode: "HDG",
-    g5MenuSelection: "HDG",
+    g5PfdMenu: false,
+    g5HsiMenu: false,
+    g5PfdMenuSelection: "HDG",
+    g5HsiMenuSelection: "HDG",
+    g5PfdHeadingBug: 270,
+    g5HsiHeadingBug: 270,
+    g5PfdCourse: 270,
+    g5HsiCourse: 270,
+    g5PfdBearingPointer: true,
+    g5HsiBearingPointer: true,
+    g5LastUnit: null,
+    gnsPower: true,
+    gnsModel: "430",
+    gnsComSpacing: "25",
+    gnsSpecialPage: null,
+    gnsMenuIndex: 0,
+    gnsFieldIndex: 0,
+    gnsDetail: null,
+    gnsDirectConfirm: false,
+    gnsDirectPosition: 0,
+    gnsWptIndex: 0,
+    gnsFields: ["DIS", "DTK", "BRG", "GS", "TRK", "ETE"],
+    gnsMapFields: ["DIS", "BRG", "TRK", "GS"],
+    gnsMapData: true,
+    gnsMapOrientation: "NORTH UP",
+    gnsDeclutter: 0,
+    gnsContrast: 80,
+    gnsBrightness: 100,
+    gnsDistanceUnit: "NM",
+    gnsCdiScale: 1,
+    gnsSbas: true,
+    gnsVnavAltitude: 2500,
+    gnsVnavRate: 500,
+    gnsFlightPlan: ["LPPR"],
+    gnsFlightPlanActive: false,
+    gnsFlightPlanLeg: 0,
     heading: 260,
-    headingBug: 270,
-    course: 270,
     source: "GPS",
     waypoint: "LPPR",
     obsMode: false,
@@ -170,17 +218,20 @@
       giPower: true,
       gncPower: true,
       course: 270,
-      toFrom: "TO",
       navMode: "VOR",
+      navDisplay: "FREQ",
+      heading: 90,
       navActive: 113.10,
       navStandby: 114.10,
       comActive: 118.000,
       comStandby: 122.800,
       tuningTarget: "NAV",
     },
-    tutorialId: "vis-to",
+    tutorialId: "free",
+    tutorialReferenceId: null,
     tutorialResultKey: "av_tutorial_ready",
-    setup2TutorialId: "identify",
+    setup2TutorialId: "free",
+    setup2SelectedReferenceId: null,
     setup2TutorialResultKey: "av_setup2_tutorial_ready",
     setup2StatusKey: "av_setup2_tutorial_ready",
     setup2StatusText: "",
@@ -199,6 +250,7 @@
   let setup2TutorialAircraftMarker = null;
   let setup2TutorialLine = null;
   let setup2TutorialReferenceMarkers = [];
+  const setup2Flight = { running: false, intervalId: null };
   const tutorialFlight = {
     running: false,
     speedKts: 90,
@@ -215,6 +267,73 @@
   const formatHeading = (value) => String(Math.round(normalize(value))).padStart(3, "0");
   const formatCom = (value) => Number(value).toFixed(3);
   const formatVloc = (value) => Number(value).toFixed(2);
+
+  function g5UnitConfig(unit) {
+    return unit === "pfd"
+      ? { powerKey: "g5PfdPower", pageKey: "g5PfdPage", modeKey: "g5PfdMode", menuKey: "g5PfdMenu", menuSelectionKey: "g5PfdMenuSelection", headingBugKey: "g5PfdHeadingBug", courseKey: "g5PfdCourse", bearingPointerKey: "g5PfdBearingPointer", canvasId: "av-g5-pfd-canvas", readoutId: "av-g5-pfd-readout", titleId: "av-g5-pfd-title", labelId: "av-g5-pfd-page-label", knobId: "av-g5-pfd-knob", optionsId: "av-g5-pfd-options" }
+      : { powerKey: "g5HsiPower", pageKey: "g5HsiPage", modeKey: "g5HsiMode", menuKey: "g5HsiMenu", menuSelectionKey: "g5HsiMenuSelection", headingBugKey: "g5HsiHeadingBug", courseKey: "g5HsiCourse", bearingPointerKey: "g5HsiBearingPointer", canvasId: "av-g5-hsi-canvas", readoutId: "av-g5-hsi-readout", titleId: "av-g5-hsi-title", labelId: "av-g5-hsi-page-label", knobId: "av-g5-hsi-knob", optionsId: "av-g5-hsi-options" };
+  }
+
+  function g5Page(unit) {
+    return state[g5UnitConfig(unit).pageKey];
+  }
+
+  function g5Powered(unit) {
+    return Boolean(state[g5UnitConfig(unit).powerKey]);
+  }
+
+  function g5Mode(unit) {
+    return state[g5UnitConfig(unit).modeKey];
+  }
+
+  function g5MenuOpen(unit) {
+    return Boolean(state[g5UnitConfig(unit).menuKey]);
+  }
+
+  function g5MenuSelection(unit) {
+    return state[g5UnitConfig(unit).menuSelectionKey];
+  }
+
+  function g5HeadingBug(unit) {
+    return Number(state[g5UnitConfig(unit).headingBugKey]);
+  }
+
+  function g5Course(unit) {
+    return Number(state[g5UnitConfig(unit).courseKey]);
+  }
+
+  function g5ReferenceUnit(page = null) {
+    const units = ["pfd", "hsi"];
+    if (state.g5LastUnit && g5Powered(state.g5LastUnit) && (!page || g5Page(state.g5LastUnit) === page)) return state.g5LastUnit;
+    return units.find((unit) => g5Powered(unit) && (!page || g5Page(unit) === page)) || units.find((unit) => g5Powered(unit)) || null;
+  }
+
+  function g5ReferenceHeadingBug() {
+    const unit = g5ReferenceUnit();
+    return unit ? g5HeadingBug(unit) : 270;
+  }
+
+  function g5ReferenceCourse() {
+    const unit = g5ReferenceUnit("HSI") || g5ReferenceUnit();
+    return unit ? g5Course(unit) : 270;
+  }
+
+  function g5PageHasValue(page, valueName, expected, tolerance) {
+    return ["pfd", "hsi"].some((unit) => {
+      if (!g5Powered(unit) || g5Page(unit) !== page) return false;
+      const value = valueName === "headingBug" ? g5HeadingBug(unit) : g5Course(unit);
+      return Math.abs(angleDelta(value, expected)) <= tolerance;
+    });
+  }
+
+  function g5HasPage(page) {
+    return ["pfd", "hsi"].some((unit) => g5Powered(unit) && g5Page(unit) === page);
+  }
+
+  function activeG5HsiUnit() {
+    if (state.g5LastUnit && g5Powered(state.g5LastUnit) && g5Page(state.g5LastUnit) === "HSI") return state.g5LastUnit;
+    return ["pfd", "hsi"].find((unit) => g5Powered(unit) && g5Page(unit) === "HSI") || null;
+  }
 
   function t(key) {
     return global.MyFlyI18n?.t?.(key) || key;
@@ -320,29 +439,91 @@
     else state.comStandby = clamp(Number(value), 118.00, 136.975);
   }
 
+  function normalizeGnsFrequencyInput(target, rawValue) {
+    const config = target === "VLOC"
+      ? { min: 108.00, max: 117.95, step: 0.05, precision: 2 }
+      : { min: 118.000, max: state.gnsComSpacing === "8.33" ? 136.990 : 136.975, step: state.gnsComSpacing === "8.33" ? 0.005 : 0.025, precision: 3 };
+    const numeric = Number(String(rawValue ?? "").trim().replace(",", "."));
+    if (!String(rawValue ?? "").trim() || !Number.isFinite(numeric)) return null;
+    const bounded = clamp(numeric, config.min, config.max);
+    let stepped = config.min + Math.round((bounded - config.min) / config.step) * config.step;
+    // 8.33 channel designators omit the fourth 5-kHz number in each 25-kHz block.
+    if (target === "COM" && state.gnsComSpacing === "8.33" && Math.round(stepped * 1000) % 25 === 20) stepped -= 0.005;
+    return Number(stepped.toFixed(config.precision));
+  }
+
+  function commitGnsFrequencyInput(input) {
+    const target = input?.dataset.gnsFrequencyTarget;
+    const role = input?.dataset.gnsFrequencyRole;
+    if (!state.gnsPower || !input || !["COM", "VLOC"].includes(target) || !["active", "standby"].includes(role)) return;
+    const value = normalizeGnsFrequencyInput(target, input.value);
+    if (value === null) {
+      setStatus(`Frequência ${target} inválida.`);
+      render();
+      return;
+    }
+    const property = `${target.toLowerCase()}${role === "active" ? "Active" : "Standby"}`;
+    state[property] = value;
+    state.tuningTarget = target;
+    if (target === "VLOC") state.tutorialReferenceId = null;
+    setStatus(`${target} ${role === "active" ? "ativa" : "standby"} ${target === "VLOC" ? formatVloc(value) : formatCom(value)}.`);
+    render();
+  }
+
+  function findNavStation(frequency) {
+    return Object.values(NAV_AIDS).find(station => Number.isFinite(station.frequency) && Math.abs(station.frequency - frequency) < 0.006) || null;
+  }
+
   function findVlocStation() {
-    const active = activeFrequency("VLOC");
-    return Object.values(VLOC_STATIONS).find((station) => Math.abs(station.frequency - active) < 0.006) || null;
+    return findNavStation(activeFrequency("VLOC"));
   }
 
   function syncFlightControls() {
-    setText("av-instrument-summary", `HDG ${formatHeading(state.heading)} · BUG ${formatHeading(state.headingBug)} · CRS ${formatHeading(state.course)} · ${state.source} · ${state.waypoint}`);
+    setText("av-instrument-summary", `HDG ${formatHeading(state.heading)} · BUG ${formatHeading(g5ReferenceHeadingBug())} · CRS ${formatHeading(g5ReferenceCourse())} · ${state.source} · ${state.waypoint}`);
   }
 
   function setup2NavId() {
-    if (Math.abs(state.setup2.navActive - 113.10) < 0.006) return "VIS · ID OK";
-    if (Math.abs(state.setup2.navActive - 114.10) < 0.006) return "PRT · ID OK";
-    return "NAV · ID OFF";
+    const station = findNavStation(state.setup2.navActive);
+    return station ? `${station.id} · ID OK` : "NAV · ID OFF";
+  }
+
+  function setup2NavGeometry() {
+    const reference = findNavStation(state.setup2.navActive);
+    if (!state.setup2.gncPower || !reference || !setup2TutorialPosition || state.setup2.navMode !== "VOR") return null;
+    if (tutorialDistanceNm(reference, setup2TutorialPosition) < 0.1) return null;
+    const radialFrom = tutorialBearing(reference, setup2TutorialPosition);
+    return { radialFrom, bearingTo: normalize(radialFrom + 180) };
+  }
+
+  function setup2NavFlag() {
+    const geometry = setup2NavGeometry();
+    if (!geometry) return "OFF";
+    const alignment = Math.abs(angleDelta(state.setup2.course, geometry.bearingTo));
+    if (Math.abs(alignment - 90) < 3) return "NAV";
+    return alignment < 90 ? "TO" : "FROM";
+  }
+
+  function setup2CdiDeviation() {
+    const geometry = setup2NavGeometry();
+    if (!geometry) return null;
+    // VOR CDI: signed displacement from the OBS course line, independent of
+    // aircraft heading. Reciprocal OBS reverses both CDI and TO/FROM.
+    // Educational true-bearing geometry; full-scale VOR deflection is 10°.
+    const angle = tutorialToRadians(angleDelta(geometry.radialFrom, state.setup2.course));
+    return -Math.asin(Math.sin(angle)) * 180 / Math.PI;
   }
 
   function setup2CdiValue() {
-    const reference = Object.values(TUTORIAL_REFERENCES).find((item) => item.frequency && Math.abs(item.frequency - state.setup2.navActive) < 0.006);
-    if (!reference || !setup2TutorialPosition || state.setup2.navMode !== "VOR") return "OFF";
-    const radialFrom = tutorialBearing(reference, setup2TutorialPosition);
-    const selectedCourse = state.setup2.toFrom === "TO" ? normalize(radialFrom + 180) : radialFrom;
-    const deviation = angleDelta(state.setup2.course, selectedCourse);
-    if (Math.abs(deviation) <= 4) return "CENTER";
+    const deviation = setup2CdiDeviation();
+    if (deviation === null) return "OFF";
+    if (Math.abs(deviation) <= 1) return "CENTER";
     return deviation < 0 ? "LEFT" : "RIGHT";
+  }
+
+  function setup2CdiDeflection() {
+    const deviation = setup2CdiDeviation();
+    if (deviation === null) return 0;
+    return clamp(deviation / 10, -1, 1);
   }
 
   function setup2SetStatus(message) {
@@ -350,7 +531,6 @@
     state.setup2StatusKey = null;
     state.setup2StatusText = message;
     setText("setup2-training-status", message);
-    setStatus(message);
   }
 
   function renderSetup2() {
@@ -363,62 +543,88 @@
     renderPowerByPrefix("setup2-gi", setup.giPower);
     renderPowerByPrefix("setup2-gnc", setup.gncPower);
 
-    const needle = document.getElementById("setup2-gi-course-needle");
-    if (needle) needle.setAttribute("transform", `rotate(${setup.course} 160 160)`);
+    const flag = setup.giPower ? setup2NavFlag() : "OFF";
+    const card = document.getElementById("setup2-gi-compass-card");
+    if (card) card.setAttribute("transform", `rotate(${-setup.course} 160 160)`);
+    const cdi = document.getElementById("setup2-gi-cdi-needle");
+    if (cdi) {
+      cdi.setAttribute("transform", `translate(${(setup2CdiDeflection() * 50).toFixed(2)} 0)`);
+      cdi.style.visibility = setup.giPower && setup2NavGeometry() ? "visible" : "hidden";
+    }
     setText("setup2-gi-course-value", `${formatHeading(setup.course)}°`);
     setText("setup2-gi-cdi-value", setup.giPower && setup.gncPower ? setup2CdiValue() : "OFF");
-    setText("setup2-gi-tofrom", setup.giPower ? setup.toFrom : "OFF");
+    setText("setup2-gi-tofrom", flag);
     setText("setup2-gi-loc", setup.giPower ? setup.navMode : "OFF");
-    setText("setup2-gi-readout", setup.giPower ? `${formatVloc(setup.navActive)} · ${setup.toFrom}` : "OFF");
+    setText("setup2-gi-readout", setup.giPower ? `${formatVloc(setup.navActive)} · ${flag}` : "OFF");
     const giKnob = document.querySelector("#setup2-gi-course-knob small");
     if (giKnob) giKnob.textContent = `${formatHeading(setup.course)}°`;
 
     const displayIsNav = setup.tuningTarget === "NAV";
     const displayActive = displayIsNav ? formatVloc(setup.navActive) : formatCom(setup.comActive);
     const displayStandby = displayIsNav ? formatVloc(setup.navStandby) : formatCom(setup.comStandby);
+    const referenceLabel = displayIsNav ? "COM" : "NAV";
+    const referenceFrequency = displayIsNav ? formatCom(setup.comActive) : formatVloc(setup.navActive);
+    setText("setup2-gnc-squelch", setup.gncPower ? (displayIsNav ? (setup.navMode === "LOC" ? "ID" : "ACT") : "SQ") : "--");
+    setText("setup2-gnc-monitor", setup.gncPower ? "STB" : "--");
     setText("setup2-gnc-mode", setup.gncPower ? (displayIsNav ? setup.navMode : "COM") : "OFF");
     setText("setup2-gnc-active-frequency", setup.gncPower ? displayActive : "OFF");
     setText("setup2-gnc-standby-frequency", setup.gncPower ? displayStandby : "OFF");
     setText("setup2-gnc-id", setup.gncPower ? (displayIsNav ? setup2NavId() : "COM ACTIVE") : "OFF");
     setText("setup2-gnc-standby-id", setup.gncPower ? `${setup.tuningTarget} STBY` : "OFF");
+    setText("setup2-gnc-reference-label", setup.gncPower ? referenceLabel : "--");
+    setText("setup2-gnc-reference-frequency", setup.gncPower ? referenceFrequency : "OFF");
+    const geometry = setup2NavGeometry();
+    let navDetail = "";
+    if (displayIsNav && setup.gncPower && setup.navDisplay !== "FREQ") {
+      navDetail = setup.navDisplay === "OBS"
+        ? `OBS ${formatHeading(setup.course)}° · ${setup2NavFlag()} · CDI ${setup2CdiValue()}`
+        : `${setup.navDisplay} ${geometry ? `${formatHeading(setup.navDisplay === "TO" ? geometry.bearingTo : geometry.radialFrom)}°` : "OFF"}`;
+    }
+    setText("setup2-gnc-nav-detail", navDetail);
+    const detail = document.getElementById("setup2-gnc-nav-detail");
+    if (detail) detail.hidden = !navDetail;
     setText("setup2-gnc-readout", setup.gncPower ? `${setup.tuningTarget} · ${displayActive}` : "OFF");
-    setText("setup2-instrument-summary", `OBS ${formatHeading(setup.course)} · NAV ${formatVloc(setup.navActive)} · ${setup.toFrom} · CDI ${setup.giPower && setup.gncPower ? setup2CdiValue() : "OFF"}`);
+    setText("setup2-instrument-summary", `HDG ${formatHeading(setup.heading)}° · OBS ${formatHeading(setup.course)} · NAV ${formatVloc(setup.navActive)} · ${flag} · CDI ${setup.giPower && setup.gncPower ? setup2CdiValue() : "OFF"}`);
     renderSetup2Tutorial();
+    renderChallengeChecklist();
   }
 
-  function gpsDeviation() {
+  function gpsDeviation(course = g5ReferenceCourse()) {
     const target = WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR;
-    return clamp(angleDelta(target.bearing, state.course) / 5, -2.5, 2.5);
+    return clamp(angleDelta(target.bearing, course) / 5, -2.5, 2.5);
   }
 
-  function vlocDeviation() {
+  function vlocDeviation(course = g5ReferenceCourse()) {
     const station = findVlocStation();
     if (!station) return 0;
     const geometry = tutorialVlocGeometry();
     const selectedReference = geometry
-      ? (Math.abs(angleDelta(state.course, geometry.bearingTo)) < 90 ? geometry.bearingTo : geometry.radialFrom)
-      : station.radial;
-    return clamp(angleDelta(state.course, selectedReference) / 5, -2.5, 2.5);
+      ? (Math.abs(angleDelta(course, geometry.bearingTo)) < 90 ? geometry.bearingTo : geometry.radialFrom)
+      : course;
+    return clamp(angleDelta(course, selectedReference) / 5, -2.5, 2.5);
   }
 
-  function cdiDeviation() {
-    return state.source === "VLOC" ? vlocDeviation() : gpsDeviation();
+  function cdiDeviation(course = g5ReferenceCourse()) {
+    return state.source === "VLOC" ? vlocDeviation(course) : gpsDeviation(course);
   }
 
   function tutorialVlocGeometry() {
-    const example = tutorialExample();
-    const reference = TUTORIAL_REFERENCES[example.reference];
     const station = findVlocStation();
-    if (!reference || !station || Math.abs(reference.frequency - station.frequency) > 0.006 || !tutorialPosition) return null;
+    const reference = station;
+    if (!reference || !tutorialPosition) return null;
     const radialFrom = tutorialBearing(reference, tutorialPosition);
-    return { radialFrom, bearingTo: normalize(radialFrom + 180) };
+    return {
+      radialFrom,
+      bearingTo: normalize(radialFrom + 180),
+      distanceNm: tutorialDistanceNm(reference, tutorialPosition),
+    };
   }
 
   function tutorialNavFlag() {
     if (state.source !== "VLOC") return "GPS";
     const geometry = tutorialVlocGeometry();
     if (!geometry) return "NAV OFF";
-    const alignment = Math.abs(angleDelta(state.course, geometry.bearingTo));
+    const alignment = Math.abs(angleDelta(g5ReferenceCourse(), geometry.bearingTo));
     if (Math.abs(alignment - 90) < 3) return "NAV";
     return alignment < 90 ? "TO" : "FROM";
   }
@@ -438,6 +644,18 @@
 
   function isFreeTutorial() {
     return state.tutorialId === FREE_TUTORIAL_EXAMPLE.id;
+  }
+
+  function syncToFromGuideVisibility() {
+    const guide = document.getElementById("av-tofrom-guide");
+    if (!guide) return;
+    const slot = document.querySelector(`[data-av-tofrom-guide-slot="${state.activeSetup}"]`);
+    if (slot && guide.parentElement !== slot) slot.appendChild(guide);
+    const selectId = state.activeSetup === "av-setup-2" ? "setup2-tutorial-example" : "av-tutorial-example";
+    const introSelected = document.getElementById(selectId)?.value === TOFROM_INTRO_TUTORIAL_ID;
+    guide.hidden = !introSelected;
+    const panelId = state.activeSetup === "av-setup-2" ? "av-setup-2" : "av-setup-1";
+    document.querySelector(`#${panelId} .av-tutorial-layout`)?.toggleAttribute("hidden", introSelected);
   }
 
   function tutorialToRadians(value) {
@@ -491,26 +709,12 @@
   }
 
   function updateTutorialFlightControls() {
-    const radialInput = document.getElementById("av-tutorial-radial");
-    const distanceInput = document.getElementById("av-tutorial-distance");
     const toggle = document.getElementById("av-tutorial-flight-toggle");
-    if (radialInput) {
-      radialInput.value = String(Math.round(normalize(tutorialFlight.radialFrom)));
-      radialInput.disabled = tutorialFlight.running;
-    }
-    if (distanceInput) {
-      distanceInput.value = String(Math.max(0.1, Number(tutorialFlight.distanceNm).toFixed(1)));
-      distanceInput.disabled = tutorialFlight.running;
-    }
-    setText("av-tutorial-radial-value", `${formatHeading(tutorialFlight.radialFrom)}°`);
-    setText("av-tutorial-distance-value", Number(tutorialFlight.distanceNm).toFixed(1));
-    setText("av-tutorial-speed", `${tutorialFlight.speedKts} KTS`);
-    setText("av-tutorial-flight-heading", `${formatHeading(state.heading)}°`);
-    setText("av-tutorial-flight-time", tutorialFlightTime());
     if (toggle) {
       toggle.textContent = t(tutorialFlight.running ? "av_tutorial_pause" : "av_tutorial_go");
       toggle.setAttribute("aria-pressed", tutorialFlight.running ? "true" : "false");
     }
+    renderTouchFlightControls("av-setup-1", state.heading, tutorialFlight.running);
   }
 
   function syncTutorialFlightInputsFromPosition() {
@@ -534,9 +738,11 @@
     if (isFreeTutorial()) return [];
     const example = tutorialExample();
     const frequency = state.gnsPower && Math.abs(state.vlocActive - example.expectedFrequency) < 0.006;
-    const source = frequency && state.source === "VLOC" && state.g5HsiPower;
-    const course = state.g5HsiPower && Math.abs(angleDelta(state.course, example.expectedCourse)) <= 4;
-    const heading = (state.g5PfdPower || state.g5HsiPower) && Math.abs(angleDelta(state.headingBug, example.expectedHeading)) <= 6;
+    const hsiAvailable = g5HasPage("HSI");
+    const source = frequency && state.source === "VLOC" && hsiAvailable;
+    const course = hsiAvailable && g5PageHasValue("HSI", "course", example.expectedCourse, 4);
+    const heading = g5PageHasValue("PFD", "headingBug", example.expectedHeading, 6)
+      || g5PageHasValue("HSI", "headingBug", example.expectedHeading, 6);
     const indication = source && tutorialNavFlag() === example.expectedMode && Math.abs(cdiDeviation()) <= 0.8;
     if (example.kind === "MAP") {
       const mapPage = state.gnsPower && state.gnsGroup === "NAV" && state.gnsPageIndex === example.expectedGnsPageIndex;
@@ -545,7 +751,7 @@
       return [mapPage, gps, range, heading];
     }
     if (example.kind === "GPS") {
-      const gps = state.gnsPower && state.g5HsiPower && state.source === "GPS" && state.waypoint === example.expectedWaypoint;
+      const gps = state.gnsPower && hsiAvailable && state.source === "GPS" && state.waypoint === example.expectedWaypoint;
       return [gps, gps && state.directToActive && state.gnsGroup === "NAV", course && state.obsMode, heading];
     }
     if (example.id === "vis-to") return [frequency, source, course, heading && indication];
@@ -553,13 +759,14 @@
   }
 
   function setup2StepResults() {
+    if (state.setup2TutorialId === "free") return [];
     const example = setup2TutorialExample();
     const setup = state.setup2;
     const nav = setup.gncPower && setup.tuningTarget === "NAV" && setup.navMode === "VOR";
     const frequency = nav && Math.abs(setup.navActive - example.frequency) < 0.006;
     if (example.id === "identify") return [nav, frequency, frequency];
     const course = setup.giPower && Math.abs(angleDelta(setup.course, example.course)) <= 4;
-    const indication = frequency && setup.giPower && setup.toFrom === example.toFrom && setup2CdiValue() === "CENTER";
+    const indication = frequency && setup.giPower && setup2NavFlag() === example.toFrom && setup2CdiValue() === "CENTER";
     return [frequency, course, indication];
   }
 
@@ -582,20 +789,6 @@
     return tasks.length > 0 && tasks.every(Boolean) && Boolean(position) && tutorialDistanceNm(position, example.start) <= 9;
   }
 
-  function setTutorialPositionFromFlightInputs() {
-    const reference = tutorialReference();
-    const radialInput = document.getElementById("av-tutorial-radial");
-    const distanceInput = document.getElementById("av-tutorial-distance");
-    const radial = clamp(Number(radialInput?.value ?? tutorialFlight.radialFrom), 0, 359);
-    const distance = clamp(Number(distanceInput?.value ?? tutorialFlight.distanceNm), 5, 80);
-    tutorialFlight.radialFrom = radial;
-    tutorialFlight.distanceNm = distance;
-    tutorialFlight.elapsedSeconds = 0;
-    tutorialPosition = tutorialDestination(reference, radial, distance);
-    state.tutorialResultKey = isFreeTutorial() ? "av_tutorial_free_ready" : "av_tutorial_ready";
-    render();
-  }
-
   function stopTutorialFlight(shouldRender = true) {
     if (tutorialFlight.intervalId !== null) {
       window.clearInterval(tutorialFlight.intervalId);
@@ -610,6 +803,13 @@
     const stepSeconds = 0.1;
     tutorialPosition = tutorialDestination(tutorialPosition, state.heading, tutorialFlight.speedKts * stepSeconds / 3600);
     tutorialFlight.elapsedSeconds += stepSeconds;
+    if (state.gnsPower && state.gnsFlightPlanActive && !state.obsMode) {
+      const target = gnsFindWaypoint(state.gnsFlightPlan[state.gnsFlightPlanLeg]);
+      if (target && tutorialDistanceNm(tutorialPosition, target) < 0.3 && state.gnsFlightPlanLeg < state.gnsFlightPlan.length - 1) {
+        state.gnsFlightPlanLeg += 1;
+        gnsActivate(state.gnsFlightPlan[state.gnsFlightPlanLeg], true);
+      }
+    }
     syncTutorialFlightInputsFromPosition();
     render();
   }
@@ -619,7 +819,7 @@
       stopTutorialFlight();
       return;
     }
-    if (!tutorialPosition) setTutorialPositionFromFlightInputs();
+    if (!tutorialPosition) tutorialPosition = { ...tutorialExample().start };
     tutorialFlight.running = true;
     tutorialFlight.elapsedSeconds = 0;
     tutorialFlight.intervalId = window.setInterval(advanceTutorialFlight, 100);
@@ -631,10 +831,61 @@
     render();
   }
 
+  function moveSetup2TutorialByKeyboard(key) {
+    state.setup2.heading = normalize(state.setup2.heading + (key === "ArrowLeft" ? -5 : 5));
+    state.setup2TutorialResultKey = "av_setup2_tutorial_ready";
+    state.setup2StatusKey = "av_setup2_tutorial_ready";
+    state.setup2StatusText = "";
+    renderSetup2();
+  }
+
+  function stopSetup2Flight(shouldRender = true) {
+    if (setup2Flight.intervalId !== null) window.clearInterval(setup2Flight.intervalId);
+    setup2Flight.intervalId = null;
+    setup2Flight.running = false;
+    if (shouldRender) renderSetup2();
+  }
+
+  function toggleSetup2Flight() {
+    if (setup2Flight.running) {
+      stopSetup2Flight();
+      return;
+    }
+    setup2Flight.running = true;
+    let lastTime = performance.now();
+    setup2Flight.intervalId = window.setInterval(() => {
+      const now = performance.now();
+      const seconds = Math.min((now - lastTime) / 1000, 1);
+      lastTime = now;
+      if (!document.getElementById("avionics")?.classList.contains("active") || state.activeSetup !== "av-setup-2") {
+        stopSetup2Flight();
+        return;
+      }
+      setup2TutorialPosition = tutorialDestination(setup2TutorialPosition || setup2TutorialExample().start, state.setup2.heading, 90 * seconds / 3600);
+      renderSetup2();
+    }, 100);
+    renderSetup2();
+  }
+
   function handleTutorialFlightKey(event) {
     if (!["ArrowLeft", "ArrowRight"].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (!document.getElementById("avionics")?.classList.contains("active") || state.activeSetup !== "av-setup-1") return;
-    if (event.target?.closest?.("input, select, textarea, [contenteditable]:not([contenteditable='false']), [role='dialog'], .avionics-layout, [role='tablist']")) return;
+    if (!document.getElementById("avionics")?.classList.contains("active") || !["av-setup-1", "av-setup-2"].includes(state.activeSetup)) return;
+    const setup2MapContainer = setup2TutorialMap?.getContainer?.();
+    const setup1MapContainer = tutorialMap?.getContainer?.();
+    const eventMap = event.target?.closest?.(".av-tutorial-map");
+    const activeMap = document.activeElement?.closest?.(".av-tutorial-map");
+    const mapTarget = eventMap || activeMap
+      || (setup2MapContainer?.contains(event.target) ? setup2MapContainer : null)
+      || (setup1MapContainer?.contains(event.target) ? setup1MapContainer : null);
+    const protectedTarget = event.target?.closest?.("input, select, textarea, [contenteditable]:not([contenteditable='false']), [role='dialog'], [role='tablist']");
+    if (protectedTarget || (event.target?.closest?.(".avionics-layout") && !mapTarget)) return;
+    if (state.activeSetup === "av-setup-2") {
+      event.preventDefault();
+      event.stopPropagation();
+      moveSetup2TutorialByKeyboard(event.key);
+      return;
+    }
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
     event.preventDefault();
     // Capture before Leaflet handles the same arrows as map-panning commands.
     event.stopPropagation();
@@ -642,7 +893,95 @@
   }
 
   function tutorialReference() {
+    if (isFreeTutorial() && state.tutorialReferenceId) {
+      return TUTORIAL_REFERENCES[state.tutorialReferenceId] || NAV_AIDS.VIS;
+    }
+    if (isFreeTutorial()) return findVlocStation() || NAV_AIDS.VIS;
     return TUTORIAL_REFERENCES[tutorialExample().reference] || TUTORIAL_REFERENCES.VIS;
+  }
+
+  function setup2TutorialReference() {
+    if (state.setup2SelectedReferenceId) {
+      return TUTORIAL_REFERENCES[state.setup2SelectedReferenceId] || NAV_AIDS.VIS;
+    }
+    return findNavStation(state.setup2.navActive) || TUTORIAL_REFERENCES[setup2TutorialExample().reference];
+  }
+
+  function navAidDescription(reference) {
+    return [reference.type, reference.frequency ? `${formatVloc(reference.frequency)} MHz` : "", reference.channel ? `CH ${reference.channel}` : ""].filter(Boolean).join(" · ") || "GPS waypoint";
+  }
+
+  function navAidReferenceLabel(reference) {
+    if (reference.frequency) return `${formatVloc(reference.frequency)} MHz`;
+    if (reference.channel) return `CH ${reference.channel}`;
+    return "GPS";
+  }
+
+  function renderNavAidCatalogs() {
+    const stations = Object.values(NAV_AIDS).sort((a, b) => a.name.localeCompare(b.name, "pt"));
+    const rows = stations.map(station => `<tr><td><button type="button" class="btn" data-av-navaid="${station.id}" title="${t("av_navaids_locate")}">${station.name}</button><br><small>${station.type}</small></td><td class="mono">${station.id}</td><td class="mono">${station.frequency ? `${formatVloc(station.frequency)} MHz` : "—"}<br><small>CH ${station.channel}</small></td></tr>`).join("");
+    document.querySelectorAll("[data-av-navaids]").forEach(list => {
+      if (list.innerHTML !== rows) list.innerHTML = rows;
+    });
+  }
+
+  function locateNavAid(button) {
+    const reference = NAV_AIDS[button.dataset.avNavaid];
+    const map = button.closest("#av-setup-2") ? setup2TutorialMap : tutorialMap;
+    if (!reference || !map) return;
+    map.setView([reference.lat, reference.lng], 9);
+    map.getContainer().focus({ preventScroll: true });
+  }
+
+  function selectTrainingNavAid(reference, setupId) {
+    if (!reference || !NAV_AIDS[reference.id]) return;
+    const hasVorSignal = Number.isFinite(reference.frequency);
+    if (setupId === "av-setup-2") {
+      const position = setup2TutorialPosition || setup2TutorialExample().start;
+      state.setup2SelectedReferenceId = hasVorSignal ? null : reference.id;
+      state.setup2.tuningTarget = "NAV";
+      if (hasVorSignal) {
+        const previousActive = state.setup2.navActive;
+        state.setup2.navActive = reference.frequency;
+        if (Math.abs(previousActive - reference.frequency) > 0.006) state.setup2.navStandby = previousActive;
+        state.setup2.navMode = "VOR";
+        state.setup2.navDisplay = "OBS";
+        state.setup2.course = tutorialBearing(position, reference);
+        setup2SetStatus(`${reference.id} ${navAidReferenceLabel(reference)} sintonizado · OBS ${formatHeading(state.setup2.course)}°.`);
+      } else {
+        // DME-only sites remain map/GPS references; they must not create a VOR signal.
+        state.setup2.navDisplay = "FREQ";
+        setup2SetStatus(`${reference.id} ${navAidReferenceLabel(reference)} · referência DME/GPS; sem sinal VOR.`);
+      }
+      renderSetup2();
+      refreshSetup2TutorialMap(true);
+      setup2TutorialMap?.getContainer().focus({ preventScroll: true });
+      return;
+    }
+
+    const position = tutorialPosition || tutorialExample().start;
+    state.tutorialReferenceId = hasVorSignal ? null : reference.id;
+    if (hasVorSignal) {
+      const previousActive = state.vlocActive;
+      state.vlocActive = reference.frequency;
+      if (Math.abs(previousActive - reference.frequency) > 0.006) state.vlocStandby = previousActive;
+      state.tuningTarget = "VLOC";
+      state.source = "VLOC";
+      state.obsMode = false;
+      state.waypoint = reference.id;
+      const course = tutorialBearing(position, reference);
+      state.g5PfdCourse = course;
+      state.g5HsiCourse = course;
+      gnsDefaultNav();
+      setStatus(`${reference.id} ${navAidReferenceLabel(reference)} sintonizado · curso ${formatHeading(course)}°.`);
+    } else {
+      // DME-only sites can be followed in the educational GPS/map view only.
+      gnsActivate(reference.id);
+      setStatus(`${reference.id} ${navAidReferenceLabel(reference)} selecionado · rota GPS visual; sem sinal VOR.`);
+    }
+    render();
+    refreshTutorialMap(true);
+    tutorialMap?.getContainer().focus({ preventScroll: true });
   }
 
   function tutorialAircraftIcon(heading = 0) {
@@ -657,7 +996,7 @@
   function tutorialReferenceIcon(reference, active) {
     return global.L.divIcon({
       className: "",
-      html: `<div class="av-tutorial-reference-marker${active ? " is-active" : ""}"><strong>${reference.id}</strong><span>${reference.frequency ? formatVloc(reference.frequency) : "GPS"}</span></div>`,
+      html: `<div class="av-tutorial-reference-marker${active ? " is-active" : ""}"><strong>${reference.id}</strong><span>${reference.frequency ? formatVloc(reference.frequency) : reference.channel ? `CH ${reference.channel}` : "GPS"}</span></div>`,
       iconSize: [72, 42],
       iconAnchor: [36, 21],
     });
@@ -681,7 +1020,8 @@
         icon: tutorialReferenceIcon(reference, false),
         zIndexOffset: 500,
       }).addTo(tutorialMap);
-      marker.bindPopup(`<strong>${reference.name}</strong><br>${reference.frequency ? `${formatVloc(reference.frequency)} MHz` : "GPS waypoint"}`);
+      marker.bindPopup(`<strong>${reference.name}</strong><br>${navAidDescription(reference)}`);
+      if (NAV_AIDS[reference.id]) marker.on("click", () => selectTrainingNavAid(reference, "av-setup-1"));
       return { reference, marker };
     });
 
@@ -698,14 +1038,14 @@
       tutorialPosition = event.target.getLatLng();
       state.tutorialResultKey = isFreeTutorial() ? "av_tutorial_free_ready" : "av_tutorial_ready";
       syncTutorialFlightInputsFromPosition();
-      renderTutorial();
+      render();
     });
     tutorialAircraftMarker.on("dragend", (event) => {
       stopTutorialFlight(false);
       tutorialPosition = event.target.getLatLng();
       state.tutorialResultKey = isFreeTutorial() ? "av_tutorial_free_ready" : "av_tutorial_ready";
       syncTutorialFlightInputsFromPosition();
-      renderTutorial();
+      render();
       tutorialMap.getContainer().focus({ preventScroll: true });
     });
     tutorialMap.on("click", (event) => {
@@ -714,14 +1054,30 @@
       tutorialAircraftMarker.setLatLng(event.latlng);
       state.tutorialResultKey = isFreeTutorial() ? "av_tutorial_free_ready" : "av_tutorial_ready";
       syncTutorialFlightInputsFromPosition();
-      renderTutorial();
+      render();
       tutorialMap.getContainer().focus({ preventScroll: true });
     });
     renderTutorial();
-    window.setTimeout(() => tutorialMap?.invalidateSize(), 120);
+    refreshTutorialMap();
+  }
+
+  function refreshTutorialMap(fitMap = false) {
+    if (!tutorialMap) return;
+    const refresh = () => {
+      if (!tutorialMap) return;
+      tutorialMap.invalidateSize({ pan: false });
+      if (!fitMap) return;
+      const example = tutorialExample();
+      const position = tutorialPosition || example.start;
+      tutorialMap.fitBounds([position, tutorialMapTarget()], { padding: [45, 45], maxZoom: 9 });
+    };
+    refresh();
+    window.setTimeout(refresh, 120);
+    window.setTimeout(refresh, 360);
   }
 
   function renderTutorial() {
+    syncToFromGuideVisibility();
     const example = tutorialExample();
     const reference = tutorialReference();
     const position = tutorialPosition || example.start;
@@ -741,94 +1097,142 @@
     setText("av-tutorial-briefing", t(example.briefingKey));
     setText("av-tutorial-objective-text", t(example.objectiveKey));
     setText("av-tutorial-aircraft", `${position.lat.toFixed(3)}°, ${position.lng.toFixed(3)}° · ${distance.toFixed(1)} NM`);
-    setText("av-tutorial-reference", `${reference.name}${reference.frequency ? ` · ${formatVloc(reference.frequency)} MHz` : ""}`);
+    setText("av-tutorial-reference", `${reference.name} · ${navAidReferenceLabel(reference)}`);
     setText("av-tutorial-bearing", `${formatHeading(bearingTo)}°`);
     setText("av-tutorial-radial-readout", `${formatHeading(radialFrom)}°`);
     setText("av-tutorial-status", t(state.tutorialResultKey));
     if (tutorialFlight.running && !passed) setText("av-tutorial-status", `${t("av_tutorial_flight_running")} · ${tutorialFlight.speedKts} KTS · HDG ${formatHeading(state.heading)}°`);
     const exampleIndex = TUTORIAL_EXAMPLES.findIndex((item) => item.id === example.id);
-    setText("av-tutorial-progress", isFreeTutorial() ? t("av_tutorial_free_badge") : `${exampleIndex + 1} / ${TUTORIAL_EXAMPLES.length}`);
+    const introSelected = document.getElementById("av-tutorial-example")?.value === TOFROM_INTRO_TUTORIAL_ID;
+    setText("av-tutorial-progress", introSelected ? t("av_tutorial_intro_badge") : isFreeTutorial() ? t("av_tutorial_free_badge") : `${exampleIndex + 1} / ${TUTORIAL_EXAMPLES.length}`);
     setText("av-tutorial-load", t(isFreeTutorial() ? "av_tutorial_load_free" : "av_tutorial_load"));
     const checkButton = document.getElementById("av-tutorial-check");
-    if (checkButton) checkButton.disabled = isFreeTutorial();
+    if (checkButton) checkButton.disabled = isFreeTutorial() || document.getElementById("av-tutorial-example")?.value === TOFROM_INTRO_TUTORIAL_ID;
     updateTutorialFlightControls();
 
     if (!tutorialMap || !tutorialAircraftMarker) return;
     tutorialAircraftMarker.setLatLng(position);
     const direction = tutorialAircraftMarker.getElement()?.querySelector(".av-tutorial-aircraft-direction");
     if (direction) direction.style.transform = `rotate(${normalize(state.heading)}deg)`;
-    tutorialLine?.setLatLngs([position, target]);
+    // Do not leave the exercise's orange guide pointing at Viseu after the
+    // pilot tunes another VOR (for example FTM). Free mode follows the tuned
+    // VOR through tutorialReference(); guided VLOC lines remain only while
+    // their active station matches the exercise reference.
+    const activeVloc = findVlocStation();
+    const lineMatchesReference = !activeVloc || activeVloc.id === reference.id;
+    tutorialLine?.setLatLngs(lineMatchesReference ? [position, target] : []);
     tutorialReferenceMarkers.forEach(({ reference: item, marker }) => {
       marker.setIcon(tutorialReferenceIcon(item, item.id === reference.id));
     });
   }
 
   function setup2TutorialExample() {
+    if (state.setup2TutorialId === "free") return { id: "free", reference: "VIS", start: SETUP2_TUTORIAL_EXAMPLES[0].start, initialActive: 113.10, initialStandby: 114.10 };
     return SETUP2_TUTORIAL_EXAMPLES.find((item) => item.id === state.setup2TutorialId) || SETUP2_TUTORIAL_EXAMPLES[0];
   }
 
   function initSetup2TutorialMap() {
     if (setup2TutorialMap || !global.L || !document.getElementById("setup2-tutorial-map")) return;
     setup2TutorialMap = global.L.map("setup2-tutorial-map", { zoomControl: true }).setView([41.0, -8.25], 7.5);
+    const setup2MapContainer = setup2TutorialMap.getContainer();
+    // Capture aircraft turns before Leaflet pans the map.
+    setup2MapContainer.tabIndex = 0;
+    setup2MapContainer.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (state.activeSetup !== "av-setup-2") return;
+      event.preventDefault();
+      event.stopPropagation();
+      moveSetup2TutorialByKeyboard(event.key);
+    });
     global.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 17,
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(setup2TutorialMap);
-    setup2TutorialReferenceMarkers = [TUTORIAL_REFERENCES.VIS, TUTORIAL_REFERENCES.PRT].map((reference) => {
+    setup2TutorialReferenceMarkers = Object.values(NAV_AIDS).map((reference) => {
       const marker = global.L.marker([reference.lat, reference.lng], {
         icon: tutorialReferenceIcon(reference, false), zIndexOffset: 500,
       }).addTo(setup2TutorialMap);
-      marker.bindPopup(`<strong>${reference.name}</strong><br>${formatVloc(reference.frequency)} MHz`);
+      marker.bindPopup(`<strong>${reference.name}</strong><br>${navAidDescription(reference)}`);
+      marker.on("click", () => selectTrainingNavAid(reference, "av-setup-2"));
       return { reference, marker };
     });
     setup2TutorialLine = global.L.polyline([], { color: "#f59e0b", weight: 3, opacity: 0.9, dashArray: "8 7" }).addTo(setup2TutorialMap);
     const start = setup2TutorialPosition || SETUP2_TUTORIAL_EXAMPLES[0].start;
     setup2TutorialAircraftMarker = global.L.marker([start.lat, start.lng], {
-      icon: tutorialAircraftIcon(), draggable: true, keyboard: true, zIndexOffset: 900,
+      icon: tutorialAircraftIcon(state.setup2.heading), draggable: true, keyboard: true, zIndexOffset: 900,
       title: "Avião do exercício Setup 2",
     }).addTo(setup2TutorialMap);
+    setup2TutorialAircraftMarker.on("dragstart", () => stopSetup2Flight(false));
     setup2TutorialAircraftMarker.on("drag", (event) => {
       setup2TutorialPosition = event.target.getLatLng();
       state.setup2TutorialResultKey = "av_setup2_tutorial_ready";
       state.setup2StatusKey = "av_setup2_tutorial_ready";
       renderSetup2();
     });
+    setup2TutorialAircraftMarker.on("dragend", (event) => {
+      setup2TutorialPosition = event.target.getLatLng();
+      state.setup2TutorialResultKey = "av_setup2_tutorial_ready";
+      state.setup2StatusKey = "av_setup2_tutorial_ready";
+      renderSetup2();
+      setup2TutorialMap.getContainer().focus({ preventScroll: true });
+    });
+    setup2TutorialAircraftMarker.on("click", () => {
+      setup2TutorialMap.getContainer().focus({ preventScroll: true });
+    });
     setup2TutorialMap.on("click", (event) => {
+      stopSetup2Flight(false);
       setup2TutorialPosition = event.latlng;
       setup2TutorialAircraftMarker.setLatLng(event.latlng);
       state.setup2TutorialResultKey = "av_setup2_tutorial_ready";
       state.setup2StatusKey = "av_setup2_tutorial_ready";
       renderSetup2();
+      setup2TutorialMap.getContainer().focus({ preventScroll: true });
     });
     renderSetup2Tutorial();
   }
 
   function renderSetup2Tutorial() {
+    syncToFromGuideVisibility();
     const example = setup2TutorialExample();
+    const free = example.id === "free";
     const index = SETUP2_TUTORIAL_EXAMPLES.indexOf(example) + 1;
-    const prefix = `av_setup2_level${index}`;
-    const reference = TUTORIAL_REFERENCES[example.reference];
+    const prefix = free ? "av_setup2_free" : `av_setup2_level${index}`;
+    const reference = setup2TutorialReference();
     const position = setup2TutorialPosition || example.start;
     const bearingTo = tutorialBearing(position, reference);
     const radialFrom = tutorialBearing(reference, position);
     const distance = tutorialDistanceNm(position, reference);
-    setText("setup2-tutorial-progress", `${index} / ${SETUP2_TUTORIAL_EXAMPLES.length}`);
+    const introSelected = document.getElementById("setup2-tutorial-example")?.value === TOFROM_INTRO_TUTORIAL_ID;
+    setText("setup2-tutorial-progress", introSelected ? t("av_tutorial_intro_badge") : free ? t("av_tutorial_free_badge") : `${index} / ${SETUP2_TUTORIAL_EXAMPLES.length}`);
     setText("setup2-tutorial-example-title", t(`${prefix}_title`));
     setText("setup2-tutorial-briefing", t(`${prefix}_briefing`));
     setText("setup2-tutorial-objective-text", t(`${prefix}_objective`));
     setText("setup2-tutorial-aircraft", `${position.lat.toFixed(3)}°, ${position.lng.toFixed(3)}° · ${distance.toFixed(1)} NM`);
-    setText("setup2-tutorial-reference", `${reference.name} · ${formatVloc(reference.frequency)} MHz`);
+    setText("setup2-tutorial-reference", `${reference.name} · ${navAidReferenceLabel(reference)}`);
     setText("setup2-tutorial-bearing", `${formatHeading(bearingTo)}°`);
     setText("setup2-tutorial-radial", `${formatHeading(radialFrom)}°`);
     const stepResults = setup2StepResults();
     const passed = state.setup2.giPower && tutorialStepsPassed(stepResults, setup2TutorialPosition, example);
     if (passed) state.setup2TutorialResultKey = "av_setup2_tutorial_success";
     else if (state.setup2TutorialResultKey === "av_setup2_tutorial_success") state.setup2TutorialResultKey = "av_setup2_tutorial_ready";
-    setText("setup2-tutorial-status", t(state.setup2TutorialResultKey));
+    setText("setup2-tutorial-status", free ? t("av_setup2_free_ready") : t(state.setup2TutorialResultKey));
+    if (setup2Flight.running) setText("setup2-tutorial-status", `${t("av_tutorial_flight_running")} · 90 KTS · HDG ${formatHeading(state.setup2.heading)}°`);
+    const flightToggle = document.getElementById("setup2-tutorial-flight-toggle");
+    if (flightToggle) {
+      flightToggle.textContent = t(setup2Flight.running ? "av_tutorial_pause" : "av_tutorial_go");
+      flightToggle.classList.toggle("is-running", setup2Flight.running);
+      flightToggle.setAttribute("aria-pressed", String(setup2Flight.running));
+    }
+    const check = document.getElementById("setup2-tutorial-check");
+    if (check) check.disabled = free || document.getElementById("setup2-tutorial-example")?.value === TOFROM_INTRO_TUTORIAL_ID;
+    renderTouchFlightControls("av-setup-2", state.setup2.heading, setup2Flight.running);
+    setText("setup2-tutorial-load", t(free ? "av_tutorial_load_free" : "av_tutorial_load"));
     renderTutorialSteps("setup2-tutorial-steps", [1, 2, 3].map((step) => `${prefix}_step${step}`), stepResults);
     updateTutorialCompletionVisuals("setup2-", passed);
     if (!setup2TutorialMap || !setup2TutorialAircraftMarker) return;
     setup2TutorialAircraftMarker.setLatLng(position);
+    const direction = setup2TutorialAircraftMarker.getElement()?.querySelector(".av-tutorial-aircraft-direction");
+    if (direction) direction.style.transform = `rotate(${normalize(state.setup2.heading)}deg)`;
     setup2TutorialLine?.setLatLngs([position, reference]);
     setup2TutorialReferenceMarkers.forEach(({ reference: item, marker }) => {
       marker.setIcon(tutorialReferenceIcon(item, item.id === reference.id));
@@ -836,14 +1240,23 @@
   }
 
   function loadSetup2TutorialExample(id, fitMap = true) {
-    const example = SETUP2_TUTORIAL_EXAMPLES.find((item) => item.id === id) || SETUP2_TUTORIAL_EXAMPLES[0];
-    state.setup2TutorialId = example.id;
+    stopSetup2Flight(false);
+    if (id === TOFROM_INTRO_TUTORIAL_ID) {
+      const select = document.getElementById("setup2-tutorial-example");
+      if (select) select.value = id;
+      syncToFromGuideVisibility();
+      renderSetup2();
+      return;
+    }
+    state.setup2TutorialId = id === "free" ? "free" : (SETUP2_TUTORIAL_EXAMPLES.find((item) => item.id === id) || SETUP2_TUTORIAL_EXAMPLES[0]).id;
+    state.setup2SelectedReferenceId = null;
+    const example = setup2TutorialExample();
     state.setup2TutorialResultKey = "av_setup2_tutorial_ready";
     state.setup2StatusKey = "av_setup2_tutorial_ready";
     state.setup2StatusText = "";
     setup2TutorialPosition = { ...example.start };
     Object.assign(state.setup2, {
-      giPower: true, gncPower: true, course: 270, toFrom: "TO", navMode: "VOR",
+      giPower: true, gncPower: true, course: 270, navMode: "VOR", navDisplay: "FREQ", heading: example.course ?? 90,
       navActive: example.initialActive, navStandby: example.initialStandby,
       comActive: 118.000, comStandby: 122.800, tuningTarget: "NAV",
     });
@@ -852,13 +1265,24 @@
     setText("setup2-training-status", t("av_setup2_tutorial_ready"));
     renderSetup2();
     if (state.activeSetup === "av-setup-2") initSetup2TutorialMap();
-    if (fitMap && setup2TutorialMap) {
+    if (fitMap) refreshSetup2TutorialMap(true);
+  }
+
+  function refreshSetup2TutorialMap(fitMap = false) {
+    const refresh = () => {
+      const container = document.getElementById("setup2-tutorial-map");
+      if (state.activeSetup !== "av-setup-2" || !container?.clientWidth || !container?.clientHeight || !setup2TutorialMap) return;
       setup2TutorialMap.invalidateSize();
-      setup2TutorialMap.fitBounds([setup2TutorialPosition, TUTORIAL_REFERENCES[example.reference]], { padding: [45, 45], maxZoom: 9 });
-    }
+      if (fitMap) setup2TutorialMap.fitBounds([setup2TutorialPosition || setup2TutorialExample().start, setup2TutorialReference()], { padding: [45, 45], maxZoom: 9 });
+      renderSetup2Tutorial();
+    };
+    refresh();
+    window.setTimeout(refresh, 120);
+    window.setTimeout(refresh, 360);
   }
 
   function checkSetup2Tutorial() {
+    if (state.setup2TutorialId === "free") return;
     const example = setup2TutorialExample();
     const setup = state.setup2;
     const positionOk = setup2TutorialPosition && tutorialDistanceNm(setup2TutorialPosition, example.start) <= 9;
@@ -867,7 +1291,7 @@
     else if (!positionOk) result = "av_setup2_tutorial_position";
     else if (setup.tuningTarget !== "NAV" || setup.navMode !== "VOR" || Math.abs(setup.navActive - example.frequency) >= 0.006) result = "av_setup2_tutorial_frequency";
     else if (example.course !== null && Math.abs(angleDelta(setup.course, example.course)) > 4) result = "av_setup2_tutorial_course";
-    else if (example.toFrom && setup.toFrom !== example.toFrom) result = "av_setup2_tutorial_tofrom";
+    else if (example.toFrom && setup2NavFlag() !== example.toFrom) result = "av_setup2_tutorial_tofrom";
     else if (example.course !== null && setup2CdiValue() !== "CENTER") result = "av_setup2_tutorial_cdi";
     state.setup2TutorialResultKey = result;
     state.setup2StatusKey = result;
@@ -877,6 +1301,10 @@
   }
 
   function nextSetup2TutorialExample() {
+    if (document.getElementById("setup2-tutorial-example")?.value === TOFROM_INTRO_TUTORIAL_ID) {
+      loadSetup2TutorialExample(SETUP2_TUTORIAL_EXAMPLES[0].id);
+      return;
+    }
     const index = SETUP2_TUTORIAL_EXAMPLES.indexOf(setup2TutorialExample());
     loadSetup2TutorialExample(SETUP2_TUTORIAL_EXAMPLES[(index + 1) % SETUP2_TUTORIAL_EXAMPLES.length].id);
   }
@@ -945,11 +1373,21 @@
   }
 
   function loadTutorialExample(id, fitMap = true) {
+    if (id === TOFROM_INTRO_TUTORIAL_ID) {
+      stopTutorialFlight(false);
+      const select = document.getElementById("av-tutorial-example");
+      if (select) select.value = id;
+      syncToFromGuideVisibility();
+      render();
+      return;
+    }
+    resetGnsUi();
     stopTutorialFlight(false);
     const example = id === FREE_TUTORIAL_EXAMPLE.id
       ? FREE_TUTORIAL_EXAMPLE
       : TUTORIAL_EXAMPLES.find((item) => item.id === id) || TUTORIAL_EXAMPLES[0];
     state.tutorialId = example.id;
+    state.tutorialReferenceId = null;
     state.tutorialResultKey = isFreeTutorial() ? "av_tutorial_free_ready" : "av_tutorial_ready";
     if (isFreeTutorial()) {
       tutorialFlight.elapsedSeconds = 0;
@@ -961,16 +1399,27 @@
       if (fitMap && tutorialMap) tutorialMap.setView([tutorialPosition.lat, tutorialPosition.lng], Math.max(tutorialMap.getZoom(), 8));
       return;
     }
+    Object.values(g5Settings).forEach(settings => Object.assign(settings, defaultG5Settings()));
     Object.assign(state, {
       g5PfdPower: true,
       g5HsiPower: true,
-      gnsPower: true,
-      g5Menu: false,
+      g5PfdPage: "PFD",
+      g5HsiPage: "HSI",
+      g5PfdMode: "HDG",
       g5HsiMode: "HDG",
-      g5MenuSelection: "HDG",
+      g5PfdMenu: false,
+      g5HsiMenu: false,
+      g5PfdMenuSelection: "HDG",
+      g5HsiMenuSelection: "HDG",
+      g5PfdHeadingBug: 270,
+      g5HsiHeadingBug: 270,
+      g5PfdCourse: 270,
+      g5HsiCourse: 270,
+      g5PfdBearingPointer: true,
+      g5HsiBearingPointer: true,
+      g5LastUnit: null,
+      gnsPower: true,
       heading: 270,
-      headingBug: 270,
-      course: 270,
       source: "GPS",
       waypoint: example.kind === "GPS" ? "LPVL" : example.kind === "MAP" ? example.expectedWaypoint : "LPPR",
       obsMode: false,
@@ -980,7 +1429,7 @@
       vlocActive: 110.30,
       vlocStandby: 114.10,
       gnsGroup: "NAV",
-      gnsPageIndex: example.kind === "MAP" ? 0 : 1,
+      gnsPageIndex: 0,
       gnsMenu: false,
       gnsCursor: false,
       directToArmed: false,
@@ -1017,6 +1466,10 @@
   }
 
   function nextTutorialExample() {
+    if (document.getElementById("av-tutorial-example")?.value === TOFROM_INTRO_TUTORIAL_ID) {
+      loadTutorialExample(TUTORIAL_EXAMPLES[0].id);
+      return;
+    }
     const currentIndex = TUTORIAL_EXAMPLES.findIndex((example) => example.id === state.tutorialId);
     const next = TUTORIAL_EXAMPLES[(Math.max(0, currentIndex) + 1) % TUTORIAL_EXAMPLES.length];
     loadTutorialExample(next.id);
@@ -1039,205 +1492,179 @@
     canvasText(ctx, "OFF", width / 2, height / 2 + 30, { color: "#94a3b8", font: "700 20px Consolas, monospace", align: "center" });
   }
 
-  function drawG5Tape(ctx, x, y, width, height, value, unit, side) {
-    ctx.fillStyle = "rgba(2, 6, 23, 0.78)";
-    ctx.fillRect(x, y, width, height);
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, width, height);
-    const labelX = side === "left" ? x + width - 8 : x + 8;
-    canvasText(ctx, unit, labelX, y + 18, { color: "#facc15", font: "700 14px Consolas, monospace", align: side === "left" ? "right" : "left" });
-    canvasText(ctx, String(value), labelX, y + height / 2, { font: "700 27px Consolas, monospace", align: side === "left" ? "right" : "left" });
-    canvasText(ctx, side === "left" ? "▲" : "◀", side === "left" ? x + width + 8 : x - 8, y + height / 2, { color: "#facc15", font: "700 18px sans-serif", align: side === "left" ? "left" : "right" });
-  }
-
-  function drawHeadingTape(ctx, width) {
-    const x = 125;
-    const y = 17;
-    const tapeWidth = width - 250;
-    ctx.fillStyle = "rgba(2, 6, 23, 0.9)";
-    ctx.fillRect(x, y, tapeWidth, 56);
-    for (let offset = -60; offset <= 60; offset += 10) {
-      const heading = normalize(state.heading + offset);
-      const px = x + tapeWidth / 2 + (offset * 2.25);
-      ctx.strokeStyle = "#cbd5e1";
-      ctx.lineWidth = offset % 30 === 0 ? 2 : 1;
-      ctx.beginPath();
-      ctx.moveTo(px, y + 38);
-      ctx.lineTo(px, y + (offset % 30 === 0 ? 19 : 27));
-      ctx.stroke();
-      if (offset % 30 === 0) canvasText(ctx, formatHeading(heading), px, y + 11, { color: "#e2e8f0", font: "700 13px Consolas, monospace", align: "center" });
-    }
-    ctx.fillStyle = "#facc15";
-    ctx.beginPath();
-    ctx.moveTo(width / 2, y + 56);
-    ctx.lineTo(width / 2 - 8, y + 44);
-    ctx.lineTo(width / 2 + 8, y + 44);
-    ctx.closePath();
-    ctx.fill();
-    canvasText(ctx, formatHeading(state.heading), width / 2, y + 72, { color: "#facc15", font: "700 20px Consolas, monospace", align: "center" });
-  }
-
-  function drawPfd(ctx, width, height) {
-    const horizon = height * 0.48;
-    ctx.fillStyle = "#23618a";
-    ctx.fillRect(0, 0, width, horizon);
-    ctx.fillStyle = "#80633d";
-    ctx.fillRect(0, horizon, width, height - horizon);
-    ctx.strokeStyle = "rgba(255,255,255,0.75)";
-    ctx.lineWidth = 2;
-    for (let offset = -80; offset <= 80; offset += 20) {
-      const y = horizon + offset;
-      ctx.beginPath();
-      ctx.moveTo(width / 2 - 42, y);
-      ctx.lineTo(width / 2 - 10, y);
-      ctx.moveTo(width / 2 + 10, y);
-      ctx.lineTo(width / 2 + 42, y);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = "#f8fafc";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(width / 2 - 65, height / 2);
-    ctx.lineTo(width / 2 - 16, height / 2);
-    ctx.moveTo(width / 2 + 16, height / 2);
-    ctx.lineTo(width / 2 + 65, height / 2);
-    ctx.stroke();
-    ctx.fillStyle = "#facc15";
-    ctx.beginPath();
-    ctx.moveTo(width / 2, height / 2 - 12);
-    ctx.lineTo(width / 2 - 9, height / 2 + 10);
-    ctx.lineTo(width / 2 + 9, height / 2 + 10);
-    ctx.closePath();
-    ctx.fill();
-    drawHeadingTape(ctx, width);
-    drawG5Tape(ctx, 12, 105, 86, 215, Math.round(90), "IAS", "left");
-    drawG5Tape(ctx, width - 98, 105, 86, 215, "2500", "ALT", "right");
-    canvasText(ctx, "VS", width - 45, 350, { color: "#facc15", font: "700 13px Consolas, monospace", align: "center" });
-    canvasText(ctx, "+020", width - 45, 374, { font: "700 17px Consolas, monospace", align: "center" });
-    canvasText(ctx, currentNavLabel(), 22, height - 32, { color: "#dbeafe", font: "700 16px Consolas, monospace" });
-    canvasText(ctx, state.obsMode ? "OBS" : "GPS", width - 22, height - 32, { color: "#f0abfc", font: "700 16px Consolas, monospace", align: "right" });
-  }
-
-  function drawCompass(ctx, width, height) {
-    const cx = width / 2;
-    const cy = height * 0.54;
-    const radius = Math.min(width * 0.37, height * 0.4);
-    ctx.fillStyle = "#07131c";
-    ctx.fillRect(0, 0, width, height);
+  // Visual reference: approved G5 mockups / Garmin 190-01112-12 Rev. A.
+  // A fixed 800x600 drawing space preserves the 4:3 instrument geometry.
+  // IAS/altitude are educational constants; navigation stays live.
+  function drawG5Display(ctx, width, height, unit) {
+    const white = "#f7fafc", cyan = "#65e4f1", magenta = "#d965e1";
+    const green = "#55df66", yellow = "#fff034";
+    const navColor = state.source === "GPS" ? magenta : green;
+    const settings = g5Settings[unit];
+    const heading = state.heading, course = g5Course(unit);
+    const cdi = cdiDeviation(course);
+    const rect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+    const line = (x, y, a, b, color = white, weight = 2) => {
+      ctx.strokeStyle = color; ctx.lineWidth = weight;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(a, b); ctx.stroke();
+    };
+    const text = (value, x, y, size = 27, color = white, align = "left") => {
+      ctx.fillStyle = color; ctx.font = `600 ${size}px Consolas, monospace`;
+      ctx.textAlign = align; ctx.textBaseline = "alphabetic"; ctx.fillText(value, x, y);
+    };
+    const poly = (points, color) => {
+      ctx.fillStyle = color; ctx.beginPath();
+      points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.closePath(); ctx.fill();
+    };
+    const circle = (x, y, radius, color = white, fill = false) => {
+      ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+      if (fill) ctx.fill(); else ctx.stroke();
+    };
+    const box = (x, y, w, h, label, color = cyan, size = 30) => {
+      rect(x, y, w, h, "#050606"); ctx.strokeStyle = "#71767b"; ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h); text(label, x + w / 2, y + h * .73, size, color, "center");
+    };
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(-state.heading * Math.PI / 180);
-    ctx.strokeStyle = "#dbeafe";
-    ctx.lineWidth = 2;
-    for (let degree = 0; degree < 360; degree += 5) {
-      const length = degree % 30 === 0 ? 17 : degree % 10 === 0 ? 11 : 6;
-      const angle = degree * Math.PI / 180;
-      ctx.beginPath();
-      ctx.moveTo(Math.sin(angle) * (radius - length), -Math.cos(angle) * (radius - length));
-      ctx.lineTo(Math.sin(angle) * radius, -Math.cos(angle) * radius);
-      ctx.stroke();
-      if (degree % 30 === 0) {
-        ctx.save();
-        ctx.translate(Math.sin(angle) * (radius - 30), -Math.cos(angle) * (radius - 30));
-        // The card rotates with heading, but its labels remain upright.
-        ctx.rotate(state.heading * Math.PI / 180);
-        canvasText(ctx, degree === 0 ? "N" : degree === 90 ? "E" : degree === 180 ? "S" : degree === 270 ? "W" : String(degree / 10).padStart(2, "0"), 0, 0, { color: "#e2e8f0", font: "700 18px Consolas, monospace", align: "center" });
-        ctx.restore();
+    ctx.scale(width / 800, height / 600);
+    if (g5Page(unit) === "PFD") {
+      const horizon = 298 + settings.pitch * 7;
+      rect(0, 0, 800, 600, "#355596"); rect(0, horizon, 800, 600 - horizon, "#82591d");
+      line(0, horizon, 800, horizon);
+      ctx.save(); ctx.beginPath(); ctx.rect(142, 54, 516, 460); ctx.clip();
+      for (let pitch = -20; pitch <= 20; pitch += 5) {
+        if (!pitch) continue;
+        const y = horizon - pitch * 7, half = pitch % 10 ? 38 : 73;
+        line(400 - half, y, 400 + half, y);
+        if (pitch % 10 === 0) {
+          text(Math.abs(pitch), 310, y + 7, 23, white, "right");
+          text(Math.abs(pitch), 490, y + 7, 23);
+        }
       }
+      ctx.restore();
+      ctx.strokeStyle = white; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(400, 310, 207, -Math.PI * .82, -Math.PI * .18); ctx.stroke();
+      [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60].forEach(a => {
+        const angle = (a - 90) * Math.PI / 180;
+        line(400 + Math.cos(angle) * 190, 310 + Math.sin(angle) * 190,
+          400 + Math.cos(angle) * 207, 310 + Math.sin(angle) * 207);
+      });
+      poly([[400, 98], [387, 122], [413, 122]], white);
+      poly([[400, 303], [321, 344], [361, 340]], yellow);
+      poly([[400, 303], [479, 344], [439, 340]], yellow);
+      line(205, 303, 258, 303, yellow, 7); line(542, 303, 595, 303, yellow, 7);
+      rect(0, 48, 141, 505, "#30487dcc"); rect(658, 48, 142, 505, "#30487dcc");
+      rect(128, 48, 12, 62, yellow); rect(128, 110, 12, 385, green); rect(128, 495, 12, 58, white);
+      for (let i = -2; i <= 3; i++) {
+        const y = 303 + i * 80;
+        text(90 - i * 10, 101, y + 10, 32, white, "right"); line(107, y, 124, y);
+        text(2500 - i * 100, 680, y + 10, 30); line(658, y, 674, y);
+      }
+      poly([[0, 258], [111, 258], [137, 293], [111, 328], [0, 328]], "#000");
+      text("90", 105, 311, 48, white, "right");
+      poly([[800, 258], [681, 258], [656, 293], [681, 328], [800, 328]], "#000");
+      text("2500", 792, 311, 42, white, "right");
+      rect(149, 0, 500, 53, "#25334f");
+      const base = Math.floor(heading / 10) * 10;
+      for (let offset = -30; offset <= 30; offset += 10) {
+        const x = 400 + (base + offset - heading) * 6.9;
+        text(formatHeading(base + offset), x, 30, 23, white, "center"); line(x, 38, x, 51);
+      }
+      box(345, 0, 110, 48, formatHeading(heading) + "°", white);
+      const bugX = 400 + Math.max(-34, Math.min(34, angleDelta(g5HeadingBug(unit), heading))) * 6.9;
+      poly([[bugX - 9, 39], [bugX + 9, 39], [bugX, 52]], cyan);
+      box(657, 0, 142, 48, settings.altitude, Math.abs(settings.altitude - 2500) > 200 ? yellow : cyan, 32);
+      box(658, 553, 142, 45, "29.92", cyan, 32); box(0, 553, 140, 45, "GS 90", magenta, 25);
+      text("HDG " + formatHeading(g5HeadingBug(unit)) + "°",400,589,27,cyan,"center");
+      line(312, 534, 337, 534); line(463, 534, 488, 534);
+      circle(400, 534, 18, white, true); line(373, 511, 373, 556, white, 4); line(427, 511, 427, 556, white, 4);
+      rect(298, 476, 204, 25, "#1b2435");
+      [-2, -1, 0, 1, 2].forEach(n => circle(400 + n * 40, 488, 6));
+      const x = 400 + Math.max(-2, Math.min(2, cdi)) * 40;
+      poly([[x, 476], [x + 8, 488], [x, 500], [x - 8, 488]], navColor);
+      text("100% ▰", 8, 25, 22); text("0", 780, 435, 22);
+    } else {
+      rect(0, 0, 800, 600, "#000");
+      const cx = 400, cy = 308, radius = 236;
+      for (let degree = 0; degree < 360; degree += 5) {
+        const angle = (degree - heading - 90) * Math.PI / 180;
+        const length = degree % 30 === 0 ? 22 : degree % 10 === 0 ? 14 : 8;
+        line(cx + Math.cos(angle) * (radius - length), cy + Math.sin(angle) * (radius - length),
+          cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, white, 3);
+        if (degree % 30 === 0) text(({0:"N",90:"E",180:"S",270:"W"})[degree] || degree / 10,
+          cx + Math.cos(angle) * (radius - 44), cy + Math.sin(angle) * (radius - 44) + 10, 31, white, "center");
+      }
+      circle(cx, cy, 122, "#b5b5b5");
+      // Rotate course/CDI once relative to heading, independent of the compass card.
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate((course - heading) * Math.PI / 180);
+      [-2, -1, 1, 2].forEach(n => circle(n * 43, 0, 7));
+      line(0, -219, 0, -89, navColor, 7); line(0, 89, 0, 221, navColor, 7);
+      poly([[0, -232], [-21, -197], [21, -197]], navColor);
+      line(-cdi * 43, -81, -cdi * 43, 81, navColor, 7);
+      ctx.restore();
+      settings.pointers.forEach((source, index) => {
+        if (source === "None") return;
+        const waypoint = WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR;
+        const bearing = source === "GPS" ? waypoint.bearing : tutorialVlocGeometry()?.bearingTo;
+        if (bearing == null) return; // No valid tuned VOR: do not invent a bearing.
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate((bearing - heading) * Math.PI / 180);
+        if (index === 0) line(0, 104, 0, -112, cyan, 4);
+        else { line(-5,104,-5,-112,cyan,3); line(5,104,5,-112,cyan,3); }
+        poly([[0, -123], [-10, -100], [10, -100]], cyan); ctx.restore();
+        text((index + 1) + " " + source, index ? 782 : 12, 505, 22, cyan, index ? "right" : "left");
+      });
+      poly([[400,276],[405,301],[433,322],[432,330],[405,318],[405,337],[413,348],[400,342],[387,348],[395,337],[395,318],[368,330],[367,322],[395,301]],white);
+      const bugAngle = (g5HeadingBug(unit) - heading) * Math.PI / 180;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(bugAngle);
+      poly([[-13,-240],[13,-240],[13,-219],[0,-228],[-13,-219]],cyan); ctx.restore();
+      box(345, 0, 110, 44, formatHeading(heading) + "°", white, 32);
+      text("100% ▰",12,28,24);
+      const waypoint = WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR;
+      const vlocGeometry = state.source === "VLOC" ? tutorialVlocGeometry() : null;
+      const distance = state.source === "VLOC" ? vlocGeometry?.distanceNm : waypoint.distance;
+      const distanceLabel = state.source === "VLOC" ? "DME NM" : "DIST NM";
+      text(distanceLabel,782,25,21,white,"right");
+      text(Number.isFinite(distance) ? distance.toFixed(1) : "---",782,59,34,navColor,"right");
+      text(state.source === "GPS" ? "GPS" : "VOR",317,264,28,navColor,"center");
+      text(state.source === "GPS" ? "ENR" : tutorialNavFlag(),485,264,27,navColor,"center");
+      if (state.obsMode) text("OBS",485,373,26,navColor,"center");
+      text("GS KT",12,554,22); text("90",12,588,32,magenta);
+      box(651,550,147,48,formatHeading(g5HeadingBug(unit)) + "°",cyan,34);
+    }
+    // Value editors share the mockup's bottom-centered opaque panel.
+    if (!g5MenuOpen(unit) && ["ALT", "PITCH", "CRS"].includes(g5Mode(unit))) {
+      const mode = g5Mode(unit);
+      const label = mode === "ALT" ? "Selected Altitude" : mode === "PITCH" ? "Pitch" : state.source === "GPS" ? "OBS Course" : "Course";
+      const value = mode === "ALT" ? settings.altitude + " ft" : mode === "PITCH" ? settings.pitch.toFixed(1) + "°" : formatHeading(course) + "°";
+      box(245,444,310,148,"",cyan); text(label,400,479,24,white,"center"); text(value,400,552,44,cyan,"center");
     }
     ctx.restore();
-    // Heading-up HSI: map heading rotates the card once. CRS is an absolute
-    // selection, so draw it in its own (course - heading) frame, not the card's.
-    const courseAngle = (state.course - state.heading) * Math.PI / 180;
-    const cdi = cdiDeviation();
-    const cdiOffset = cdi * 23;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(courseAngle);
-    ctx.strokeStyle = "#f0abfc";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(0, -radius + 16);
-    ctx.lineTo(0, -radius * 0.42);
-    ctx.moveTo(0, radius * 0.42);
-    ctx.lineTo(0, radius - 16);
-    ctx.stroke();
-    ctx.fillStyle = "#f0abfc";
-    ctx.beginPath();
-    ctx.moveTo(0, -radius + 4);
-    ctx.lineTo(-10, -radius + 23);
-    ctx.lineTo(10, -radius + 23);
-    ctx.closePath();
-    ctx.fill();
-    // Deviation moves sideways in the selected course frame, not the card frame.
-    ctx.beginPath();
-    ctx.moveTo(-cdiOffset, -radius * 0.38);
-    ctx.lineTo(-cdiOffset, radius * 0.38);
-    ctx.stroke();
-    ctx.fillStyle = "#e2e8f0";
-    [-2, -1, 1, 2].forEach((dot) => {
-      ctx.beginPath();
-      ctx.arc(dot * 23, 0, 3, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-    // Fixed lubber mark and actual heading (independent of the selected bug).
-    ctx.fillStyle = "#f8fafc";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - radius + 4);
-    ctx.lineTo(cx - 8, cy - radius - 10);
-    ctx.lineTo(cx + 8, cy - radius - 10);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#020617";
-    ctx.fillRect(cx - 40, cy - radius - 43, 80, 29);
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cx - 40, cy - radius - 43, 80, 29);
-    canvasText(ctx, `${formatHeading(state.heading)}°`, cx, cy - radius - 28, { font: "700 23px Consolas, monospace", align: "center" });
-    ctx.strokeStyle = "#f8fafc";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(cx - 54, cy);
-    ctx.lineTo(cx - 12, cy);
-    ctx.moveTo(cx + 12, cy);
-    ctx.lineTo(cx + 54, cy);
-    ctx.stroke();
-    ctx.fillStyle = "#facc15";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - 14);
-    ctx.lineTo(cx - 9, cy + 11);
-    ctx.lineTo(cx + 9, cy + 11);
-    ctx.closePath();
-    ctx.fill();
-    const bugAngle = (state.headingBug - state.heading) * Math.PI / 180;
-    ctx.save();
-    ctx.translate(cx + Math.sin(bugAngle) * (radius + 4), cy - Math.cos(bugAngle) * (radius + 4));
-    ctx.rotate(bugAngle);
-    ctx.fillStyle = "#7dd3fc";
-    ctx.beginPath();
-    ctx.moveTo(0, 15);
-    ctx.lineTo(-9, -5);
-    ctx.lineTo(9, -5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-    canvasText(ctx, "HSI", 20, 26, { color: "#e2e8f0", font: "700 17px Consolas, monospace" });
-    canvasText(ctx, currentNavLabel(), 20, 52, { color: "#f0abfc", font: "700 15px Consolas, monospace" });
-    canvasText(ctx, `CRS ${formatHeading(state.course)}`, width - 20, 26, { color: "#f0abfc", font: "700 17px Consolas, monospace", align: "right" });
-    canvasText(ctx, `CDI ${cdiDeviation() >= 0 ? "+" : ""}${cdiDeviation().toFixed(1)}`, width - 20, 52, { color: "#f8fafc", font: "700 15px Consolas, monospace", align: "right" });
-    canvasText(ctx, `${state.source}${state.obsMode ? " · OBS" : ""} · ${tutorialNavFlag()}`, 20, height - 26, { color: "#facc15", font: "700 16px Consolas, monospace" });
-    canvasText(ctx, `BUG ${formatHeading(state.headingBug)}`, width - 20, 80, { color: "#7dd3fc", font: "700 19px Consolas, monospace", align: "right" });
   }
 
-  function drawG5Canvas(canvasId, page, powered, readoutId) {
-    const canvas = document.getElementById(canvasId);
+  function renderG5ModeLabels() {
+    ["pfd", "hsi"].forEach((unit) => {
+      const config = g5UnitConfig(unit);
+      const page = g5Page(unit);
+      const label = page === "HSI" ? "HSI" : "PFD";
+      const title = document.getElementById(config.titleId);
+      const pageLabel = document.getElementById(config.labelId);
+      const canvas = document.getElementById(config.canvasId);
+      if (title) title.innerHTML = `G5 <small>${label}</small>`;
+      if (pageLabel) pageLabel.textContent = label;
+      if (canvas) canvas.setAttribute("aria-label", `Display Garmin G5 ${label} simulado`);
+    });
+  }
+
+  function drawG5Canvas(unit) {
+    const config = g5UnitConfig(unit);
+    const page = g5Page(unit);
+    const powered = g5Powered(unit);
+    const canvas = document.getElementById(config.canvasId);
     if (!canvas) return;
-    let context = g5Contexts.get(canvasId);
+    let context = g5Contexts.get(config.canvasId);
     if (!context) {
       context = canvas.getContext("2d");
-      if (context) g5Contexts.set(canvasId, context);
+      if (context) g5Contexts.set(config.canvasId, context);
     }
     if (!context) return;
     const width = canvas.width;
@@ -1245,114 +1672,214 @@
     if (!powered) {
       drawG5Off(context, width, height);
     } else {
-      if (page === "HSI") drawCompass(context, width, height);
-      else drawPfd(context, width, height);
+      drawG5Display(context, width, height, unit);
     }
     const readout = page === "HSI"
-      ? `HSI · HDG ${formatHeading(state.heading)} · BUG ${formatHeading(state.headingBug)} · CRS ${formatHeading(state.course)} · ${state.source} · ${tutorialNavFlag()}`
-      : `PFD · HDG ${formatHeading(state.heading)} · BUG ${formatHeading(state.headingBug)} · ${state.source}`;
-    setText(readoutId, powered ? readout : `${page} · OFF`);
+      ? `HSI · HDG ${formatHeading(state.heading)} · BUG ${formatHeading(g5HeadingBug(unit))} · CRS ${formatHeading(g5Course(unit))} · ${state.source} · ${tutorialNavFlag()}`
+      : `PFD · HDG ${formatHeading(state.heading)} · BUG ${formatHeading(g5HeadingBug(unit))} · ${state.source}`;
+    setText(config.readoutId, powered ? readout : `${page} · OFF`);
   }
 
   function drawG5() {
-    drawG5Canvas("av-g5-pfd-canvas", "PFD", state.g5PfdPower, "av-g5-pfd-readout");
-    drawG5Canvas("av-g5-hsi-canvas", "HSI", state.g5HsiPower, "av-g5-hsi-readout");
+    drawG5Canvas("pfd");
+    drawG5Canvas("hsi");
   }
 
   function gnsPageName() {
     return PAGES[state.gnsGroup][state.gnsPageIndex] || PAGES[state.gnsGroup][0];
   }
 
-  function renderGnsNav(page) {
-    const target = WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR;
-    if (page === "MAP") {
-      return `<div class="gns-map-page"><div class="gns-map-view" role="img" aria-label="Mapa GNS com terreno, rota e waypoint ${state.waypoint}">
-        <svg class="gns-map-svg" viewBox="0 0 640 180" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="gns-map-sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#07182a" />
-              <stop offset="1" stop-color="#02070d" />
-            </linearGradient>
-            <linearGradient id="gns-map-relief" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#65722b" />
-              <stop offset="0.45" stop-color="#b08727" />
-              <stop offset="0.72" stop-color="#77422c" />
-              <stop offset="1" stop-color="#302634" />
-            </linearGradient>
-            <filter id="gns-map-glow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-          <rect width="640" height="180" fill="url(#gns-map-sky)" />
-          <path class="gns-map-grid" d="M0 42H640 M0 88H640 M0 134H640 M80 0V180 M190 0V180 M300 0V180 M410 0V180 M520 0V180" />
-          <path class="gns-map-relief" d="M0 122L74 93 132 106 181 72 246 88 305 46 367 68 421 35 495 59 554 21 640 47V180H0Z" opacity=".88" />
-          <path class="gns-map-terrain terrain-yellow" d="M20 122L75 94 132 107 181 74 245 89 207 125 141 137 76 132Z" />
-          <path class="gns-map-terrain terrain-orange" d="M260 80L306 48 367 69 421 36 496 60 456 98 382 101 325 119Z" />
-          <path class="gns-map-terrain terrain-red" d="M449 94L496 61 554 23 640 48 640 109 570 99 514 123Z" />
-          <path class="gns-map-contour" d="M16 129C83 88 129 139 193 89S305 60 366 83 454 26 531 59 592 42 640 61" />
-          <path class="gns-map-contour contour-soft" d="M0 151C74 109 117 161 188 114S312 92 378 112 472 54 541 83 597 71 640 84" />
-          <path class="gns-map-road" d="M-20 164C81 132 166 143 248 119S407 80 660 93" />
-          <path class="gns-map-river" d="M20 10C93 45 126 23 190 50S306 30 364 53 485 34 640 7" />
-          <circle class="gns-map-range-ring" cx="188" cy="105" r="67" />
-          <path class="gns-map-route" d="M188 105C284 103 354 75 505 58" />
-          <path class="gns-map-track" d="M188 105L307 83" />
-          <g class="gns-map-aircraft-svg" transform="translate(188 105) rotate(${normalize(state.heading)})" filter="url(#gns-map-glow)">
-            <path d="M0-13L5 8 0 5-5 8Z" />
-            <path d="M-4-1L-18 7-4 5M4-1L18 7 4 5" />
-          </g>
-          <g class="gns-map-waypoint" transform="translate(505 58)">
-            <circle r="8" />
-            <path d="M-14 0H14M0-14V14" />
-            <text x="13" y="-10">${state.waypoint}</text>
-          </g>
-          <text class="gns-map-terrain-label" x="14" y="22">TERRAIN</text>
-          <text class="gns-map-airport-label" x="454" y="82">${state.waypoint}</text>
-          <text class="gns-map-range-label" x="602" y="164">${state.mapRange} NM</text>
-        </svg>
-      </div><div class="gns-map-data-grid" aria-label="Campos de dados da Map Page">
-        <span><b>RNG</b>${state.mapRange} NM</span><span><b>TRK</b>${formatHeading(state.heading)}°</span>
-        <span><b>BRG</b>${formatHeading(target.bearing)}°</span><span><b>DTK</b>${formatHeading(target.bearing)}°</span>
-        <span><b>DIS</b>${target.distance.toFixed(1)} NM</span><span><b>GS</b>90 KT</span>
-      </div></div>`;
-    }
-    if (page === "NAV/COM") {
-      return `<div class="gns-line"><b>COM</b> ${formatCom(state.comActive)} / ${formatCom(state.comStandby)}</div><div class="gns-line"><b>VLOC</b> ${formatVloc(state.vlocActive)} / ${formatVloc(state.vlocStandby)}</div><div class="gns-line gns-large-value">${state.source} <b>${state.waypoint}</b></div>`;
-    }
-    const deviation = cdiDeviation();
-    return `<div class="gns-line gns-large-value"><b>${state.source}</b> ${state.waypoint}</div><div class="gns-line"><b>DTK</b> ${formatHeading(state.course)}° <b>TRK</b> ${formatHeading(state.heading)}°</div><div class="gns-line"><b>DIS</b> ${target.distance.toFixed(1)} NM <b>BRG</b> ${formatHeading(target.bearing)}°</div><div class="gns-cdi"><span class="gns-cdi-track"></span><span class="gns-cdi-needle" style="left:${50 + deviation * 16}%"></span></div><div class="gns-line gns-bottom"><b>${state.obsMode ? "OBS" : "LEG"}</b> ${formatHeading(state.course)}° <span>${deviation >= 0 ? "+" : ""}${deviation.toFixed(1)} · ${tutorialNavFlag()}</span></div>`;
+  function resetGnsUi() {
+    Object.assign(state, { gnsSpecialPage: null, gnsMenu: false, gnsCursor: false,
+      gnsMenuIndex: 0, gnsFieldIndex: 0, gnsDetail: null, gnsDirectConfirm: false,
+      gnsDirectPosition: 0, gnsFlightPlan: ["LPPR"], gnsFlightPlanActive: false,
+      gnsFlightPlanLeg: 0, gnsFields: ["DIS", "DTK", "BRG", "GS", "TRK", "ETE"],
+      gnsMapFields: ["DIS", "BRG", "TRK", "GS"], gnsMapData: true,
+      gnsMapOrientation: "NORTH UP", gnsDeclutter: 0, gnsWptIndex: 0 });
   }
 
-  function renderGnsWpt(page) {
-    if (page === "DIRECT-TO") {
-      return `<div class="gns-line gns-large-value"><b>DIRECT-TO</b></div><div class="gns-line">WPT <strong>${state.directEntry || state.waypoint}</strong></div><div class="gns-line">${state.directToArmed ? "SELECT WPT · PRESS ENT" : "PRESS D→ TO EDIT"}</div><div class="gns-line gns-bottom">${state.directToArmed ? "CLR CANCEL" : "ENT ACCEPT"}</div>`;
-    }
-    const station = findVlocStation();
-    if (page === "VOR") return `<div class="gns-line gns-large-value"><b>VOR</b> ${station ? station.name : "---"}</div><div class="gns-line">FREQ ${formatVloc(state.vlocActive)} · ${station ? "ID OK" : "NAV OFF"}</div><div class="gns-line">RADIAL ${station ? formatHeading(station.radial) : "---"}°</div>`;
-    return `<div class="gns-line gns-large-value"><b>AIRPORT</b> ${state.waypoint}</div><div class="gns-line">${(WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR).name}</div><div class="gns-line">BRG ${formatHeading((WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR).bearing)}° · ${targetString()}</div>`;
+  function gnsWaypoints() {
+    return (global.AERODROMES || []).filter(point => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lon)))
+      .map(point => ({ id: point.icao, name: point.name, lat: Number(point.lat), lng: Number(point.lon), frequency: point.main_freq }));
   }
 
-  function targetString() {
-    return `${(WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR).distance.toFixed(1)} NM`;
+  function gnsFindWaypoint(id) {
+    return gnsWaypoints().find(point => point.id === String(id).trim().toUpperCase())
+      || Object.values(TUTORIAL_REFERENCES).find(point => point.id === String(id).trim().toUpperCase()) || null;
+  }
+
+  function syncGnsWaypoints() {
+    const position = tutorialPosition || tutorialExample().start;
+    [...gnsWaypoints(), ...Object.values(TUTORIAL_REFERENCES)].forEach(point => {
+      WAYPOINTS[point.id] = { ...point, bearing: tutorialBearing(position, point), distance: tutorialDistanceNm(position, point) };
+    });
+  }
+
+  function gnsNearest() {
+    const page = gnsPageName();
+    const points = page === "AIRPORTS" ? gnsWaypoints() : page === "VOR" ? Object.values(NAV_AIDS).filter(point => Number.isFinite(point.frequency)) : [];
+    return points.map(point => ({ ...point, ...WAYPOINTS[point.id] })).sort((a, b) => a.distance - b.distance);
+  }
+
+  function gnsAuxItems() {
+    const item = (label, action) => ({ label, action });
+    return {
+      "FLIGHT PLANNING": [item("Trip Planning", "TRIP"), item("Fuel Planning", "FUEL"), item("Density Alt / TAS", "DENSITY"), item("Crossfill", "CROSSFILL")],
+      "UTILITY": [item("Checklists", "CHECKLISTS"), item("Flight Timers", "TIMERS"), item("RAIM Prediction", "RAIM"), item("Sunrise / Sunset", "SUNRISE")],
+      "SETUP 1": [item("CDI / Alarms", "CDI"), item("Units / Position", "UNITS"), item("Date / Time", "DATE"), item("Airspace Alarms", "AIRSPACE")],
+      "SETUP 2": [item("Display", "DISPLAY"), item("COM Configuration", "COM_CONFIG"), item("Nearest Airport Criteria", "CRITERIA"), ...(state.gnsModel === "430w" ? [item("SBAS Selection", "SBAS")] : [])],
+    }[gnsPageName()] || [];
+  }
+
+  function gnsMenuItems() {
+    if (state.gnsSpecialPage === "FPL") return [
+      { label: "Add Waypoint?", action: "FPL_ADD" },
+      { label: "Activate Leg?", action: "FPL_ACTIVATE", disabled: !state.gnsFlightPlan.length },
+      { label: "Delete Waypoint?", action: "FPL_DELETE", disabled: !state.gnsFlightPlan.length },
+      { label: "Invert Flight Plan?", action: "FPL_INVERT", disabled: state.gnsFlightPlan.length < 2 },
+      { label: "Delete Flight Plan?", action: "FPL_CLEAR" },
+    ];
+    if (state.gnsSpecialPage === "DIRECT") return [{ label: "Cancel Direct-To?", action: "CANCEL_DIRECT" }];
+    if (state.gnsGroup === "NAV" && gnsPageName() === "NAV 1") return [
+      { label: "Change Fields?", action: "FIELDS" }, { label: "Restore Defaults?", action: "DEFAULTS" },
+      { label: "Crossfill?", action: "CROSSFILL", disabled: true },
+    ];
+    if (gnsPageName() === "MAP") return [
+      { label: state.gnsMapData ? "Data Fields Off?" : "Data Fields On?", action: "MAP_DATA" },
+      { label: "Change Fields?", action: "MAP_FIELDS" }, { label: "Setup Map?", action: "MAP_SETUP" },
+      { label: "Restore Defaults?", action: "MAP_DEFAULTS" },
+    ];
+    return [{ label: "Return to Default NAV?", action: "NAV_DEFAULT" }];
+  }
+
+  function gnsDefaultNav() {
+    Object.assign(state, { gnsGroup: "NAV", gnsPageIndex: 0, gnsSpecialPage: null,
+      gnsMenu: false, gnsCursor: false, gnsDetail: null, directToArmed: false });
+  }
+
+  function gnsOpenDirect(id = state.waypoint) {
+    Object.assign(state, { gnsSpecialPage: "DIRECT", gnsMenu: false, gnsDetail: null,
+      gnsCursor: true, directToArmed: true, directEntry: id, gnsDirectConfirm: false, gnsDirectPosition: 0 });
+    setStatus("Direct-to: seleciona o identificador; ENT confirma e ENT ativa.");
+  }
+
+  function gnsActivate(id, fromPlan = false) {
+    const point = gnsFindWaypoint(id);
+    if (!point) { setStatus("Waypoint não disponível na base local."); return; }
+    state.waypoint = point.id;
+    state.directToActive = !fromPlan;
+    state.gnsFlightPlanActive = fromPlan;
+    state.source = "GPS";
+    const course = tutorialBearing(tutorialPosition || tutorialExample().start, point);
+    state.g5PfdCourse = course;
+    state.g5HsiCourse = course;
+    gnsDefaultNav();
+    setStatus(`${fromPlan ? "Plano de voo" : "Direct-to"} ${point.id} ativo · GPS.`);
+  }
+
+  function gnsSelectMenu(index = state.gnsMenuIndex) {
+    const item = gnsMenuItems()[index];
+    if (!item || item.disabled) return;
+    state.gnsMenu = false;
+    state.gnsFieldIndex = 0;
+    switch (item.action) {
+      case "FIELDS": case "MAP_FIELDS": state.gnsDetail = item.action; state.gnsCursor = true; if (item.action === "MAP_FIELDS") state.gnsMapData = true; break;
+      case "DEFAULTS": state.gnsFields = ["DIS", "DTK", "BRG", "GS", "TRK", "ETE"]; state.gnsCursor = false; break;
+      case "MAP_DEFAULTS": state.gnsMapData = true; state.gnsMapOrientation = "NORTH UP"; state.gnsMapFields = ["DIS", "BRG", "TRK", "GS"]; break;
+      case "MAP_DATA": state.gnsMapData = !state.gnsMapData; break;
+      case "MAP_SETUP": state.gnsDetail = "MAP_SETUP"; state.gnsCursor = true; break;
+      case "FPL_ADD": state.gnsDetail = "FPL ADD"; state.directEntry = state.waypoint; state.gnsCursor = true; state.gnsDirectPosition = 0; break;
+      case "FPL_ACTIVATE": state.gnsFlightPlanLeg = Math.min(state.gnsFlightPlan.length - 1, state.gnsSelectedLeg || 0); gnsActivate(state.gnsFlightPlan[state.gnsFlightPlanLeg], true); break;
+      case "FPL_DELETE": state.gnsFlightPlan.splice(state.gnsSelectedLeg || 0, 1); state.gnsFlightPlanActive = false; break;
+      case "FPL_INVERT": state.gnsFlightPlan.reverse(); state.gnsFlightPlanActive = false; break;
+      case "FPL_CLEAR": state.gnsFlightPlan = []; state.gnsFlightPlanActive = false; break;
+      case "CANCEL_DIRECT": state.directToActive = false; gnsDefaultNav(); break;
+      default: gnsDefaultNav();
+    }
+    render();
+  }
+
+  // Local, public-domain geography. Navigation values remain educational.
+  function renderGnsPortugalMap() {
+    const position = tutorialPosition || tutorialExample().start;
+    const destination = gnsFindWaypoint(state.waypoint);
+    const scale = 110 / state.mapRange;
+    const rotation = state.gnsMapOrientation === "TRACK UP" ? tutorialToRadians(state.heading) : 0;
+    const project = (lng, lat) => {
+      const east = (lng - position.lng) * Math.cos(tutorialToRadians(position.lat)) * 60 * scale;
+      const north = (lat - position.lat) * 60 * scale;
+      return [240 + east * Math.cos(rotation) - north * Math.sin(rotation), 132 - north * Math.cos(rotation) - east * Math.sin(rotation)];
+    };
+    const outlines = (global.MyFlyGnsDisplay?.geography()?.features || []).map(feature => {
+      const path = feature.rings.map(ring => ring.map(([lng, lat], index) => {
+        const [x, y] = project(lng, lat);
+        return `${index ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`;
+      }).join("") + "Z").join("");
+      return `<path class="gns-geography${feature.id === "PRT" ? " gns-geography-portugal" : ""}" d="${path}"/>`;
+    }).join("");
+    const points = [...gnsWaypoints(), ...Object.values(NAV_AIDS)];
+    const symbols = points.map(point => {
+      const [x, y] = project(point.lng, point.lat);
+      if (x < 8 || x > 472 || y < 10 || y > 210) return "";
+      const id = point.id.replace(/[^A-Z0-9]/g, "");
+      if (state.gnsDeclutter >= 2 && !point.type && id !== state.waypoint) return "";
+      return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><circle class="gns-map-place" r="${point.type ? 4 : 3}"/>${state.gnsDeclutter ? "" : `<text class="gns-map-place-label" x="7" y="-5">${id}</text>`}</g>`;
+    }).join("");
+    const route = destination ? (() => {
+      const [x, y] = project(destination.lng, destination.lat);
+      return `<path class="gns-map-route" d="M240 132L${x.toFixed(1)} ${y.toFixed(1)}"/>`;
+    })() : "";
+    return `<g class="gns-portugal-map"><rect width="480" height="220" fill="#030708"/>${outlines}${route}${symbols}${outlines ? "" : '<text x="130" y="30" fill="#fff" font-size="12">GEOGRAPHIC MAP UNAVAILABLE</text>'}
+      <g class="gns-map-aircraft-svg" transform="translate(240 132) rotate(${state.gnsMapOrientation === "TRACK UP" ? 0 : normalize(state.heading)})"><path d="M0-12L4 7 0 4-4 7Z M-3-1L-13 6-3 4 M3-1L13 6 3 4"/></g>
+      <text class="gns-map-range-label" x="12" y="205">${state.mapRange} NM${state.gnsDeclutter ? " -" + state.gnsDeclutter : ""}</text>
+      <text class="gns-geography-label" x="340" y="18">${state.gnsMapOrientation}</text></g>`;
   }
 
   function renderGns() {
     const screen = document.getElementById("av-gns-screen");
     if (!screen) return;
+    setText("av-gns-model-label", state.gnsModel === "430w" ? "GNS 430W" : "GNS 430");
+    const modelSelect = document.getElementById("av-gns-model");
+    if (modelSelect) modelSelect.value = state.gnsModel;
+    const english = global.MyFlyI18n?.language === "en";
+    setText("av-gns-model-caption", english ? "Model" : "Modelo");
+    setText("av-gns-control-hint", english ? "Outer knob: group/field · inner: page/value · press: CRSR" : "Knob exterior: grupo/campo · interior: página/valor · pressionar: CRSR");
+    setText("av-gns-live-note", english ? "Display and controls based on Garmin manuals · live simulated flight values. Map: Natural Earth." : "Display e comandos baseados no manual Garmin · valores ligados ao voo simulado. Mapa: Natural Earth.");
+    const side = screen.closest(".gns-unit")?.querySelector(".gns-side-labels");
+    if (side) side.innerHTML = `NAV<br><strong>PAGE</strong><span>GROUP</span>`;
     if (!state.gnsPower) {
-      screen.innerHTML = `<div class="gns-off-screen">GNS 430<br><span>OFF</span></div>`;
-      setText("av-gns-readout", "OFF · COM/VLOC STANDBY");
+      screen.innerHTML = `<div class="gns-off-screen">${state.gnsModel === "430w" ? "GNS 430W" : "GNS 430"}<br><span>OFF</span></div>`;
       return;
     }
-    const page = gnsPageName();
-    let body = "";
-    if (state.message) body = `<div class="gns-message">MSG · ${state.message}</div>`;
-    else if (state.gnsGroup === "NAV") body = renderGnsNav(page);
-    else if (state.gnsGroup === "WPT") body = renderGnsWpt(page);
-    else if (state.gnsGroup === "AUX") body = `<div class="gns-line gns-large-value"><b>${page}</b></div><div class="gns-line">${page === "FPLN" ? "ACTIVE FLIGHT PLAN" : "USE KNOBS TO SELECT"}</div><div class="gns-line">COM ${formatCom(state.comActive)} · VLOC ${formatVloc(state.vlocActive)}</div>`;
-    else body = `<div class="gns-line gns-large-value"><b>NEAREST ${page}</b></div><div class="gns-line">LPPR · ${targetString()}</div><div class="gns-line">PRESS ENT FOR DETAILS</div>`;
-    screen.innerHTML = `<div class="gns-screen-top"><span>${state.gnsGroup}</span><strong>${page}</strong><span>${state.source}</span></div><div class="gns-frequency-strip"><span>COM ${formatCom(state.comActive)} <em>${formatCom(state.comStandby)}</em></span><span>VLOC ${formatVloc(state.vlocActive)} <em>${formatVloc(state.vlocStandby)}</em></span></div><div class="gns-screen-body">${body}</div><div class="gns-screen-footer"><span>${state.gnsCursor ? "CURSOR ACTIVE" : state.gnsMenu ? "MENU OPTIONS" : state.directToArmed ? "DIRECT-TO" : "PAGE GROUP"}</span><span>${state.obsMode ? "OBS" : "AUTO"} · ${state.mapRange}NM</span></div>`;
-    setText("av-gns-readout", `${state.gnsGroup} · ${state.source} · ${state.waypoint} · ${state.tuningTarget} STBY`);
+    const position = tutorialPosition || tutorialExample().start;
+    const target = WAYPOINTS[state.waypoint] || WAYPOINTS.LPPR;
+    const airports = gnsWaypoints();
+    const airport = state.gnsGroup === "WPT" ? airports[state.gnsWptIndex % airports.length] : gnsFindWaypoint(state.waypoint);
+    const station = findVlocStation();
+    const vlocGeometry = state.source === "VLOC" ? tutorialVlocGeometry() : null;
+    const navDistance = state.source === "VLOC" ? vlocGeometry?.distanceNm : target.distance;
+    const navBearing = state.source === "VLOC" ? vlocGeometry?.bearingTo : target.bearing;
+    const distance = Number.isFinite(navDistance)
+      ? navDistance * (state.gnsDistanceUnit === "KM" ? 1.852 : 1)
+      : null;
+    const eteSeconds = Math.round(target.distance / tutorialFlight.speedKts * 3600);
+    const values = { DIS: Number.isFinite(distance) ? distance.toFixed(1) : "---", DTK: formatHeading(g5ReferenceCourse()) + "°", BRG: Number.isFinite(navBearing) ? formatHeading(navBearing) + "°" : "---",
+      GS: String(tutorialFlight.speedKts), TRK: formatHeading(state.heading) + "°", ETE: `${Math.floor(eteSeconds / 60)}:${String(eteSeconds % 60).padStart(2, "0")}`,
+      ALT: String(g5Settings.pfd.altitude), XTK: (Math.sin(tutorialToRadians(angleDelta(g5ReferenceCourse(), target.bearing))) * target.distance).toFixed(1) };
+    const html = global.MyFlyGnsDisplay.render({ state, page: gnsPageName(), pages: PAGES[state.gnsGroup], heading: formatHeading,
+      deviation: state.source === "GPS" ? clamp(Number(values.XTK) / state.gnsCdiScale, -1, 1) : clamp(cdiDeviation() / 2.5, -1, 1), values, position, airport: airport || { id: "----", name: "NOT AVAILABLE", lat: 0, lng: 0 },
+      stationId: station?.id, stationName: station?.name || "NAV OFF", flag: tutorialNavFlag(), nearest: gnsNearest(),
+      waypoints: WAYPOINTS, directAirport: gnsFindWaypoint(state.directEntry), elapsed: tutorialFlightTime(),
+      auxItems: gnsAuxItems(), menu: gnsMenuItems(), mapSvg: gnsPageName() === "MAP" && !state.gnsSpecialPage ? renderGnsPortugalMap() : "" });
+    // GO renders every 100 ms. Keep a native text editor focused until commit/cancel.
+    if (screen.contains(document.activeElement) && document.activeElement.matches("input")) {
+      const template = document.createElement("template");
+      template.innerHTML = html;
+      screen.querySelector(".gns-live-svg")?.replaceWith(template.content.querySelector(".gns-live-svg"));
+    } else screen.innerHTML = html;
+    screen.style.setProperty("--gns-backlight", state.gnsBrightness / 100);
+    screen.style.setProperty("--gns-contrast", state.gnsContrast / 80);
+    setText("av-gns-readout", `${state.gnsSpecialPage || state.gnsGroup} · ${state.source} · ${state.waypoint} · ${state.tuningTarget} STBY`);
   }
 
   function renderPowerByPrefix(prefix, on) {
@@ -1378,10 +1905,12 @@
 
   function render() {
     if (!ready) return;
+    syncGnsWaypoints();
     syncFlightControls();
     renderPower("g5-pfd", state.g5PfdPower);
     renderPower("g5-hsi", state.g5HsiPower);
     renderPower("gns", state.gnsPower);
+    renderG5ModeLabels();
     renderG5HsiControls();
     document.getElementById("av-gns-tune-toggle")?.classList.toggle("is-vloc", state.tuningTarget === "VLOC");
     drawG5();
@@ -1389,6 +1918,7 @@
     renderScenario();
     renderTutorial();
     renderSetup2();
+    renderNavAidCatalogs();
     renderChallengeChecklist();
   }
 
@@ -1405,10 +1935,12 @@
   function toggleSetup2Power(unit) {
     state.setup2[unit === "gi" ? "giPower" : "gncPower"] = !state.setup2[unit === "gi" ? "giPower" : "gncPower"];
     setup2SetStatus(`${unit === "gi" ? "GI-106A" : "GNC 255"} ${state.setup2[unit === "gi" ? "giPower" : "gncPower"] ? "ON" : "OFF"}.`);
-    render();
+    renderSetup2();
   }
 
   function setup2AdjustFrequency(target, direction) {
+    if (!state.setup2.gncPower) return;
+    if (target === "NAV") state.setup2SelectedReferenceId = null;
     const key = target === "NAV" ? "navStandby" : "comStandby";
     const step = target === "NAV" ? 0.05 : 0.025;
     const min = target === "NAV" ? 108.00 : 118.000;
@@ -1416,16 +1948,18 @@
     state.setup2[key] = clamp(Number((state.setup2[key] + direction * step).toFixed(3)), min, max);
     state.setup2.tuningTarget = target;
     setup2SetStatus(`${target} standby ${target === "NAV" ? formatVloc(state.setup2[key]) : formatCom(state.setup2[key])}.`);
-    render();
+    renderSetup2();
   }
 
   function setup2Flip(target) {
+    if (!state.setup2.gncPower) return;
+    if (target === "NAV") state.setup2SelectedReferenceId = null;
     const activeKey = target === "NAV" ? "navActive" : "comActive";
     const standbyKey = target === "NAV" ? "navStandby" : "comStandby";
     [state.setup2[activeKey], state.setup2[standbyKey]] = [state.setup2[standbyKey], state.setup2[activeKey]];
     state.setup2.tuningTarget = target;
     setup2SetStatus(`${target} standby transferida para ativa.`);
-    render();
+    renderSetup2();
   }
 
   function resetSetup2() {
@@ -1434,6 +1968,7 @@
   }
 
   function switchAvionicsSetup(setupId) {
+    if (setupId !== "av-setup-2") stopSetup2Flight(false);
     state.activeSetup = setupId;
     document.querySelectorAll(".avionics-subtab").forEach((tab) => {
       const active = tab.getAttribute("aria-controls") === setupId;
@@ -1446,54 +1981,85 @@
       panel.classList.toggle("is-active", active);
       panel.hidden = !active;
     });
-    if (setupId === "av-setup-2") initSetup2TutorialMap();
-    setStatus(setupId === "av-setup-2" ? "Setup 2 selecionado: GI-106A + GNC 255." : t("av_status_ready"));
-    render();
     if (setupId === "av-setup-2") {
       initSetup2TutorialMap();
-      window.setTimeout(() => {
-        setup2TutorialMap?.invalidateSize();
-        const example = setup2TutorialExample();
-        setup2TutorialMap?.fitBounds([setup2TutorialPosition || example.start, TUTORIAL_REFERENCES[example.reference]], { padding: [45, 45], maxZoom: 9 });
-      }, 120);
+      renderSetup2();
+      refreshSetup2TutorialMap(true);
+    } else {
+      setStatus(t("av_status_ready"));
+      render();
+      refreshTutorialMap(true);
     }
   }
 
   function adjustGnsFrequency(kind, direction) {
-    const multiplier = kind === "left-large" ? 1 : kind === "left-small" ? 0.1 : 0;
-    if (!multiplier) return;
-    const step = state.tuningTarget === "VLOC" ? (kind === "left-large" ? 1 : 0.05) : (kind === "left-large" ? 1 : 0.025);
-    setCurrentFrequency(currentFrequency() + direction * step);
+    if (state.tuningTarget === "VLOC") state.tutorialReferenceId = null;
+    const step = kind === "left-large" ? 1 : state.tuningTarget === "VLOC" ? 0.05 : state.gnsComSpacing === "8.33" ? 0.005 : 0.025;
+    let value = currentFrequency() + direction * step;
+    if (state.tuningTarget === "COM" && state.gnsComSpacing === "8.33" && Math.round(value * 1000) % 25 === 20) value += direction * 0.005;
+    if (state.tuningTarget === "COM") state.comStandby = normalizeGnsFrequencyInput("COM", value);
+    else setCurrentFrequency(normalizeGnsFrequencyInput("VLOC", value));
     setStatus(`${state.tuningTarget} standby ${state.tuningTarget === "VLOC" ? formatVloc(currentFrequency()) : formatCom(currentFrequency())}.`);
   }
 
   function rotateGns(kind, direction) {
-    if (kind === "left-large" || kind === "left-small") adjustGnsFrequency(kind, direction);
-    if (kind === "right-large") {
-      // The Garmin Direct-to page uses the small knob to edit the identifier
-      // and the large knob to move between identifier positions. This
-      // simulator exposes the known local waypoints as a compact selector, so
-      // keep the large-knob selection active for the whole Direct-to page.
-      const selectingDirectWaypoint = state.directToArmed && state.gnsGroup === "WPT" && state.gnsPageIndex === 2;
-      if (selectingDirectWaypoint) {
-        const waypointIds = Object.keys(WAYPOINTS);
-        const currentIndex = Math.max(0, waypointIds.indexOf(state.directEntry || state.waypoint));
-        state.directEntry = waypointIds[(currentIndex + direction + waypointIds.length) % waypointIds.length];
-        setStatus(`Direct-to ${state.directEntry} selecionado. Pressiona ENT.`);
-      } else {
-        const index = PAGE_GROUPS.indexOf(state.gnsGroup);
-        state.gnsGroup = PAGE_GROUPS[(index + direction + PAGE_GROUPS.length) % PAGE_GROUPS.length];
-        state.gnsPageIndex = 0;
+    if (!state.gnsPower) return;
+    const wrap = (value, length) => (value + direction + length) % length;
+    if (kind.startsWith("left-")) adjustGnsFrequency(kind, direction);
+    else if (state.gnsMenu) state.gnsMenuIndex = wrap(state.gnsMenuIndex, gnsMenuItems().length);
+    else if (state.gnsSpecialPage === "DIRECT" || state.gnsDetail === "FPL ADD") {
+      state.gnsDirectConfirm = false;
+      if (kind === "right-large") state.gnsDirectPosition = wrap(state.gnsDirectPosition, 4);
+      else {
+        const alphabet = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const chars = state.directEntry.padEnd(4, " ").split("");
+        chars[state.gnsDirectPosition] = alphabet[wrap(Math.max(0, alphabet.indexOf(chars[state.gnsDirectPosition])), alphabet.length)];
+        state.directEntry = chars.join("").trimEnd();
       }
-    }
-    if (kind === "right-small") {
-      const pages = PAGES[state.gnsGroup];
-      state.gnsPageIndex = (state.gnsPageIndex + direction + pages.length) % pages.length;
+    } else if (state.gnsCursor) {
+      const page = gnsPageName();
+      const count = state.gnsSpecialPage === "FPL" ? Math.max(1, state.gnsFlightPlan.length) : state.gnsSpecialPage === "PROC" ? 3
+        : state.gnsGroup === "NRST" ? Math.max(1, gnsNearest().length) : state.gnsDetail === "DISPLAY" ? 2
+        : state.gnsDetail === "MAP_FIELDS" ? 4 : page === "NAV 1" ? 6 : page === "VNAV" ? 2
+        : state.gnsGroup === "AUX" && !state.gnsDetail ? Math.max(1, gnsAuxItems().length) : 1;
+      if (kind === "right-large") state.gnsFieldIndex = wrap(state.gnsFieldIndex, count);
+      else if (state.gnsDetail === "FIELDS" || state.gnsDetail === "MAP_FIELDS") {
+        const fields = state.gnsDetail === "FIELDS" ? state.gnsFields : state.gnsMapFields;
+        const choices = ["DIS", "DTK", "BRG", "GS", "TRK", "ETE", "ALT", "XTK"];
+        fields[state.gnsFieldIndex] = choices[wrap(choices.indexOf(fields[state.gnsFieldIndex]), choices.length)];
+      } else if (state.gnsDetail === "DISPLAY") {
+        const key = state.gnsFieldIndex === 0 ? "gnsContrast" : "gnsBrightness";
+        state[key] = clamp(state[key] + direction * 5, 30, 100);
+      } else if (state.gnsDetail === "UNITS") state.gnsDistanceUnit = state.gnsDistanceUnit === "NM" ? "KM" : "NM";
+      else if (state.gnsDetail === "COM_CONFIG") {
+        state.gnsComSpacing = state.gnsComSpacing === "25" ? "8.33" : "25";
+        state.comActive = normalizeGnsFrequencyInput("COM", state.comActive);
+        state.comStandby = normalizeGnsFrequencyInput("COM", state.comStandby);
+      }
+      else if (state.gnsDetail === "CDI") {
+        const scales = [0.3, 1, 2, 5];
+        state.gnsCdiScale = scales[wrap(scales.indexOf(state.gnsCdiScale), scales.length)];
+      } else if (state.gnsDetail === "SBAS" && state.gnsModel === "430w") state.gnsSbas = !state.gnsSbas;
+      else if (state.gnsDetail === "MAP_SETUP") state.gnsMapOrientation = state.gnsMapOrientation === "NORTH UP" ? "TRACK UP" : "NORTH UP";
+      else if (page === "VNAV") {
+        const key = state.gnsFieldIndex === 0 ? "gnsVnavAltitude" : "gnsVnavRate";
+        state[key] = clamp(state[key] + direction * 100, 0, key === "gnsVnavAltitude" ? 30000 : 3000);
+      } else if (state.gnsGroup === "WPT") state.gnsWptIndex = wrap(state.gnsWptIndex, gnsWaypoints().length);
+      else if (state.gnsGroup === "AUX" || state.gnsGroup === "NRST" || state.gnsSpecialPage) state.gnsFieldIndex = wrap(state.gnsFieldIndex, count);
+    } else {
+      state.gnsSpecialPage = null;
+      state.gnsDetail = null;
+      if (kind === "right-large") {
+        state.gnsGroup = PAGE_GROUPS[wrap(PAGE_GROUPS.indexOf(state.gnsGroup), PAGE_GROUPS.length)];
+        state.gnsPageIndex = 0;
+      } else state.gnsPageIndex = wrap(state.gnsPageIndex, PAGES[state.gnsGroup].length);
     }
     render();
   }
 
   function flipFrequency(target) {
+    if (!state.gnsPower) return;
+    if (target === "VLOC") state.tutorialReferenceId = null;
     if (target === "COM") [state.comActive, state.comStandby] = [state.comStandby, state.comActive];
     else [state.vlocActive, state.vlocStandby] = [state.vlocStandby, state.vlocActive];
     setStatus(`${target} ${target === "COM" ? formatCom(activeFrequency(target)) : formatVloc(activeFrequency(target))} active.`);
@@ -1501,56 +2067,90 @@
   }
 
   function pressGnsKey(key) {
-    state.message = "";
-    if (["MSG", "FPL", "PROC"].includes(key)) {
-      state.gnsGroup = key === "FPL" ? "AUX" : key === "PROC" ? "WPT" : "AUX";
-      state.gnsPageIndex = key === "FPL" ? 0 : key === "PROC" ? 2 : 1;
-      if (key === "MSG") state.message = "NO MESSAGES";
-      setStatus(key === "FPL" ? "Flight plan page selected." : key === "PROC" ? "Procedures page selected." : "No active messages.");
+    if (!state.gnsPower) return;
+    const editor = document.getElementById("av-gns-ident-input");
+    if (editor && key === "ENT") state.directEntry = editor.value.trim().toUpperCase();
+    if (key === "CLR_HOLD") gnsDefaultNav();
+    else if (["MSG", "FPL", "PROC"].includes(key)) {
+      const previous = state.gnsSpecialPage;
+      state.gnsSpecialPage = previous === key ? null : key;
+      state.gnsMenu = false;
+      state.gnsDetail = null;
+      state.gnsCursor = key !== "MSG" && previous !== key;
+      state.gnsFieldIndex = 0;
+      state.directToArmed = false;
     } else if (key === "CDI") {
       state.source = state.source === "GPS" ? "VLOC" : "GPS";
+      if (state.source === "VLOC") state.tutorialReferenceId = null;
       setStatus(`CDI ${state.source}.`);
     } else if (key === "OBS") {
       state.obsMode = !state.obsMode;
-      setStatus(state.obsMode ? "OBS mode active; automatic sequencing paused." : "OBS mode off; automatic sequencing restored.");
+      setStatus(state.obsMode ? "OBS ativo: sequencia automatica suspensa." : "OBS desligado.");
     } else if (key === "COM_FLIP") flipFrequency("COM");
     else if (key === "VLOC_FLIP") flipFrequency("VLOC");
-    else if (key === "MENU") state.gnsMenu = !state.gnsMenu;
-    else if (key === "CRSR") {
+    else if (key === "MENU") {
+      state.gnsSelectedLeg = state.gnsFieldIndex;
+      state.gnsMenu = !state.gnsMenu;
+      state.gnsMenuIndex = 0;
+    } else if (key === "CRSR") {
       state.gnsCursor = !state.gnsCursor;
-      setStatus(state.gnsCursor ? "GNS cursor active." : "GNS cursor off.");
-    }
-    else if (key === "RNG_UP") state.mapRange = clamp(state.mapRange * 2, 5, 160);
+      state.gnsFieldIndex = 0;
+      if (!state.gnsCursor && state.gnsSpecialPage !== "DIRECT") state.gnsDetail = null;
+    } else if (key === "RNG_UP") state.mapRange = clamp(state.mapRange * 2, 5, 160);
     else if (key === "RNG_DOWN") state.mapRange = clamp(state.mapRange / 2, 5, 160);
     else if (key === "DIRECT") {
-      state.gnsGroup = "WPT";
-      state.gnsPageIndex = 2;
-      state.directToArmed = true;
-      state.directToActive = false;
-      state.directEntry = state.waypoint;
-      state.gnsCursor = false;
-      setStatus("Direct-to ready. Select a waypoint and press ENT.");
-    } else if (/^\d$/.test(key) && state.directToArmed) {
-      state.directEntry = `${state.directEntry}${key}`.slice(-4);
+      const selected = state.gnsGroup === "NRST" ? gnsNearest()[state.gnsFieldIndex]?.id
+        : state.gnsSpecialPage === "FPL" ? state.gnsFlightPlan[state.gnsFieldIndex]
+        : state.gnsGroup === "WPT" ? gnsWaypoints()[state.gnsWptIndex]?.id : state.waypoint;
+      gnsOpenDirect(selected || state.waypoint);
     } else if (key === "CLR") {
-      if (state.directToArmed) state.directEntry = state.directEntry.slice(0, -1);
-      else state.message = "";
-    } else if (key === "ENT" && state.directToArmed) {
-      if (state.directToArmed) state.waypoint = state.directEntry || state.waypoint;
-      state.directToArmed = false;
-      state.directToActive = true;
-      state.directEntry = "";
-      state.source = "GPS";
-      state.gnsGroup = "NAV";
-      state.gnsPageIndex = 0;
-      setStatus("Direct-to accepted; NAV guidance active.");
+      if (state.gnsMenu) state.gnsMenu = false;
+      else if (state.gnsDirectConfirm) state.gnsDirectConfirm = false;
+      else if (state.gnsDetail) state.gnsDetail = null;
+      else if (state.gnsCursor) state.gnsCursor = false;
+      else if (state.gnsSpecialPage) { state.gnsSpecialPage = null; state.directToArmed = false; }
+      else if (gnsPageName() === "MAP") state.gnsDeclutter = (state.gnsDeclutter + 1) % 4;
+    } else if (key === "ENT") {
+      if (state.gnsMenu) { gnsSelectMenu(); return; }
+      if (state.gnsSpecialPage === "DIRECT") {
+        if (!gnsFindWaypoint(state.directEntry)) setStatus(t("av_waypoint_unavailable"));
+        else if (state.gnsDirectConfirm) gnsActivate(state.directEntry);
+        else { state.gnsDirectConfirm = true; state.gnsCursor = false; }
+      } else if (state.gnsDetail === "FPL ADD") {
+        const point = gnsFindWaypoint(state.directEntry);
+        if (point) { state.gnsFlightPlan.push(point.id); state.gnsDetail = null; state.gnsFieldIndex = state.gnsFlightPlan.length - 1; }
+        else setStatus("Waypoint nao disponivel.");
+      } else if (state.gnsDetail) { state.gnsDetail = null; state.gnsCursor = false; }
+      else if (state.gnsSpecialPage === "PROC") {
+        state.message = "PROCEDURE DATABASE NOT AVAILABLE";
+        state.gnsSpecialPage = "MSG";
+        state.gnsCursor = false;
+      } else if (state.gnsSpecialPage === "FPL") gnsOpenDirect(state.gnsFlightPlan[state.gnsFieldIndex] || state.waypoint);
+      else if (state.gnsGroup === "AUX") {
+        state.gnsDetail = gnsAuxItems()[state.gnsFieldIndex]?.action || null;
+        state.gnsFieldIndex = 0;
+        state.gnsCursor = true;
+      } else if (state.gnsGroup === "NRST") {
+        const point = gnsNearest()[state.gnsFieldIndex];
+        if (point) gnsOpenDirect(point.id);
+      } else if (state.gnsGroup === "WPT" && gnsPageName() === "APT FREQ") {
+        const point = gnsWaypoints()[state.gnsWptIndex];
+        if (point?.frequency) {
+          const value = Number(point.frequency);
+          const normalized = normalizeGnsFrequencyInput("COM", value);
+          if (Math.abs(value - normalized) > 0.001) setStatus("Frequência 8.33: seleciona AUX > Setup 2 > COM Configuration.");
+          else { state.comStandby = normalized; setStatus(`COM standby ${formatCom(normalized)}.`); }
+        }
+      } else state.gnsCursor = false;
     }
     render();
   }
 
-  function syncHeading() {
-    state.headingBug = state.heading;
-    setStatus("G5 heading bug synchronized to current heading.");
+  function syncHeading(unit) {
+    if (!unit || !g5Powered(unit)) return;
+    state[g5UnitConfig(unit).headingBugKey] = state.heading;
+    state.g5LastUnit = unit;
+    setStatus(`G5 ${unit.toUpperCase()} heading bug synchronized to current heading.`);
     render();
   }
 
@@ -1558,81 +2158,204 @@
     return state.source === "VLOC" || state.obsMode;
   }
 
+  function g5MenuOptions(unit) {
+    const settings = g5Settings[unit];
+    if (settings.menuLevel === "setup") return ["BACK", "BP1", "BP2"];
+    if (settings.menuLevel === "source") return ["BACK", "NONE", "GPS", "VLOC"];
+    // Garmin 190-01112-12 Rev. A §1.5: page changes are knob menu choices.
+    if (g5Page(unit) === "PFD") return ["BACK", "HDG", "ALT", "HSI", "PITCH", "SETUP"];
+    return g5HsiCourseAvailable()
+      ? ["BACK", "HDG", "CRS", "BEARING", "ALT", "PFD", "SETUP"]
+      : ["BACK", "HDG", "ALT", "PFD", "SETUP"];
+  }
+
+  function g5MenuLabel(unit, choice) {
+    if (choice === "SETUP") return "Setup";
+    if (choice === "BP1" || choice === "BP2") return `Bearing Pointer ${choice === "BP1" ? 1 : 2}: ${g5Settings[unit].pointers[choice === "BP1" ? 0 : 1]}`;
+    if (["NONE", "GPS", "VLOC"].includes(choice)) return choice === "NONE" ? "None" : choice;
+    if (choice === "BACK") return t("av_g5_menu_back");
+    if (choice === "BEARING") return t("av_g5_menu_bearing");
+    if (choice === "PFD" || choice === "HSI") return choice;
+    if (g5Page(unit) === "PFD" || choice === "ALT") {
+      if (choice === "ALT") return `Altitude ${g5Settings[unit].altitude} ft`;
+      if (choice === "PITCH") return `Pitch ${g5Settings[unit].pitch.toFixed(1)}°`;
+    }
+    if (choice === "CRS") return `${state.source === "VLOC" ? t("av_g5_menu_course") : "OBS"} ${formatHeading(g5Course(unit))}°`;
+    return `${t("av_g5_menu_heading")} ${formatHeading(g5HeadingBug(unit))}°`;
+  }
+
+  function g5MenuHint(unit) {
+    return t(g5Page(unit) === "HSI"
+      ? (g5HsiCourseAvailable() ? "av_g5_menu_hint" : "av_g5_course_unavailable")
+      : "av_g5_pfd_menu_hint");
+  }
+
   function renderG5HsiControls() {
-    if (!state.g5HsiPower) {
-      state.g5Menu = false;
-      state.g5HsiMode = "HDG";
-    }
-    if (!g5HsiCourseAvailable()) {
-      state.g5HsiMode = "HDG";
-      if (state.g5MenuSelection === "CRS") state.g5MenuSelection = "HDG";
-    }
-    const menu = document.getElementById("av-g5-hsi-options");
-    if (menu) menu.hidden = !state.g5Menu;
-    const knob = document.getElementById("av-g5-hsi-knob");
-    if (knob) {
-      knob.textContent = state.g5Menu ? "MENU" : state.g5HsiMode;
-      knob.title = t(state.g5Menu ? "av_g5_menu_hint" : state.g5HsiMode === "CRS" ? "av_g5_course_help" : "av_g5_heading_help");
-      knob.setAttribute("aria-label", `G5 HSI · ${knob.textContent}`);
-      knob.setAttribute("aria-expanded", String(state.g5Menu));
-      knob.disabled = !state.g5HsiPower;
-    }
-    const menuButton = document.getElementById("av-g5-hsi-menu");
-    if (menuButton) {
-      menuButton.disabled = !state.g5HsiPower;
-      menuButton.setAttribute("aria-expanded", String(state.g5Menu));
-    }
-    document.querySelectorAll("[data-g5-hsi-choice]").forEach((button) => {
-      const choice = button.dataset.g5HsiChoice;
-      button.disabled = choice === "CRS" && !g5HsiCourseAvailable();
-      button.classList.toggle("is-selected", choice === state.g5MenuSelection);
+    ["pfd", "hsi"].forEach((unit) => {
+      const config = g5UnitConfig(unit);
+      const powered = g5Powered(unit);
+      const isMenuOpen = powered && g5MenuOpen(unit);
+      const options = document.getElementById(config.optionsId);
+      if (options) {
+        options.hidden = !isMenuOpen;
+        options.classList.toggle("g5-setup-options", g5Settings[unit].menuLevel !== "main");
+        options.querySelector("strong").textContent = g5Settings[unit].menuLevel === "source"
+          ? `Bearing Pointer ${g5Settings[unit].pointerIndex + 1}` : "Setup";
+      }
+      const knob = document.getElementById(config.knobId);
+      if (knob) {
+        knob.textContent = isMenuOpen ? "MENU" : g5Mode(unit);
+        knob.title = t(isMenuOpen
+          ? "av_g5_menu_hint"
+          : g5Page(unit) === "HSI" && g5Mode(unit) === "CRS" ? "av_g5_course_help" : "av_g5_heading_help");
+        if (!isMenuOpen && ["ALT", "PITCH"].includes(g5Mode(unit))) {
+          knob.title = `${g5Mode(unit)} · ←/→ · Enter`;
+        }
+        knob.setAttribute("aria-label", `G5 ${g5Page(unit)} · ${knob.textContent}`);
+        knob.setAttribute("aria-expanded", String(isMenuOpen));
+        knob.disabled = !powered;
+      }
     });
-    setText("av-g5-hsi-heading-option", `${t("av_g5_menu_heading")} ${formatHeading(state.headingBug)}°`);
-    setText("av-g5-hsi-course-option", `${state.source === "VLOC" ? t("av_g5_menu_course") : "OBS"} ${formatHeading(state.course)}°`);
-    setText("av-g5-hsi-menu-hint", t(g5HsiCourseAvailable() ? "av_g5_menu_hint" : "av_g5_course_unavailable"));
+    document.querySelectorAll("[data-g5-menu-choice]").forEach((button) => {
+      const unit = button.closest("[data-g5-menu-unit]")?.dataset.g5MenuUnit;
+      if (!unit) return;
+      const choice = button.dataset.g5MenuChoice;
+      const choices = g5MenuOptions(unit);
+      const selectionIndex = Math.max(0, choices.indexOf(g5MenuSelection(unit)));
+      const start = Math.max(0, selectionIndex - 3);
+      button.hidden = !choices.slice(start, start + 4).includes(choice);
+      button.disabled = unit !== "pfd" && choice === "CRS" && !g5HsiCourseAvailable();
+      button.classList.toggle("is-selected", choice === g5MenuSelection(unit));
+      const label = g5MenuLabel(unit, choice);
+      const parts = label.match(/^(Heading|Course|OBS|Altitude|Pitch) (.+)$/);
+      button.replaceChildren();
+      const name = document.createElement("span");
+      name.textContent = parts ? parts[1] : label;
+      button.append(name);
+      if (parts) {
+        const value = document.createElement("span");
+        value.className = "g5-menu-value";
+        value.textContent = parts[2];
+        button.append(value);
+      }
+      button.style.order = g5MenuOptions(unit).indexOf(choice);
+    });
+    document.querySelectorAll(".g5-hsi-menu-hint").forEach((element) => {
+      const unit = element.closest("[data-g5-menu-unit]")?.dataset.g5MenuUnit || "hsi";
+      element.textContent = g5MenuHint(unit);
+    });
   }
 
-  function toggleG5HsiMenu() {
-    if (!state.g5HsiPower) return;
-    state.g5Menu = !state.g5Menu;
-    if (state.g5Menu) state.g5MenuSelection = state.g5HsiMode;
+  function toggleG5Menu(unit) {
+    if (!unit || !g5Powered(unit)) return;
+    const config = g5UnitConfig(unit);
+    const opening = !g5MenuOpen(unit);
+    if (opening) g5Settings[unit].menuLevel = "main";
+    state[config.menuKey] = opening;
+    state.g5LastUnit = unit;
+    if (opening) state[config.menuSelectionKey] = g5Page(unit) === "HSI" ? g5Mode(unit) : "HDG";
     render();
   }
 
-  function selectG5HsiMode(mode) {
-    if (!state.g5HsiPower || (mode === "CRS" && !g5HsiCourseAvailable())) return;
-    state.g5Menu = false;
-    state.g5HsiMode = mode === "CRS" ? "CRS" : "HDG";
-    setStatus(t(state.g5HsiMode === "CRS" ? "av_g5_course_help" : "av_g5_heading_help"));
-    render();
-    document.getElementById("av-g5-hsi-knob")?.focus({ preventScroll: true });
-  }
-
-  function rotateG5Hsi(direction) {
-    if (!state.g5HsiPower) return;
-    if (state.g5Menu) {
-      const options = g5HsiCourseAvailable() ? ["HDG", "CRS", "BACK"] : ["HDG", "BACK"];
-      const index = options.indexOf(state.g5MenuSelection);
-      state.g5MenuSelection = options[(index + direction + options.length) % options.length];
-    } else if (state.g5HsiMode === "CRS") {
-      state.course = normalize(state.course + direction * 5);
-      setStatus(`G5 HSI CRS ${formatHeading(state.course)}°.`);
+  function selectG5MenuChoice(unit, choice) {
+    if (!unit || !g5Powered(unit) || !g5MenuOpen(unit) || !g5MenuOptions(unit).includes(choice)) return;
+    if (choice === "CRS" && !g5HsiCourseAvailable()) return;
+    const config = g5UnitConfig(unit);
+    const settings = g5Settings[unit];
+    const showSubmenu = () => { render(); document.getElementById(config.knobId)?.focus({ preventScroll: true }); };
+    if (choice === "SETUP" || choice === "BEARING") {
+      settings.menuLevel = "setup";
+      state[config.menuSelectionKey] = "BP1";
+      showSubmenu(); return;
+    }
+    if (choice === "BP1" || choice === "BP2") {
+      settings.pointerIndex = choice === "BP1" ? 0 : 1;
+      settings.menuLevel = "source";
+      state[config.menuSelectionKey] = settings.pointers[settings.pointerIndex].toUpperCase();
+      showSubmenu(); return;
+    }
+    if (settings.menuLevel === "source") {
+      if (choice !== "BACK") settings.pointers[settings.pointerIndex] = choice === "NONE" ? "None" : choice;
+      settings.menuLevel = "setup";
+      state[config.menuSelectionKey] = settings.pointerIndex ? "BP2" : "BP1";
+      showSubmenu(); return;
+    }
+    if (settings.menuLevel === "setup" && choice === "BACK") {
+      settings.menuLevel = "main";
+      state[config.menuSelectionKey] = "SETUP";
+      showSubmenu(); return;
+    }
+    state[config.menuSelectionKey] = choice;
+    state[config.menuKey] = false;
+    state.g5LastUnit = unit;
+    if (choice === "BACK") {
+      setStatus(`G5 ${unit.toUpperCase()} ${g5Page(unit)} menu fechado.`);
+    } else if (choice === "PFD" || choice === "HSI") {
+      toggleG5Page(unit);
+    } else if (choice === "ALT") {
+      state[config.modeKey] = "ALT";
+    } else if (g5Page(unit) === "HSI") {
+      state[config.modeKey] = choice === "CRS" ? "CRS" : "HDG";
+      setStatus(t(state[config.modeKey] === "CRS" ? "av_g5_course_help" : "av_g5_heading_help"));
     } else {
-      state.headingBug = normalize(state.headingBug + direction * 5);
-      setStatus(`G5 HSI HDG BUG ${formatHeading(state.headingBug)}°.`);
+      state[config.modeKey] = choice;
+      setStatus(`G5 ${unit.toUpperCase()} ${g5MenuLabel(unit, choice)}.`);
+    }
+    render();
+    document.getElementById(config.knobId)?.focus({ preventScroll: true });
+  }
+
+  function rotateG5Hsi(direction, unit = activeG5HsiUnit()) {
+    if (!unit || !g5Powered(unit)) return;
+    const config = g5UnitConfig(unit);
+    state.g5LastUnit = unit;
+    if (g5MenuOpen(unit)) {
+      const options = g5MenuOptions(unit);
+      const index = options.indexOf(g5MenuSelection(unit));
+      state[config.menuSelectionKey] = options[(index + direction + options.length) % options.length];
+    } else if (g5Mode(unit) === "ALT") {
+      g5Settings[unit].altitude = Math.max(0, Math.min(20000, g5Settings[unit].altitude + direction * 100));
+    } else if (g5Mode(unit) === "PITCH") {
+      g5Settings[unit].pitch = Math.max(-10, Math.min(10, g5Settings[unit].pitch + direction * 0.5));
+    } else if (g5Page(unit) === "HSI" && g5Mode(unit) === "CRS") {
+      state[config.courseKey] = normalize(g5Course(unit) + direction * 5);
+      setStatus(`G5 ${unit.toUpperCase()} CRS ${formatHeading(g5Course(unit))}°.`);
+    } else {
+      state[config.headingBugKey] = normalize(g5HeadingBug(unit) + direction * 5);
+      setStatus(`G5 ${unit.toUpperCase()} HDG BUG ${formatHeading(g5HeadingBug(unit))}°.`);
     }
     render();
   }
 
-  function pressG5HsiKnob() {
-    if (!state.g5HsiPower) return;
-    if (state.g5Menu) selectG5HsiMode(state.g5MenuSelection);
-    else if (state.g5HsiMode === "CRS") selectG5HsiMode("HDG");
-    else toggleG5HsiMenu();
+  function pressG5HsiKnob(unit = activeG5HsiUnit()) {
+    if (!unit || !g5Powered(unit)) return;
+    state.g5LastUnit = unit;
+    const config = g5UnitConfig(unit);
+    if (g5MenuOpen(unit)) selectG5MenuChoice(unit, g5MenuSelection(unit));
+    else if (["ALT", "PITCH", "CRS"].includes(g5Mode(unit))) {
+      state[config.modeKey] = "HDG";
+      render();
+    }
+    else toggleG5Menu(unit);
+  }
+
+  function toggleG5Page(unit) {
+    if (!g5Powered(unit)) return;
+    const config = g5UnitConfig(unit);
+    state[config.pageKey] = g5Page(unit) === "HSI" ? "PFD" : "HSI";
+    state[config.modeKey] = "HDG";
+    state[config.menuKey] = false;
+    g5Settings[unit].menuLevel = "main";
+    state.g5LastUnit = unit;
+    const label = g5Page(unit) === "HSI" ? "HSI" : "PFD";
+    setStatus(`G5 ${unit.toUpperCase()} agora em ${label}.`);
+    render();
   }
 
   function bindHorizontalRotary(control, onStep, onClick, onHold) {
     if (!control) return;
+    control.classList.add("av-rotary-touch-target");
+    if (onStep && control.id) addTouchRotaryControls(control, onStep);
     const drag = { active: false, moved: false, held: false, pointerId: null, remainder: 0, lastX: 0 };
     let suppressClick = false;
     let holdTimer = null;
@@ -1644,6 +2367,7 @@
 
     control.addEventListener("pointerdown", (event) => {
       if (event.button !== undefined && event.button !== 0) return;
+      if (drag.active || event.isPrimary === false) return;
       drag.active = true;
       drag.moved = false;
       drag.held = false;
@@ -1666,11 +2390,11 @@
       if (Math.abs(drag.remainder) > 5) drag.moved = true;
       if (drag.moved) cancelHold();
       while (drag.remainder >= threshold) {
-        onStep(1);
+        onStep?.(1);
         drag.remainder -= threshold;
       }
       while (drag.remainder <= -threshold) {
-        onStep(-1);
+        onStep?.(-1);
         drag.remainder += threshold;
       }
       event.preventDefault();
@@ -1685,6 +2409,10 @@
     control.addEventListener("pointerup", finishDrag);
     control.addEventListener("pointercancel", finishDrag);
     control.addEventListener("lostpointercapture", finishDrag);
+    control.addEventListener("blur", () => {
+      cancelHold();
+      drag.active = false;
+    });
     control.addEventListener("click", (event) => {
       if (suppressClick) {
         suppressClick = false;
@@ -1696,60 +2424,169 @@
     });
   }
 
-  function bindGnsCrsrKnob() {
-    const knob = document.getElementById("av-gns-crsr-knob");
-    if (!knob) return;
-    const drag = { active: false, moved: false, pointerId: null, remainder: 0, lastX: 0 };
+  function bindTouchStep(button, onStep) {
+    let delay = null;
+    let repeat = null;
+    let pointerId = null;
     let suppressClick = false;
-    const threshold = 18;
-
-    knob.addEventListener("pointerdown", (event) => {
-      if (event.button !== undefined && event.button !== 0) return;
-      drag.active = true;
-      drag.moved = false;
-      drag.pointerId = event.pointerId;
-      drag.remainder = 0;
-      drag.lastX = event.clientX;
-      knob.classList.add("is-dragging");
-      knob.setPointerCapture?.(event.pointerId);
-    });
-    knob.addEventListener("pointermove", (event) => {
-      if (!drag.active || event.pointerId !== drag.pointerId) return;
-      const delta = event.clientX - drag.lastX;
-      drag.lastX = event.clientX;
-      drag.remainder += delta;
-      if (Math.abs(drag.remainder) > 5) drag.moved = true;
-      const selectingDirectWaypoint = state.directToArmed && state.gnsGroup === "WPT" && state.gnsPageIndex === 2;
-      while (drag.remainder >= threshold) {
-        rotateGns(selectingDirectWaypoint ? "right-large" : state.gnsCursor ? "right-small" : "right-large", 1);
-        drag.remainder -= threshold;
-      }
-      while (drag.remainder <= -threshold) {
-        rotateGns(selectingDirectWaypoint ? "right-large" : state.gnsCursor ? "right-small" : "right-large", -1);
-        drag.remainder += threshold;
-      }
-      event.preventDefault();
-    });
-    const finishDrag = (event) => {
-      if (!drag.active || event.pointerId !== drag.pointerId) return;
-      suppressClick = drag.moved;
-      drag.active = false;
-      knob.classList.remove("is-dragging");
-      knob.releasePointerCapture?.(event.pointerId);
+    const stop = (cancelled = false) => {
+      if (delay !== null) window.clearTimeout(delay);
+      if (repeat !== null) window.clearInterval(repeat);
+      delay = repeat = null;
+      if (cancelled) suppressClick = true;
+      const capturedId = pointerId;
+      pointerId = null;
+      if (capturedId !== null && button.hasPointerCapture?.(capturedId)) button.releasePointerCapture(capturedId);
     };
-    knob.addEventListener("pointerup", finishDrag);
-    knob.addEventListener("pointercancel", finishDrag);
-    knob.addEventListener("click", (event) => {
-      if (suppressClick) {
-        suppressClick = false;
-        event.preventDefault();
+    const step = () => {
+      if (button.closest(".av-setup-panel")?.hidden
+        || !document.getElementById("avionics-trainer")?.classList.contains("av-mobile-mode")
+        || !document.getElementById("avionics")?.classList.contains("active")) {
+        stop(true);
         return;
       }
-      pressGnsKey("CRSR");
+      onStep();
+    };
+    button.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || event.isPrimary === false || pointerId !== null) return;
+      suppressClick = false;
+      pointerId = event.pointerId;
+      button.setPointerCapture?.(pointerId);
+      delay = window.setTimeout(() => {
+        delay = null;
+        suppressClick = true;
+        step();
+        if (pointerId !== null) repeat = window.setInterval(step, 90);
+      }, 400);
+    });
+    button.addEventListener("pointerup", () => stop());
+    button.addEventListener("pointercancel", () => stop(true));
+    button.addEventListener("lostpointercapture", () => { if (pointerId !== null) stop(true); });
+    button.addEventListener("blur", () => { if (pointerId !== null) stop(true); });
+    global.addEventListener("blur", () => { if (pointerId !== null) stop(true); });
+    button.addEventListener("click", () => {
+      if (suppressClick) { suppressClick = false; return; }
+      step();
+    });
+    button.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") suppressClick = false;
+    });
+  }
+
+  function addTouchRotaryControls(control, onStep) {
+    if (control.closest(".av-touch-rotary")) return;
+    const labels = {
+      "av-g5-pfd-knob": "G5 PFD", "av-g5-hsi-knob": "G5 HSI",
+      "av-gns-tune-outer": "MHz", "av-gns-tune-toggle": "kHz · C/V",
+      "av-gns-nav-outer": "av_touch_group", "av-gns-crsr-knob": "av_touch_page",
+      "setup2-gi-course-knob": "OBS", "setup2-gnc-nav-knob": "NAV", "setup2-gnc-com-knob": "COM",
+    };
+    const label = labels[control.id];
+    if (!label) return;
+    const wrapper = document.createElement("div");
+    wrapper.className = "av-touch-rotary";
+    wrapper.dataset.avTouchControl = control.id;
+    wrapper.setAttribute("role", "group");
+    const caption = document.createElement("span");
+    caption.className = "av-touch-rotary-caption";
+    caption.dataset.avTouchLabel = label;
+    const buttons = [-1, 1].map(direction => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "av-key av-touch-step";
+      button.dataset.avTouchStep = String(direction);
+      button.textContent = direction < 0 ? "−" : "+";
+      bindTouchStep(button, () => onStep(direction));
+      return button;
+    });
+    control.before(wrapper);
+    wrapper.append(caption, buttons[0], control, buttons[1]);
+  }
+
+  function updateTouchControlLabels() {
+    const mobileToggle = document.getElementById("av-mobile-toggle");
+    if (mobileToggle) {
+      mobileToggle.textContent = t("av_mobile_button");
+      mobileToggle.setAttribute("aria-label", t(mobileToggle.getAttribute("aria-pressed") === "true" ? "av_mobile_disable" : "av_mobile_enable"));
+    }
+    document.querySelectorAll(".av-touch-rotary").forEach(wrapper => {
+      const caption = wrapper.querySelector("[data-av-touch-label]");
+      const key = caption.dataset.avTouchLabel;
+      const label = key.startsWith("av_") ? t(key) : key;
+      caption.textContent = label;
+      wrapper.setAttribute("aria-label", label);
+      wrapper.querySelectorAll("[data-av-touch-step]").forEach(button => {
+        button.setAttribute("aria-label", `${t(Number(button.dataset.avTouchStep) < 0 ? "av_touch_decrease" : "av_touch_increase")} · ${label}`);
+      });
+    });
+    document.querySelectorAll("[data-av-aircraft-turn]").forEach(button => {
+      button.setAttribute("aria-label", t(Number(button.dataset.avAircraftTurn) < 0 ? "av_touch_turn_left" : "av_touch_turn_right"));
+    });
+  }
+
+  function renderTouchFlightControls(setupId, heading, running) {
+    const controls = document.querySelector(`[data-av-touch-flight="${setupId}"]`);
+    if (!controls) return;
+    controls.querySelector("output").textContent = `HDG ${formatHeading(heading)}°`;
+    const toggle = controls.querySelector("[data-av-map-flight]");
+    toggle.textContent = t(running ? "av_tutorial_pause" : "av_tutorial_go");
+    toggle.setAttribute("aria-pressed", String(running));
+  }
+
+  function bindTouchFlightControls() {
+    document.getElementById("av-mobile-toggle")?.addEventListener("click", event => {
+      const trainer = document.getElementById("avionics-trainer");
+      const enabled = trainer.classList.toggle("av-mobile-mode");
+      event.currentTarget.setAttribute("aria-pressed", String(enabled));
+      updateTouchControlLabels();
+      if (state.activeSetup === "av-setup-2") refreshSetup2TutorialMap();
+      else refreshTutorialMap();
+    });
+    document.querySelectorAll("[data-av-touch-flight]").forEach(controls => {
+      const setup2 = controls.dataset.avTouchFlight === "av-setup-2";
+      controls.querySelectorAll("[data-av-aircraft-turn]").forEach(button => {
+        bindTouchStep(button, () => {
+          const direction = Number(button.dataset.avAircraftTurn);
+          if (setup2) moveSetup2TutorialByKeyboard(direction < 0 ? "ArrowLeft" : "ArrowRight");
+          else turnTutorial(direction);
+        });
+      });
+      controls.querySelector("[data-av-map-flight]")?.addEventListener("click", setup2 ? toggleSetup2Flight : toggleTutorialFlight);
+    });
+    updateTouchControlLabels();
+    global.addEventListener("myflyapp:language", updateTouchControlLabels);
+  }
+
+  function bindGnsCrsrKnob() {
+    const bindings = [["av-gns-nav-outer", "right-large"], ["av-gns-crsr-knob", "right-small"],
+      ["av-gns-tune-outer", "left-large"], ["av-gns-tune-toggle", "left-small"]];
+    bindings.forEach(([id, kind]) => {
+      const knob = document.getElementById(id);
+      const press = id === "av-gns-crsr-knob" ? () => pressGnsKey("CRSR")
+        : id === "av-gns-tune-toggle" ? () => {
+          if (!state.gnsPower) return;
+          state.tuningTarget = state.tuningTarget === "COM" ? "VLOC" : "COM";
+          render();
+        } : undefined;
+      bindHorizontalRotary(knob, direction => rotateGns(kind, direction), press);
+      knob?.addEventListener("keydown", event => {
+        if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+          event.preventDefault();
+          rotateGns(kind, event.key === "ArrowRight" ? 1 : -1);
+        }
+      });
+      knob?.addEventListener("wheel", event => {
+        event.preventDefault();
+        rotateGns(kind, event.deltaY < 0 ? 1 : -1);
+      }, { passive: false });
     });
   }
 
   function bindControls() {
+    document.getElementById("avionics-trainer")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-av-navaid]");
+      if (button) locateNavAid(button);
+    });
     document.getElementById("av-setup-1-tab")?.addEventListener("click", () => switchAvionicsSetup("av-setup-1"));
     document.getElementById("av-setup-2-tab")?.addEventListener("click", () => switchAvionicsSetup("av-setup-2"));
     bindAvionicsHelper();
@@ -1759,133 +2596,211 @@
     document.getElementById("setup2-gi-power")?.addEventListener("click", () => toggleSetup2Power("gi"));
     document.getElementById("setup2-gnc-power")?.addEventListener("click", () => toggleSetup2Power("gnc"));
     bindHorizontalRotary(document.getElementById("setup2-gi-course-knob"), (direction) => {
+      if (!state.setup2.giPower) return;
       state.setup2.course = normalize(state.setup2.course + direction * 5);
       setup2SetStatus(`GI-106A OBS ${formatHeading(state.setup2.course)}°.`);
-      render();
+      renderSetup2();
     });
     document.getElementById("setup2-gi-course-knob")?.addEventListener("keydown", (event) => {
+      if (!state.setup2.giPower) return;
       if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
       event.preventDefault();
       state.setup2.course = normalize(state.setup2.course + (event.key === "ArrowRight" ? 5 : -5));
       setup2SetStatus(`GI-106A OBS ${formatHeading(state.setup2.course)}°.`);
-      render();
+      renderSetup2();
     });
     bindHorizontalRotary(document.getElementById("setup2-gnc-nav-knob"), (direction) => setup2AdjustFrequency("NAV", direction), () => {
+      if (!state.setup2.gncPower) return;
       state.setup2.tuningTarget = "NAV";
       setup2SetStatus("GNC 255 NAV selecionado.");
-      render();
+      renderSetup2();
     });
     bindHorizontalRotary(document.getElementById("setup2-gnc-com-knob"), (direction) => setup2AdjustFrequency("COM", direction), () => {
+      if (!state.setup2.gncPower) return;
       state.setup2.tuningTarget = "COM";
       setup2SetStatus("GNC 255 COM selecionado.");
-      render();
+      renderSetup2();
     });
-    document.getElementById("setup2-gi-tofrom-button")?.addEventListener("click", () => {
-      state.setup2.toFrom = state.setup2.toFrom === "TO" ? "FROM" : "TO";
-      setup2SetStatus(`GI-106A ${state.setup2.toFrom} selecionado.`);
-      render();
+    ["NAV", "COM"].forEach((target) => {
+      const knob = document.getElementById(`setup2-gnc-${target.toLowerCase()}-knob`);
+      knob?.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+        event.preventDefault();
+        setup2AdjustFrequency(target, ["ArrowRight", "ArrowUp"].includes(event.key) ? 1 : -1);
+      });
+      knob?.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        setup2AdjustFrequency(target, event.deltaY < 0 ? 1 : -1);
+      }, { passive: false });
     });
     document.getElementById("setup2-gnc-nav-flip")?.addEventListener("click", () => setup2Flip(state.setup2.tuningTarget));
     document.getElementById("setup2-gnc-com-flip")?.addEventListener("click", () => {
+      if (!state.setup2.gncPower) return;
       state.setup2.tuningTarget = state.setup2.tuningTarget === "NAV" ? "COM" : "NAV";
       setup2SetStatus(`GNC 255 ${state.setup2.tuningTarget} selecionado.`);
-      render();
+      renderSetup2();
     });
     document.getElementById("setup2-gnc-cdi-button")?.addEventListener("click", () => {
-      state.setup2.navMode = state.setup2.navMode === "VOR" ? "LOC" : "VOR";
-      setup2SetStatus(`GNC 255 ${state.setup2.navMode} selecionado.`);
-      render();
+      // GNC 255 Pilot's Guide 190-01182-01 Rev. E §§1.2.6–1.2.7:
+      // OBS shows course/CDI; T/F reads bearing/radial, never forces a flag.
+      if (!state.setup2.gncPower) return;
+      state.setup2.tuningTarget = "NAV";
+      state.setup2.navDisplay = state.setup2.navDisplay === "OBS" ? "FREQ" : "OBS";
+      renderSetup2();
     });
     document.getElementById("setup2-gnc-tofrom-button")?.addEventListener("click", () => {
-      state.setup2.toFrom = state.setup2.toFrom === "TO" ? "FROM" : "TO";
-      setup2SetStatus(`GNC 255 ${state.setup2.toFrom} selecionado.`);
-      render();
+      if (!state.setup2.gncPower) return;
+      state.setup2.tuningTarget = "NAV";
+      state.setup2.navDisplay = state.setup2.navDisplay === "TO" ? "FROM" : "TO";
+      renderSetup2();
     });
-    document.getElementById("av-g5-hsi-menu")?.addEventListener("click", toggleG5HsiMenu);
-    document.querySelectorAll("[data-g5-hsi-choice]").forEach((button) => {
-      button.addEventListener("click", () => selectG5HsiMode(button.dataset.g5HsiChoice));
+    document.querySelectorAll("[data-g5-menu-choice]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const unit = button.closest("[data-g5-menu-unit]")?.dataset.g5MenuUnit;
+        selectG5MenuChoice(unit, button.dataset.g5MenuChoice);
+      });
     });
-    bindHorizontalRotary(document.getElementById("av-g5-pfd-knob"), (direction) => {
-      if (!state.g5PfdPower) return;
-      state.headingBug = normalize(state.headingBug + direction * 5);
-      setStatus(`G5 heading bug ${formatHeading(state.headingBug)}°.`);
-      render();
-    }, () => { if (state.g5PfdPower) syncHeading(); });
-    const hsiKnob = document.getElementById("av-g5-hsi-knob");
-    bindHorizontalRotary(hsiKnob, rotateG5Hsi, pressG5HsiKnob, () => {
-      if (!state.g5HsiPower || state.g5Menu || state.g5HsiMode !== "HDG") return;
-      syncHeading();
-    });
-    hsiKnob?.addEventListener("keydown", (event) => {
-      if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
-        event.preventDefault();
-        rotateG5Hsi(event.key === "ArrowRight" ? 1 : -1);
-      } else if (event.key === "Escape") {
-        event.preventDefault();
-        selectG5HsiMode("HDG");
-      }
+    ["pfd", "hsi"].forEach((unit) => {
+      const config = g5UnitConfig(unit);
+      const knob = document.getElementById(config.knobId);
+      bindHorizontalRotary(knob, (direction) => {
+        if (!g5Powered(unit)) return;
+        rotateG5Hsi(direction, unit);
+      }, () => {
+        if (!g5Powered(unit)) return;
+        pressG5HsiKnob(unit);
+      }, () => {
+        if (!g5Powered(unit) || g5MenuOpen(unit) || g5Mode(unit) !== "HDG") return;
+        syncHeading(unit);
+      });
+      knob?.addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+          event.preventDefault();
+          const direction = event.key === "ArrowRight" ? 1 : -1;
+          rotateG5Hsi(direction, unit);
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          pressG5HsiKnob(unit);
+        } else if (event.key === "Escape" && g5MenuOpen(unit)) {
+          event.preventDefault();
+          selectG5MenuChoice(unit, "BACK");
+        }
+      });
     });
     bindGnsCrsrKnob();
-    document.querySelectorAll(".gns-volume-knob[data-av-gns-rotate]").forEach((knob) => {
-      const [kind] = (knob.getAttribute("data-av-gns-rotate") || "").split(":");
-      bindHorizontalRotary(knob, (direction) => rotateGns(kind, direction));
+    document.querySelectorAll("[data-av-gns-volume]").forEach(knob => {
+      const target = knob.dataset.avGnsVolume;
+      const adjust = direction => {
+        if (!state.gnsPower) return;
+        const key = target === "COM" ? "gnsComVolume" : "gnsNavVolume";
+        state[key] = clamp((state[key] ?? 50) + direction * 5, 0, 100);
+        setStatus(`${target} volume ${state[key]}% (simulado).`);
+      };
+      bindHorizontalRotary(knob, adjust, () => {
+        if (!state.gnsPower) return;
+        const key = target === "COM" ? "gnsSquelch" : "gnsIdent";
+        state[key] = !state[key];
+        setStatus(`${target} ${target === "COM" ? "squelch" : "ID"} ${state[key] ? "ON" : "OFF"} (simulado).`);
+      });
+      knob.addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault(); adjust(event.key === "ArrowRight" ? 1 : -1);
+      });
     });
-    document.querySelectorAll("[data-av-gns-rotate]").forEach((button) => button.addEventListener("click", () => {
-      const [kind, direction] = (button.getAttribute("data-av-gns-rotate") || "").split(":");
-      rotateGns(kind, Number(direction));
-    }));
-    document.querySelectorAll("[data-av-gns-key]").forEach((button) => button.addEventListener("click", () => pressGnsKey(button.getAttribute("data-av-gns-key"))));
-    document.getElementById("av-gns-tune-toggle")?.addEventListener("click", () => {
-      state.tuningTarget = state.tuningTarget === "COM" ? "VLOC" : "COM";
-      setStatus(`Tuning cursor ${state.tuningTarget}.`);
+    document.querySelectorAll("[data-av-gns-key]").forEach(button => {
+      const key = button.dataset.avGnsKey;
+      if (key === "CLR") bindHorizontalRotary(button, undefined, () => pressGnsKey("CLR"), () => pressGnsKey("CLR_HOLD"));
+      else button.addEventListener("click", () => pressGnsKey(key));
+    });
+    document.getElementById("av-gns-model")?.addEventListener("change", event => {
+      state.gnsModel = event.target.value;
+      state.gnsDetail = null;
       render();
     });
+    const display = document.getElementById("av-gns-screen");
+    display?.addEventListener("click", event => {
+      const choice = event.target.closest?.("[data-gns-menu-choice]");
+      if (choice) gnsSelectMenu(Number(choice.dataset.gnsMenuChoice));
+    });
+    display?.addEventListener("input", event => {
+      if (event.target.id !== "av-gns-ident-input") return;
+      event.target.value = event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      state.directEntry = event.target.value;
+      state.gnsDirectConfirm = false;
+      renderGns();
+    });
+    display?.addEventListener("change", event => {
+      const input = event.target.closest?.(".gns-frequency-input");
+      if (input) {
+        input.blur();
+        commitGnsFrequencyInput(input);
+      }
+    });
+    display?.addEventListener("keydown", event => {
+      const input = event.target.closest?.("input");
+      if (!input) return;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        input.blur();
+        if (input.id === "av-gns-ident-input") pressGnsKey("ENT");
+        else commitGnsFrequencyInput(input);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        input.blur();
+        if (input.id === "av-gns-ident-input") pressGnsKey("CLR");
+        else render();
+      }
+    });
     document.getElementById("av-reset")?.addEventListener("click", () => {
-      state.g5HsiMode = "HDG";
-      state.g5MenuSelection = "HDG";
       state.challengeConfirmed[`setup1-${state.tutorialId}`] = false;
-      Object.assign(state, { g5PfdPower: true, g5HsiPower: true, gnsPower: true, g5Menu: false, heading: 260, headingBug: 270, course: 270, source: "GPS", waypoint: "LPPR", obsMode: false, tuningTarget: "COM", comActive: 118.00, comStandby: 122.80, vlocActive: 110.30, vlocStandby: 114.10, gnsGroup: "NAV", gnsPageIndex: 1, gnsMenu: false, gnsCursor: false, directToArmed: false, directToActive: false, directEntry: "", mapRange: 20, message: "" });
+      Object.assign(state, { g5PfdPower: true, g5HsiPower: true, g5PfdPage: "PFD", g5HsiPage: "HSI", g5PfdMode: "HDG", g5HsiMode: "HDG", g5PfdMenu: false, g5HsiMenu: false, g5PfdMenuSelection: "HDG", g5HsiMenuSelection: "HDG", g5PfdHeadingBug: 270, g5HsiHeadingBug: 270, g5PfdCourse: 270, g5HsiCourse: 270, g5PfdBearingPointer: true, g5HsiBearingPointer: true, g5LastUnit: null, gnsPower: true, heading: 260, source: "GPS", waypoint: "LPPR", obsMode: false, tuningTarget: "COM", comActive: 118.00, comStandby: 122.80, vlocActive: 110.30, vlocStandby: 114.10, gnsGroup: "NAV", gnsPageIndex: 1, gnsMenu: false, gnsCursor: false, directToArmed: false, directToActive: false, directEntry: "", mapRange: 20, message: "" });
       setStatus(t("av_status_ready"));
       loadTutorialExample("vis-to");
       render();
     });
     document.getElementById("setup2-reset")?.addEventListener("click", resetSetup2);
+    document.getElementById("av-tutorial-example")?.addEventListener("change", () => {
+      syncToFromGuideVisibility();
+      render();
+    });
     document.getElementById("av-tutorial-load")?.addEventListener("click", () => loadTutorialExample(document.getElementById("av-tutorial-example")?.value || "vis-to"));
     document.getElementById("av-tutorial-check")?.addEventListener("click", tutorialCheck);
     document.getElementById("av-tutorial-next")?.addEventListener("click", nextTutorialExample);
     document.getElementById("setup2-tutorial-load")?.addEventListener("click", () => loadSetup2TutorialExample(document.getElementById("setup2-tutorial-example")?.value || "identify"));
     document.getElementById("setup2-tutorial-check")?.addEventListener("click", checkSetup2Tutorial);
     document.getElementById("setup2-tutorial-next")?.addEventListener("click", nextSetup2TutorialExample);
+    document.getElementById("setup2-tutorial-flight-toggle")?.addEventListener("click", toggleSetup2Flight);
+    document.getElementById("setup2-tutorial-example")?.addEventListener("change", (event) => loadSetup2TutorialExample(event.target.value));
     document.querySelectorAll(".av-challenge-open").forEach((button) => {
       button.addEventListener("click", () => openChallenge(button.closest("[data-challenge-id]")?.dataset.challengeId));
     });
     document.querySelectorAll(".av-challenge-confirm").forEach((button) => {
       button.addEventListener("click", () => confirmChallenge(button.closest("[data-challenge-id]")?.dataset.challengeId));
     });
-    document.getElementById("av-tutorial-radial")?.addEventListener("input", setTutorialPositionFromFlightInputs);
-    document.getElementById("av-tutorial-distance")?.addEventListener("input", setTutorialPositionFromFlightInputs);
     document.getElementById("av-tutorial-flight-toggle")?.addEventListener("click", toggleTutorialFlight);
-    document.getElementById("av-tutorial-turn-left")?.addEventListener("click", () => turnTutorial(-1));
-    document.getElementById("av-tutorial-turn-right")?.addEventListener("click", () => turnTutorial(1));
     document.addEventListener("keydown", handleTutorialFlightKey, true);
+    bindTouchFlightControls();
     global.addEventListener("myflyapp:language", render);
   }
 
   function ensureReady() {
     if (ready) {
       render();
+      refreshTutorialMap();
       return;
     }
     if (!document.getElementById("avionics-trainer")) return;
     bindControls();
     ready = true;
     state.ready = true;
-    tutorialPosition = { ...TUTORIAL_EXAMPLES[0].start };
+    tutorialPosition = { ...FREE_TUTORIAL_EXAMPLE.start };
     setup2TutorialPosition = { ...SETUP2_TUTORIAL_EXAMPLES[0].start };
     initTutorialMap();
-    loadTutorialExample("vis-to", false);
-    loadSetup2TutorialExample("identify", false);
+    loadTutorialExample("free", false);
+    loadSetup2TutorialExample("free", false);
+    global.MyFlyGnsDisplay?.init(render);
     render();
+    refreshTutorialMap(true);
   }
 
   global.MyFlyAvionics = { ensureReady };

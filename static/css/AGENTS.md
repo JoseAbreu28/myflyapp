@@ -20,15 +20,25 @@
 - Keep the draggable simulator aircraft visibly interactive with grab/grabbing cursor feedback and a touch-safe target.
 - Keep the three manual instrument panels aligned as peers on desktop and stacked on narrow screens.
 - Keep the VOR trainer map, control blocks, instrument canvases, and guidance readable on desktop and stacked without overflow on narrow screens.
-- Keep the Avionics Simulator subtabs and both instrument layouts legible and non-overlapping at desktop, tablet, and narrow mobile widths: Setup 1 has stacked square G5 PFD/HSI displays and the horizontal GNS 430/430W face; Setup 2 has a compact black cockpit-rack treatment with a round GI-106A VOR/LOC using a numbered radial scale, central CDI/course pointer, and TO/VOR annunciators, plus a short, wide GNC 255 front panel aligned to the official manual's control zones, including metal bezels, monochrome LCD-style display, minimal ACT/STB frequency pair, two left volume knobs, bezel keys, and a concentric right tuning knob. Preserve the physical G5 heading/course knobs without auxiliary +/- controls, the GNS COM/VLOC volume deck, PUSH C/V control, draggable CRSR knob, GI course/TO-FROM controls, and GNC NAV/COM controls.
-- Keep the instrument-first avionics rack, read-only status strip, tutorial map, exercise brief, readouts, and action controls readable on desktop and stacked on narrow screens.
-- Keep the tutorial flight-control strip readable and usable on desktop and narrow screens, including the radial slider, distance field, GO/PAUSE state, speed/heading/time readouts, and left/right turn buttons.
+- Keep both avionics racks legible without overlap at desktop, tablet and narrow mobile widths. Setup 1 has stacked 4:3 G5 screens and horizontal GNS 430/430W. Setup 2 has a round GI-106A with rotating numbered OBS card, fixed index, vertical CDI and TO/VOR annunciators, plus a short, wide GNC 255 with metal bezels, monochrome LCD, ACT/STB frequencies, left volume knobs, bezel keys and right concentric tuning knob. Preserve instrument controls and read-only automatic GI TO/FROM; the normal layout has no auxiliary +/- buttons.
+- Keep the instrument-first avionics rack with the tutorial map directly below the GNS/GNC navigation instrument on desktop for direct comparison, with the read-only status strip, exercise brief, readouts, and action controls readable; stack the full rack on narrow screens.
+- Keep the Setup 1 flight start/pause button readable beside the exercise actions at desktop and narrow widths; the normal layout has no separate flight-control strip.
+- Scope supplementary touch layout rules to `#avionics-trainer.av-mobile-mode`, never enable them automatically by viewport or pointer type. Hidden rotary wrappers use `display: contents` to preserve the normal bezel; in mobile mode separate concentric knobs, show −/+ and aircraft controls, and give keys at least 44px targets. Retain instrument display proportions and keep both racks within 320px phone widths. Rotary targets prevent touch scrolling during horizontal drag; ordinary buttons retain page scrolling.
 - Mark individual correct tutorial steps with a subtle green background and accessible check; pending rows and reading tips stay neutral. Overall success colors the brief, objective and status only when the actionable criteria are met. Free-mode instructions stay neutral.
-- Keep the GNS Map Page data-field strip legible and keep the shared nine-level challenge checklist readable, keyboard-accessible, and responsive; ready and confirmed states must remain visually distinct from merely active rows.
+- Keep the GNS Map Page data fields legible and keep the guided exercise brief, steps, readouts, and status readable and responsive.
+- Keep the live manual-style GNS display at its 240:128 aspect ratio, with COM/VLOC cells on the left, navigation/menu content on the right and page indicators below. Native input overlays must align with the SVG cells, stay legible and retain focus during GO. Keep both concentric knob rings reachable. At narrow widths the display spans the bezel above the physical controls; the only external selector is the instrument model.
 - Keep the Setup 1 and Setup 2 tutorial maps and brief panels usable independently at desktop and narrow widths.
+- Honor `.av-tutorial-layout[hidden]` over its grid/block layout rules: Nível 0 shows the introduction guide and hides the previous exercise's brief, objective, steps and readouts in both setups, including Modo mobile.
+- Keep the shared `.av-tofrom-guide` readable in both setup contexts, with TO/FROM cards, reading checklist, setup-specific readouts, example values, and responsive stacking at narrow widths.
+- Setup 2's GNC OBS/CDI or bearing/radial detail must remain legible inside its LCD without widening the rack; its flight button uses the existing start/pause styling.
+- Keep each map's collapsible `.av-navaid-catalog` readable; its station table may scroll horizontally inside `.av-navaid-table` without widening the rack at narrow viewports.
 - The Setup 1 tutorial aircraft symbol points along its heading; rotate the inner symbol only, preserving Leaflet marker positioning and its draggable target.
 - Keep the Helper toggle and hover/focus popover readable above the instrument panels and usable on narrow screens.
 - Keep the G5 HSI selector menu inside its display with a visible selected item, disabled unavailable Course/OBS option, and legible guidance. Its selected heading readout must clear the bezel controls.
+- Render the G5 main menu as a four-item knob-navigated viewport; keep HSI in the first PFD row. Setup and bearing-source submenus are opaque vertical lists with a visible title and selection highlight; preserve readability and focus indication at narrow widths.
+- Keep G5 menus inside the display and opened through the physical knob interaction; no separate G5 MENU key should be introduced, and hidden page-specific choices must not occupy layout space.
+- Match the approved G5 mockup bezel and 4:3 display proportions without stretching the compass. Menus occupy the bottom of the display, with neutral gradient cells, cyan selection outlines and separate cyan values; power symbols use CSS geometry rather than platform-dependent glyphs.
+- G5 canvases are read-only displays, with no pointer cursor or focusable page-toggle styling. Page changes use the knob-selected HSI/PFD menu item; retain legible labels and menu focus indication.
 - Preserve `body.printing-navigation` styles used by navigation PDF/print fallback.
 - Keep badge classes compatible with JS: `.vfr`, `.mvfr`, `.ifr`, `.lifr`, `.unknown`, `.mb-ok`, `.mb-bad`.
 
@@ -42,6 +52,7 @@
 
 - Browser-check desktop and narrow viewport after layout changes.
 - For avionics layout edits, verify both subtabs: Setup 1's G5 PFD/HSI canvases, controls, and GNS key matrix, plus Setup 2's GI-106A and GNC 255 controls, at desktop and narrow widths.
+- For introduction visibility, verify Nível 0 hides the exercise block, other levels/free mode restore it, and setup/language/mobile-mode switching preserves the selected presentation.
 - For print-related edits, trigger navigation print/PDF fallback and inspect the print view.
 
 ## Child DOX Index
