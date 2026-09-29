@@ -28,6 +28,7 @@
 - Keep METAR/TAF failures graceful; upstream outages should render unavailable states, not break the page.
 - Keep fplbriefing tokens in-memory/request-scoped only.
 - Treat `massbalance.js` source assumptions as safety-relevant; update comments when POH data, limits, or units change.
+- In `massbalance.js`, enter basic empty weight directly in lb, empty-weight arm in inches, fuel in US gallons, and people/baggage in kg; keep the internal calculation and visible unit labels aligned.
 - Keep VOR station frequencies, coordinates, and published declination traceable to NAV Portugal eAIP ENR 4.1; do not imply geometric map distance is certified DME.
 - `avionics-simulator.js` owns a shared `NAV_AIDS` catalogue for both setups: PRT, VIS, CAS, VFA, FTM and LIS provide VOR tuning; DAR (Arouca, CH 96X) and DMR (Marão, CH 93X) are DME-only map/GPS references. Keep channel, frequency, type and antenna coordinates traceable to ENR 4.1; do not invent VOR signals for DME-only sites. Beja is excluded from this catalogue.
 

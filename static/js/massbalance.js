@@ -20,8 +20,9 @@
  * NOT the real values for each individual aircraft (those come from each
  * airplane's weighing record) so they are editable in the UI.
  *
- * Inputs follow the club convention: fuel in US gallons, people/baggage in kg.
- * Everything is converted to pounds / inches internally to check the POH
+ * Inputs follow the club convention: empty/basic empty weight in lb, arm in
+ * inches, fuel in US gallons, and people/baggage in kg. Everything is
+ * converted to pounds / inches internally to check the POH
  * envelope, which is defined in those units.
  */
 
@@ -65,6 +66,7 @@ const MB_I18N = {
     envelope_aria: "Envelope de centro de gravidade",
     moment_axis: "Momento / 1000 (lb·in)",
     weight_axis: "Peso (lb)",
+    kg_to_lb_formula: "Conversão de massa: lb = kg × 2,2046 (1 kg = 2,2046 lb).",
   },
   en: {
     pilot: "Pilot",
@@ -100,6 +102,7 @@ const MB_I18N = {
     envelope_aria: "Center of gravity envelope",
     moment_axis: "Moment / 1000 (lb·in)",
     weight_axis: "Weight (lb)",
+    kg_to_lb_formula: "Mass conversion: lb = kg × 2.2046 (1 kg = 2.2046 lb).",
   },
 };
 
@@ -129,7 +132,7 @@ function c152Fwd(w) {
 const MB_AIRCRAFT = {
   "CS-ASP": {
     type: "Cessna 152",
-    emptyKg: 515.2, // 1136 lb POH sample
+    emptyLb: 1136, // POH sample
     emptyArm: 29.9, // 34.0/1.136
     maxTakeoffLb: 1670,
     maxRampLb: 1675,
@@ -147,8 +150,8 @@ const MB_AIRCRAFT = {
   },
   "D-ELFA": {
     type: "Cessna 152",
-    emptyKg: 515.2,
-    emptyArm: 29.9,
+    emptyLb: 1148.13, // D-ELFA weighing sheet: Basic Empty Weight
+    emptyArm: 30.439, // D-ELFA weighing sheet: C.G. arm
     maxTakeoffLb: 1670,
     maxRampLb: 1675,
     fwd: c152Fwd,
@@ -165,7 +168,7 @@ const MB_AIRCRAFT = {
   },
   "CS-AUD": {
     type: "Cessna 172M",
-    emptyKg: 618.7, // 1364 lb POH sample
+    emptyLb: 1364, // POH sample
     emptyArm: 37.9, // 51.7/1.364
     maxTakeoffLb: 2300,
     maxRampLb: 2300,
@@ -185,7 +188,7 @@ const MB_AIRCRAFT = {
   },
   "CS-EAU": {
     type: "Cessna 150",
-    emptyKg: 494.0, // 1089 lb POH sample
+    emptyLb: 1089, // POH sample
     emptyArm: 33.06, // 36.0/1.089
     maxTakeoffLb: 1600,
     maxRampLb: 1600,
@@ -254,8 +257,8 @@ function mbRenderForm(reg) {
         <label class="mb-field">
           <span>${mbT("empty_weight")}</span>
           <span class="mb-input-wrap">
-            <input id="mb-empty-kg" class="select" type="number" min="0" step="0.1" value="${ac.emptyKg}">
-            <em class="mb-unit">kg</em>
+            <input id="mb-empty-lb" class="select" type="number" min="0" step="0.01" value="${ac.emptyLb}">
+            <em class="mb-unit">lb</em>
           </span>
         </label>
         <label class="mb-field">
@@ -270,6 +273,7 @@ function mbRenderForm(reg) {
     <div class="mb-loads card-inset">
       <h4>${mbT("load")}</h4>
       <div class="mb-grid">${stationRows}</div>
+      <p class="note mb-conversion-note">${mbT("kg_to_lb_formula")}</p>
     </div>`;
 
   form.querySelectorAll("input").forEach((input) => {
@@ -283,7 +287,7 @@ function mbCompute(reg) {
 
   const items = [];
 
-  const emptyLb = mbNum("mb-empty-kg") * MB_KG_TO_LB;
+  const emptyLb = mbNum("mb-empty-lb");
   const emptyArm = mbNum("mb-empty-arm");
   items.push({ label: mbT("empty_item"), weightLb: emptyLb, arm: emptyArm });
 
