@@ -63,10 +63,13 @@ const MB_I18N = {
     total_weight: "Peso total",
     cg_limits: "Limites CG",
     total_moment: "Momento total",
+    manual_calc_title: "Cálculo manual do momento",
+    manual_calc_formula: "Momento de cada item = peso (lb) × braço (in). Momento total = soma dos momentos ÷ 1000.",
+    manual_calc_sum: "Soma dos momentos",
     envelope_aria: "Envelope de centro de gravidade",
     moment_axis: "Momento / 1000 (lb·in)",
     weight_axis: "Peso (lb)",
-    kg_to_lb_formula: "Conversão de massa: lb = kg × 2,2046 (1 kg = 2,2046 lb).",
+    kg_to_lb_formula: "Conversões:<br>lb = kg × 2,2046 (1 kg = 2,2046 lb)<br>L = gal US × 3,785 (1 gal US = 3,785 L)<br>lb combustível = gal US × 6 (AVGAS).",
   },
   en: {
     pilot: "Pilot",
@@ -99,10 +102,13 @@ const MB_I18N = {
     total_weight: "Total weight",
     cg_limits: "CG limits",
     total_moment: "Total moment",
+    manual_calc_title: "Manual moment calculation",
+    manual_calc_formula: "Moment of each item = weight (lb) × arm (in). Total moment = sum of moments ÷ 1000.",
+    manual_calc_sum: "Sum of moments",
     envelope_aria: "Center of gravity envelope",
     moment_axis: "Moment / 1000 (lb·in)",
     weight_axis: "Weight (lb)",
-    kg_to_lb_formula: "Mass conversion: lb = kg × 2.2046 (1 kg = 2.2046 lb).",
+    kg_to_lb_formula: "Conversions:<br>lb = kg × 2.2046 (1 kg = 2.2046 lb)<br>L = US gal × 3.785 (1 US gal = 3.785 L)<br>fuel lb = US gal × 6 (AVGAS).",
   },
 };
 
@@ -371,6 +377,7 @@ function mbCompute(reg) {
     fuelGal,
     withinEnvelope,
     warnings,
+    items,
   });
   mbRenderChart(ac, totalLb, totalMoment / 1000, withinEnvelope);
 }
@@ -392,6 +399,20 @@ function mbRenderResults(ac, r) {
     ? `<ul class="mb-warnings">${r.warnings.map((w) => `<li>⚠️ ${w}</li>`).join("")}</ul>`
     : "";
 
+  const manualRowsHtml = (r.items || [])
+    .map(
+      (it) =>
+        `<div>${it.label}: ${mbFmt(it.weightLb, 2)} lb × ${mbFmt(it.arm, 3)} in = ${mbFmt(it.weightLb * it.arm / 1000, 3)} lb·in/1000</div>`
+    )
+    .join("");
+  const manualCalcHtml = `
+    <div class="mb-manual-calc">
+      <p><strong>${mbT("manual_calc_title")}</strong></p>
+      <p class="note">${mbT("manual_calc_formula")}</p>
+      <div class="note">${manualRowsHtml}</div>
+      <p class="note"><strong>${mbT("manual_calc_sum")} = ${mbFmt(r.totalMoment / 1000, 3)} lb·in/1000 → ${mbFmt(r.totalMoment / 1000, 2)}</strong></p>
+    </div>`;
+
   box.innerHTML = `
     <p><span class="badge mb-${statusClass}">${statusText}</span></p>
     <table class="mb-table">
@@ -402,6 +423,7 @@ function mbRenderResults(ac, r) {
       <tr><th>${mbT("cg_limits")} @ ${mbFmt(r.totalLb, 0)} lb</th><td>${mbFmt(r.fwdLimit, 2)}" – ${mbFmt(r.aftLimit, 2)}"</td></tr>
       <tr><th>${mbT("total_moment")}</th><td>${mbFmt(r.totalMoment / 1000, 2)} <span class="note">(lb·in/1000)</span></td></tr>
     </table>
+    ${manualCalcHtml}
     ${warnHtml}`;
 }
 
