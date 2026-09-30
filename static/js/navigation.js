@@ -1,16 +1,30 @@
 const NAV_NM_PER_RAD = 3440.065;
 const NAV_DEFAULT_CENTER = [41.25, -8.0];
+const NAV_MAGNETIC_VARIATION_DEG = 1;
+const NAV_NEAR_AERODROME_NM = 5;
 
 let navMap = null;
 let navLine = null;
 let navMarkers = [];
 let navLegLabelLayer = null;
+let navDistanceTickLayer = null;
 let navAlternateMarker = null;
 let navAlternate = null;
+let navAlternateRouteLine = null;
+let navAlternateRouteLayer = null;
+let navAlternateRouteMarkers = [];
+let navAlternateRoutePoints = [];
 let navReferenceMarkers = [];
 let navMode = "route";
 let navLegAltitudes = {};
+let navLegWinds = {};
+let navAlternateLegWinds = {};
+let navRoundTripConfig = null;
 let navLanguage = "pt";
+let navTocMarker = null;
+let navTodMarker = null;
+let navAlternateTocMarker = null;
+let navAlternateTodMarker = null;
 let navSimMap = null;
 let navSimRouteLine = null;
 let navSimDirectLine = null;
@@ -31,7 +45,7 @@ let navSimRouteSignature = "";
 
 const NAV_I18N = {
   pt: {
-    nav_help: "Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternate: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.",
+    nav_help: "Modo Rota: clica para adicionar pernas. Pontos próximos de aeródromos recebem o ICAO; os restantes recebem o 5-letter code mais próximo do mapa de referências. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternate: escolhe na lista ou clica no mapa para definir o alternante. Alternate Breaking point: seleciona o botão e clica no percurso tracejado do alternate para inserir um ponto intermédio. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar. Marcas perpendiculares no mapa indicam cada 5 NM dentro de cada perna.",
     alternate_title: "Alternate Aerodrome",
     alternate_select: "Selecionar aeródromo",
     alternate_nm_label: "Distância alternante",
@@ -42,7 +56,7 @@ const NAV_I18N = {
     pdf_ready: "Report pronto para exportar.",
   },
   en: {
-    nav_help: "Route mode: click to add route legs. Breaking point: click on/near the line to insert an intermediate point in the nearest segment. Alternate: choose from the list or click the map to set the alternate. Reference mode: mark visual references, obstacles, turning points or notes. Drag markers to adjust.",
+    nav_help: "Route mode: click to add route legs. Points near aerodromes use the ICAO; other points receive the nearest 5-letter code from the reference map. Breaking point: click on/near the line to insert an intermediate point in the nearest segment. Alternate: choose from the list or click the map to set the alternate. Alternate breaking point: select the button and click the dashed alternate route to insert an intermediate point. Reference mode: mark visual references, obstacles, turning points or notes. Drag markers to adjust. Perpendicular map marks indicate each 5 NM within each leg.",
     alternate_title: "Alternate Aerodrome",
     alternate_select: "Select aerodrome",
     alternate_nm_label: "Alternate distance",
@@ -53,6 +67,62 @@ const NAV_I18N = {
     pdf_ready: "Report ready to export.",
   },
 };
+
+Object.assign(NAV_I18N.pt, {
+  export_plan: "Exportar flightplan",
+  import_plan: "Importar flightplan",
+  plan_exported: "Flightplan exportado em JSON.",
+  plan_imported: "Flightplan importado.",
+  plan_import_error: "Não foi possível importar este flightplan JSON.",
+  alternate_route_title: "Rota do alternante",
+  alternate_route_help: "Seleciona o alternate e usa o modo Alternante para adicionar pontos intermédios no mapa. A rota começa na aterragem final.",
+  alternate_route_clear: "Limpar rota do alternante",
+  alternate_final_landing: "Aterragem final",
+  alternate_touch_go: "Touch-and-go",
+  alternate_route_pending: "Seleciona um alternate para criar a rota.",
+  alternate_route_summary: "{origin} → {destination} · {points} ponto(s) intermédio(s) · {distance} NM",
+  alternate_route_no_destination: "Cria primeiro uma rota principal com destino.",
+  alternate_route_need_two: "A rota do alternante precisa de origem e destino.",
+  alternate_route_undo: "Último ponto do alternate removido.",
+  alternate_toc_tod_title: "TOC / TOD do alternante",
+  alternate_toc_start_altitude: "Altitude no início da subida do alternate (ft)",
+  alternate_cruise_altitude: "Altitude no TOC / cruzeiro do alternate (ft)",
+  alternate_toc_climb_speed: "Velocidade inicial de subida do alternate (kt)",
+  alternate_toc_climb_rate: "Razão de subida do alternate (ft/min)",
+  alternate_destination_altitude: "Altitude do alternate (ft)",
+  alternate_toc_distance: "Distância calculada até TOC (NM)",
+  alternate_toc_tod_help: "Define as altitudes do alternate. O TOD usa a mesma fórmula de descida.",
+  alternate_toc_tod_pending: "Indica as altitudes para calcular TOC e TOD do alternate.",
+  alternate_calculations_title: "Cálculos do alternate",
+});
+
+Object.assign(NAV_I18N.en, {
+  export_plan: "Export flight plan",
+  import_plan: "Import flight plan",
+  plan_exported: "Flight plan exported as JSON.",
+  plan_imported: "Flight plan imported.",
+  plan_import_error: "This flight plan JSON could not be imported.",
+  alternate_route_title: "Alternate route",
+  alternate_route_help: "Select the alternate and use Alternate mode to add intermediate points on the map. The route starts at the final landing.",
+  alternate_route_clear: "Clear alternate route",
+  alternate_final_landing: "Final landing",
+  alternate_touch_go: "Touch-and-go",
+  alternate_route_pending: "Select an alternate to create the route.",
+  alternate_route_summary: "{origin} → {destination} · {points} intermediate point(s) · {distance} NM",
+  alternate_route_no_destination: "Create a main route with a destination first.",
+  alternate_route_need_two: "The alternate route needs an origin and destination.",
+  alternate_route_undo: "Last alternate point removed.",
+  alternate_toc_tod_title: "Alternate TOC / TOD",
+  alternate_toc_start_altitude: "Alternate climb start altitude (ft)",
+  alternate_cruise_altitude: "Alternate TOC / cruise altitude (ft)",
+  alternate_toc_climb_speed: "Alternate initial climb speed (kt)",
+  alternate_toc_climb_rate: "Alternate rate of climb (ft/min)",
+  alternate_destination_altitude: "Alternate altitude (ft)",
+  alternate_toc_distance: "Calculated distance to TOC (NM)",
+  alternate_toc_tod_help: "Enter alternate altitudes. TOD uses the same descent formula.",
+  alternate_toc_tod_pending: "Enter altitudes to calculate alternate TOC and TOD.",
+  alternate_calculations_title: "Alternate calculations",
+});
 
 Object.assign(NAV_I18N.pt, {
   app_title: "MyFlyApp",
@@ -144,6 +214,7 @@ Object.assign(NAV_I18N.pt, {
   nav_disclaimer: "Disclaimer: esta ferramenta é apenas um apoio à preparação da navegação. Não substitui a carta aeronáutica oficial, o AIP/eAIP, NOTAM, informação de espaço aéreo, altitudes mínimas, obstáculos, terreno, procedimentos publicados ou briefing operacional. Usa sempre a carta verdadeira e fontes oficiais para informação detalhada.",
   mode_route: "Rota",
   mode_break: "Breaking point",
+  mode_alternate_break: "Alternate Breaking point",
   mode_alternate: "Alternante",
   mode_reference: "Referência",
   save_pdf: "Guardar PDF",
@@ -221,7 +292,7 @@ Object.assign(NAV_I18N.pt, {
   vor_turn_right: "A estação está {degrees}° à direita do rumo atual.",
   vor_heading_aligned: "O rumo está alinhado com a estação.",
   vor_geometric_distance: "geométrica; não substitui DME",
-  nav_help: "Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternante: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.",
+  nav_help: "Modo Rota: clica para adicionar pernas. Os pontos próximos de aeródromos recebem o ICAO; os restantes recebem o 5-letter code mais próximo do mapa de referências. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternante: escolhe na lista ou clica no mapa para definir o alternante. Alternate Breaking point: seleciona o botão e clica no percurso tracejado do alternate para inserir um ponto intermédio. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar. Marcas perpendiculares no mapa indicam cada 5 NM dentro de cada perna.",
   undo_point: "Desfazer ponto",
   clear_route: "Limpar rota",
   fit_route: "Ajustar mapa",
@@ -239,11 +310,51 @@ Object.assign(NAV_I18N.pt, {
   route_builder_same: "Escolhe aeródromos diferentes para principal e destino.",
   route_built_oneway: "Rota criada: {dep} -> {dest}. Podes agora inserir breaking points e referências.",
   route_built_roundtrip: "Rota ida e volta criada: {dep} -> {dest} -> {dep}. Podes agora inserir breaking points e referências.",
+  nav_charts_title: "Cartas dos aeródromos usados",
+  nav_charts_help: "Abre as cartas ADC/VAC e a página eAIP dos aeródromos identificados na rota.",
+  nav_chart_adc: "Ver ADC",
+  nav_chart_vac: "Ver VAC",
+  nav_chart_aip: "Abrir eAIP",
+  nav_chart_source: "Fonte oficial NAV Portugal/eAIP; confirma sempre a edição atual.",
   total_label: "Total",
   legs_label: "Pernas",
   leg_header: "Perna",
   alt_vfr_header: "ALT VFR",
+  mag_track_header: "MAG TRACK",
+  wind_speed_header: "Vento",
+  mag_head_header: "MAG HEAD",
+  gs_header: "GS",
+  time_header: "Tempo",
+  wind_format_hint: "DDD/SSkts",
+  wind_format_invalid: "Usa DDD/SSkts",
+  wind_format_ok: "OK",
   add_two_points: "Adiciona pelo menos dois pontos.",
+  route_point_pending: "a obter 5-letter code...",
+  route_point_source: "Fonte: mapa 5-letter code",
+  route_point_aerodrome: "Aeródromo próximo",
+  route_point_fallback: "Código indisponível",
+  edit_point_name: "Nome do ponto",
+  flightlog_title: "Dados do flight log",
+  aircraft_ident: "Aeronave / matrícula",
+  pilot_label: "Piloto",
+  date_label: "Data",
+  toc_tod_title: "TOC / TOD",
+  toc_reference: "Ponto de início da subida",
+  toc_reference_departure: "Partida (DEP)",
+  toc_start_altitude: "Altitude no início da subida (ft)",
+  toc_distance: "Distância calculada até TOC (NM)",
+  toc_climb_speed: "Velocidade inicial de subida (kt)",
+  toc_climb_rate: "Razão de subida (ft/min)",
+  cruise_altitude: "Altitude no TOC / cruzeiro (ft)",
+  destination_altitude: "Altitude de destino (ft)",
+  toc_tod_help: "A distância até TOC é calculada pela altitude inicial, altitude no TOC, razão e velocidade de subida. TOD = altitude a descer (milhares de ft) × 3 + 2; ROD 500 ft/min e GS 90 kt.",
+  toc_tod_pending: "Indica o ponto de subida, as altitudes, a razão e a velocidade para calcular TOC e TOD.",
+  toc_tod_ready: "TOC {toc} NM desde {reference} · subida {climb} kt / {rate} ft/min ({time}) · TOD {tod} NM antes do destino.",
+  toc_tod_outside: "O TOD fica fora da rota atual; aumenta a rota ou revê as altitudes.",
+  toc_tod_invalid: "Dados insuficientes: indica as altitudes, a razão e a velocidade de subida.",
+  toc_no_climb: "A altitude inicial já está acima do TOC; a distância considerada é 0,0 NM.",
+  tod_invalid: "TOD indisponível: a altitude de destino tem de ser inferior à altitude no TOC.",
+  wind_at_altitude_help: "Vento na altitude da perna no formato DDD/SSkts, por exemplo 130/09kts. É reportado sem fabricar correção de vento.",
   alternate_title: "Aeródromo alternante",
   alternate_select: "Selecionar aeródromo",
   manual_none: "Manual / nenhum",
@@ -259,7 +370,7 @@ Object.assign(NAV_I18N.pt, {
   e6b_open: "Abrir E6BX numa nova janela",
   e6b_tab_note: "Ferramenta externa fornecida por e6bx.com. Se não carregar dentro da tab, usa o botão para abrir a calculadora numa nova janela.",
   distance_nm: "Distância (NM)",
-  gs_speed: "Velocidade GS (kt)",
+  gs_speed: "Velocidade ar / TAS (kt)",
   fuel_burn: "Consumo (gal/h)",
   reserve_min: "Reserva (min)",
   meters_label: "Metros",
@@ -286,9 +397,14 @@ Object.assign(NAV_I18N.pt, {
   vfr_north_rule: "norte: par +500",
   create_two_route_points: "Cria primeiro pelo menos dois pontos de rota.",
   break_inserted: "Breaking point inserido na rota.",
+  alternate_break_inserted: "Breaking point inserido na rota do alternate.",
   pdf_ready: "Relatório pronto para exportar.",
   pdf_download_ready: "PDF pronto.",
   pdf_download_link: "Descarregar PDF",
+  pdf_roundtrip_generating: "A gerar os PDFs de ida e volta...",
+  pdf_roundtrip_ready: "PDFs de ida e volta prontos.",
+  pdf_outbound_label: "PDF ida",
+  pdf_return_label: "PDF volta",
   pdf_ready_again: "Relatório pronto. Usa Guardar PDF para exportar novamente.",
   pdf_generating: "A gerar PDF...",
   pdf_fallback: "Download falhou. A abrir impressão como alternativa.",
@@ -632,6 +748,7 @@ Object.assign(NAV_I18N.en, {
   nav_disclaimer: "Disclaimer: this tool is only a support aid for navigation preparation. It does not replace the official aeronautical chart, AIP/eAIP, NOTAM, airspace information, minimum altitudes, obstacles, terrain, published procedures, or operational briefing. Always use the real chart and official sources for detailed information.",
   mode_route: "Route",
   mode_break: "Breaking point",
+  mode_alternate_break: "Alternate breaking point",
   mode_alternate: "Alternate",
   mode_reference: "Reference",
   save_pdf: "Save PDF",
@@ -726,11 +843,51 @@ Object.assign(NAV_I18N.en, {
   route_builder_same: "Choose different aerodromes for departure and destination.",
   route_built_oneway: "Route created: {dep} -> {dest}. You can now insert breaking points and references.",
   route_built_roundtrip: "Round trip route created: {dep} -> {dest} -> {dep}. You can now insert breaking points and references.",
+  nav_charts_title: "Charts for route aerodromes",
+  nav_charts_help: "Open the ADC/VAC charts and eAIP page for aerodromes identified on the route.",
+  nav_chart_adc: "View ADC",
+  nav_chart_vac: "View VAC",
+  nav_chart_aip: "Open eAIP",
+  nav_chart_source: "Official NAV Portugal/eAIP source; always confirm the current edition.",
   total_label: "Total",
   legs_label: "Legs",
   leg_header: "Leg",
   alt_vfr_header: "VFR ALT",
+  mag_track_header: "MAG TRACK",
+  wind_speed_header: "Wind",
+  mag_head_header: "MAG HEAD",
+  gs_header: "GS",
+  time_header: "Time",
+  wind_format_hint: "DDD/SSkts",
+  wind_format_invalid: "Use DDD/SSkts",
+  wind_format_ok: "OK",
   add_two_points: "Add at least two points.",
+  route_point_pending: "fetching 5-letter code...",
+  route_point_source: "Source: 5-letter code map",
+  route_point_aerodrome: "Nearby aerodrome",
+  route_point_fallback: "Code unavailable",
+  edit_point_name: "Point name",
+  flightlog_title: "Flight log details",
+  aircraft_ident: "Aircraft / ident",
+  pilot_label: "Pilot",
+  date_label: "Date",
+  toc_tod_title: "TOC / TOD",
+  toc_reference: "Climb start point",
+  toc_reference_departure: "Departure (DEP)",
+  toc_start_altitude: "Altitude at climb start (ft)",
+  toc_distance: "Calculated distance to TOC (NM)",
+  toc_climb_speed: "Initial climb speed (kt)",
+  toc_climb_rate: "Rate of climb (ft/min)",
+  cruise_altitude: "TOC / cruise altitude (ft)",
+  destination_altitude: "Destination altitude (ft)",
+  toc_tod_help: "TOC distance is calculated from the start altitude, TOC altitude, rate and climb speed. TOD = altitude to lose (thousands of ft) × 3 + 2; ROD 500 ft/min and GS 90 kt.",
+  toc_tod_pending: "Enter the climb point, altitudes, rate and speed to calculate TOC and TOD.",
+  toc_tod_ready: "TOC {toc} NM from {reference} · climb {climb} kt / {rate} ft/min ({time}) · TOD {tod} NM before destination.",
+  toc_tod_outside: "TOD is outside the current route; extend the route or review the altitudes.",
+  toc_tod_invalid: "Insufficient data: enter the altitudes, rate and climb speed.",
+  toc_no_climb: "The start altitude is already above the TOC; the distance used is 0.0 NM.",
+  tod_invalid: "TOD unavailable: destination altitude must be below the TOC altitude.",
+  wind_at_altitude_help: "Wind at the leg altitude in DDD/SSkts format, for example 130/09kts. It is reported without fabricating a wind correction.",
   manual_none: "Manual / none",
   alternate_none: "No alternate selected.",
   alternate_manual: "Manual alternate",
@@ -741,7 +898,7 @@ Object.assign(NAV_I18N.en, {
   e6b_open: "Open E6BX in a new window",
   e6b_tab_note: "External tool provided by e6bx.com. If it does not load inside the tab, use the button to open the calculator in a new window.",
   distance_nm: "Distance (NM)",
-  gs_speed: "GS speed (kt)",
+  gs_speed: "Airspeed / TAS (kt)",
   fuel_burn: "Fuel burn (gal/h)",
   reserve_min: "Reserve (min)",
   meters_label: "Meters",
@@ -768,8 +925,13 @@ Object.assign(NAV_I18N.en, {
   vfr_north_rule: "north: even +500",
   create_two_route_points: "Create at least two route points first.",
   break_inserted: "Breaking point inserted in the route.",
+  alternate_break_inserted: "Breaking point inserted in the alternate route.",
   pdf_download_ready: "PDF ready.",
   pdf_download_link: "Download PDF",
+  pdf_roundtrip_generating: "Generating the outbound and return PDFs...",
+  pdf_roundtrip_ready: "Outbound and return PDFs ready.",
+  pdf_outbound_label: "Outbound PDF",
+  pdf_return_label: "Return PDF",
   pdf_ready_again: "Report ready. Use Save PDF to export again.",
   pdf_generating: "Generating PDF...",
   pdf_fallback: "Download failed. Opening print as a fallback.",
@@ -1063,6 +1225,97 @@ function navFmt(value, digits = 1) {
   });
 }
 
+function navParseWind(value) {
+  const raw = String(value || "").trim().replace(/\s+/g, "").toUpperCase();
+  if (!raw) return null;
+  const match = raw.match(/^(\d{1,3})\/(\d{1,3})(?:KTS?)?$/);
+  if (!match) return null;
+  const direction = Number(match[1]);
+  const speed = Number(match[2]);
+  if (!Number.isInteger(direction) || direction < 0 || direction > 360) return null;
+  if (!Number.isInteger(speed) || speed < 0 || speed > 200) return null;
+  return {
+    direction,
+    speed,
+    text: `${String(direction).padStart(3, "0")}/${String(speed).padStart(2, "0")}kts`,
+  };
+}
+
+function navGetAirspeedKt() {
+  const value = Number.parseFloat(document.getElementById("nav-e6b-speed")?.value || "");
+  return Number.isFinite(value) && value > 0 ? value : NaN;
+}
+
+function navComputeLegsForPoints(points) {
+  const legs = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const from = points[i - 1];
+    const to = points[i];
+    const trueTrack = navBearingDeg(from, to);
+    legs.push({
+      index: i,
+      from,
+      to,
+      nm: navDistanceNm(from, to),
+      trueTrack,
+      magTrack: navMagneticTrack(trueTrack),
+      heading: trueTrack,
+    });
+  }
+  return legs;
+}
+
+function navCalculateLegPerformance(leg, wind, airspeedKt = navGetAirspeedKt()) {
+  if (!leg || !Number.isFinite(leg.magTrack) || !wind || !Number.isFinite(airspeedKt) || airspeedKt <= 0) {
+    return { groundSpeedKt: NaN, magHead: NaN, timeMin: NaN };
+  }
+
+  const trackRad = navToRad(leg.magTrack);
+  const rightEast = Math.cos(trackRad);
+  const rightNorth = -Math.sin(trackRad);
+  const trackEast = Math.sin(trackRad);
+  const trackNorth = Math.cos(trackRad);
+  const windToRad = navToRad((wind.direction + 180) % 360);
+  const windEast = Math.sin(windToRad) * wind.speed;
+  const windNorth = Math.cos(windToRad) * wind.speed;
+  const windAlong = windEast * trackEast + windNorth * trackNorth;
+  const windCross = windEast * rightEast + windNorth * rightNorth;
+  if (Math.abs(windCross) >= airspeedKt) return { groundSpeedKt: NaN, magHead: NaN, timeMin: NaN };
+
+  const airAlong = Math.sqrt(Math.max(0, (airspeedKt * airspeedKt) - (windCross * windCross)));
+  const groundSpeedKt = airAlong + windAlong;
+  if (!Number.isFinite(groundSpeedKt) || groundSpeedKt <= 0) {
+    return { groundSpeedKt: NaN, magHead: NaN, timeMin: NaN };
+  }
+
+  const airEast = trackEast * airAlong + rightEast * (-windCross);
+  const airNorth = trackNorth * airAlong + rightNorth * (-windCross);
+  const trueHeading = navNormalizeHeading(navToDeg(Math.atan2(airEast, airNorth)));
+  return {
+    groundSpeedKt,
+    magHead: navMagneticTrack(trueHeading),
+    timeMin: leg.nm > 0 ? (leg.nm / groundSpeedKt) * 60 : 0,
+  };
+}
+
+function navPerformanceForLeg(leg, windMap = navLegWinds) {
+  return navCalculateLegPerformance(leg, navParseWind(windMap[leg.index]));
+}
+
+function navSummarizeLegPerformance(legs, windMap) {
+  const totalNm = (legs || []).reduce((sum, leg) => sum + leg.nm, 0);
+  const performances = (legs || []).map((leg) => navPerformanceForLeg(leg, windMap));
+  const complete = performances.length > 0 && performances.every((item) => Number.isFinite(item.groundSpeedKt) && Number.isFinite(item.timeMin));
+  const timeMin = complete ? performances.reduce((sum, item) => sum + item.timeMin, 0) : NaN;
+  return {
+    totalNm,
+    performances,
+    complete,
+    timeMin,
+    groundSpeedKt: complete && timeMin > 0 ? totalNm / (timeMin / 60) : NaN,
+  };
+}
+
 function navSetText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
@@ -1097,37 +1350,345 @@ function navGetDestinationPoint() {
   return navMarkers.length ? navMarkers[navMarkers.length - 1].getLatLng() : null;
 }
 
-function navComputeLegs() {
-  const pts = navGetRoutePoints();
-  const legs = [];
-  for (let i = 1; i < pts.length; i += 1) {
-    const from = pts[i - 1];
-    const to = pts[i];
-    legs.push({
-      index: i,
-      nm: navDistanceNm(from, to),
-      heading: navBearingDeg(from, to),
-    });
+function navMagneticTrack(trueTrack) {
+  // 1° W variation: magnetic track is true track plus one degree.
+  return navNormalizeHeading(Number(trueTrack) + NAV_MAGNETIC_VARIATION_DEG);
+}
+
+function navPointIdentifier(marker, index) {
+  return marker?.navPointMeta?.code || `P${index + 1}`;
+}
+
+function navPointDisplayLabel(point, fallback = "") {
+  const customName = String(point?.customName || "").trim();
+  if (customName) return customName;
+  const code = String(point?.code || "").trim();
+  if (code) return code;
+  const title = String(point?.title || "").trim();
+  return title || fallback;
+}
+
+function navMarkerDisplayLabel(marker, index) {
+  return navPointDisplayLabel(marker?.navPointMeta, navPointIdentifier(marker, index));
+}
+
+function navPromptPointName(point, fallback = "") {
+  if (!point) return false;
+  const current = navPointDisplayLabel(point, fallback);
+  const value = window.prompt(`${navT("edit_point_name")}:`, current);
+  if (value === null) return false;
+  const customName = value.trim();
+  if (customName) point.customName = customName;
+  else delete point.customName;
+  return true;
+}
+
+function navPointMeta(marker, index) {
+  const meta = marker?.navPointMeta || {};
+  return {
+    code: navPointIdentifier(marker, index),
+    title: meta.title || "",
+    customName: meta.customName || "",
+    kind: meta.kind || "route-point",
+    source: meta.source || "",
+    lat: Number(marker.getLatLng().lat.toFixed(6)),
+    lng: Number(marker.getLatLng().lng.toFixed(6)),
+  };
+}
+
+function navRenderAerodromeCharts() {
+  const box = document.getElementById("nav-aerodrome-charts");
+  const list = document.getElementById("nav-aerodrome-charts-list");
+  if (!box || !list) return;
+
+  const aerodromes = Array.isArray(window.AERODROMES) ? window.AERODROMES : [];
+  const seen = new Set();
+  const used = [];
+  navMarkers.forEach((marker) => {
+    const code = marker?.navPointMeta?.code;
+    if (!code || seen.has(code)) return;
+    const aerodrome = aerodromes.find((item) => item.icao === code);
+    if (!aerodrome) return;
+    seen.add(code);
+    used.push(aerodrome);
+  });
+
+  box.hidden = used.length === 0;
+  if (!used.length) {
+    list.innerHTML = "";
+    return;
   }
-  return legs;
+
+  list.innerHTML = used.map((aerodrome) => {
+    const title = `${aerodrome.icao} - ${aerodrome.name || ""}`;
+    const chartButton = (url, label) => url
+      ? `<a class="btn nav-chart-button" href="${navEscapeHtml(url)}" target="_blank" rel="noopener noreferrer">${navT(label === "ADC" ? "nav_chart_adc" : "nav_chart_vac")}</a>`
+      : "";
+    return `
+      <div class="nav-aerodrome-chart-card">
+        <strong>${navEscapeHtml(title)}</strong>
+        <div class="nav-aerodrome-chart-actions">
+          ${chartButton(aerodrome.adc_pdf_url, "ADC")}
+          ${chartButton(aerodrome.vac_pdf_url, "VAC")}
+          ${aerodrome.aip_url ? `<a class="btn nav-chart-button" href="${navEscapeHtml(aerodrome.aip_url)}" target="_blank" rel="noopener noreferrer">${navT("nav_chart_aip")}</a>` : ""}
+        </div>
+        <small class="note">${navT("nav_chart_source")}</small>
+      </div>
+    `;
+  }).join("");
+}
+
+function navComputeLegs() {
+  // The simulator continues to use true geometry; planning uses MAG TRACK.
+  return navComputeLegsForPoints(navGetRoutePoints());
+}
+
+function navRenderDistanceTicks(legs) {
+  if (!navDistanceTickLayer) return;
+  navDistanceTickLayer.clearLayers();
+
+  legs.forEach((leg) => {
+    for (let distanceNm = 5; distanceNm < leg.nm - 0.2; distanceNm += 5) {
+      const point = navInterpolateLatLng(leg.from, leg.to, distanceNm / leg.nm);
+      const tickHalfLengthNm = 0.45;
+      const left = navOffsetLatLng(point, leg.trueTrack - 90, tickHalfLengthNm);
+      const right = navOffsetLatLng(point, leg.trueTrack + 90, tickHalfLengthNm);
+      const tick = L.polyline([left, right], {
+        color: "#166534",
+        weight: 2,
+        opacity: 0.9,
+        interactive: true,
+      }).addTo(navDistanceTickLayer);
+      tick.bindTooltip(`${navFmt(distanceNm, 0)} NM`, {
+        className: "nav-distance-tick-label",
+        direction: "right",
+        sticky: true,
+      });
+      tick.on("click", (event) => {
+        if (window.L?.DomEvent && event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      });
+    }
+  });
 }
 
 function navMidpointLatLng(a, b) {
   return L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
 }
 
+function navAlternatePointMeta(point, index = 0) {
+  const safe = point || {};
+  return {
+    code: safe.code || safe.icao || "",
+    title: safe.title || safe.name || "",
+    customName: safe.customName || "",
+    kind: safe.kind || (safe.role === "destination" ? "alternate" : "route-point"),
+    source: safe.source || "alternate-route",
+    lat: Number(Number(safe.lat).toFixed(6)),
+    lng: Number(Number(safe.lng).toFixed(6)),
+    role: safe.role || (index === 0 ? "origin" : "intermediate"),
+  };
+}
+
+function navIsRoundTripPlan() {
+  return Boolean(navRoundTripConfig || document.getElementById("nav-route-roundtrip")?.checked);
+}
+
+function navGetRoundTripDepartureCode() {
+  return navRoundTripConfig?.departureIcao
+    || document.getElementById("nav-route-dep-select")?.value
+    || navPointIdentifier(navMarkers[0], 0);
+}
+
+function navGetAlternateOriginIndex() {
+  if (!navMarkers.length) return -1;
+  if (!navIsRoundTripPlan()) return navMarkers.length - 1;
+  const departureCode = navGetRoundTripDepartureCode();
+  const matches = navMarkers
+    .map((marker, index) => ({ marker, index }))
+    .filter(({ marker, index }) => navPointIdentifier(marker, index) === departureCode)
+    .map(({ index }) => index);
+  return matches.length ? matches[matches.length - 1] : 0;
+}
+
+function navGetRoundTripTouchGoCode() {
+  if (!navIsRoundTripPlan()) return "--";
+  return navRoundTripConfig?.destinationIcao
+    || document.getElementById("nav-route-dest-select")?.value
+    || "--";
+}
+
+function navGetAlternateOriginMeta() {
+  const index = navGetAlternateOriginIndex();
+  if (index < 0) return null;
+  return { ...navPointMeta(navMarkers[index], index), role: "origin" };
+}
+
+function navGetAlternateIntermediates() {
+  if (!navAlternate || navAlternateRoutePoints.length < 2) return [];
+  return navAlternateRoutePoints.slice(1, -1).map((point) => ({ ...point, role: "intermediate" }));
+}
+
+function navUpdateAlternateRoutePoint(index, latlng) {
+  const point = navAlternateRoutePoints[index];
+  if (!point || !latlng) return;
+  point.lat = Number(latlng.lat);
+  point.lng = Number(latlng.lng);
+  if (index === navAlternateRoutePoints.length - 1 && navAlternate) {
+    navAlternate = { ...navAlternate, lat: point.lat, lng: point.lng };
+    if (!navAlternate.icao) navSyncAlternateSelects("");
+  }
+  if (navAlternateRouteLine) {
+    navAlternateRouteLine.setLatLngs(navAlternateRoutePoints.map((item) => [item.lat, item.lng]));
+  }
+  navRenderAlternateSummary();
+}
+
+function navCreateAlternateRouteMarker(point, index) {
+  if (!navAlternateRouteLayer) return null;
+  const lastIndex = navAlternateRoutePoints.length - 1;
+  const isOrigin = index === 0;
+  const isDestination = index === lastIndex;
+  const label = isOrigin
+    ? "ALT DEP"
+    : navPointDisplayLabel(point, isDestination ? "ALT" : `A${index}`);
+  const iconWidth = Math.max(isOrigin ? 58 : 42, Math.min(150, label.length * 7 + 16));
+  const className = isOrigin
+    ? "nav-alternate-route-marker nav-alternate-route-origin"
+    : isDestination
+      ? "nav-alternate-route-marker nav-alternate-route-destination"
+      : "nav-alternate-route-marker nav-alternate-route-intermediate";
+  const marker = L.marker([point.lat, point.lng], {
+    draggable: !isOrigin,
+    icon: L.divIcon({
+      className,
+      html: navEscapeHtml(label),
+      iconSize: [iconWidth, 25],
+      iconAnchor: [iconWidth / 2, 12],
+    }),
+  }).addTo(navAlternateRouteLayer);
+  const code = point.code || (isOrigin ? navT("alternate_final_landing") : navT("alternate_manual"));
+  const popupLabel = point.customName
+    ? `<strong>${navEscapeHtml(point.customName)}</strong><br>${navEscapeHtml(code)}`
+    : `<strong>${navEscapeHtml(code)}</strong>`;
+  marker.bindPopup(`${popupLabel}<br>${navEscapeHtml(point.title || "")}`);
+  if (!isOrigin) {
+    marker.on("click", (event) => {
+      if (window.L?.DomEvent && event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      if (!navPromptPointName(point, label)) return;
+      if (isDestination && navAlternate) {
+        navAlternate = { ...navAlternate };
+        if (point.customName) navAlternate.customName = point.customName;
+        else delete navAlternate.customName;
+      }
+      navRenderAlternateRoute();
+      navUpdateE6B();
+    });
+    marker.on("drag", () => navUpdateAlternateRoutePoint(index, marker.getLatLng()));
+    marker.on("dragend", () => navUpdateAlternateRoutePoint(index, marker.getLatLng()));
+  }
+  return marker;
+}
+
+function navRenderAlternateRoute() {
+  if (!navMap || !window.L) return;
+  navClearAlternatePhaseMarkers();
+  if (!navAlternate || !navGetDestinationPoint()) {
+    navAlternateRoutePoints = [];
+    navAlternateMarker = null;
+    if (navAlternateRouteLine) navAlternateRouteLine.setLatLngs([]);
+    if (navAlternateRouteLayer) navAlternateRouteLayer.clearLayers();
+    navAlternateRouteMarkers = [];
+    navRenderAlternateLegs();
+    navRenderAlternatePhaseMarkers();
+    navUpdateAlternateBreakMode();
+    return;
+  }
+
+  const origin = navGetAlternateOriginMeta();
+  const intermediates = navGetAlternateIntermediates();
+  const endpoint = navAlternatePointMeta({
+    ...navAlternate,
+    code: navAlternate.icao || navAlternate.code || "",
+    title: navAlternate.name || navAlternate.title || navT("alternate_manual"),
+    customName: navAlternate.customName || "",
+    role: "destination",
+    kind: "alternate",
+    source: navAlternate.icao ? "aerodromes" : "alternate-route",
+  }, intermediates.length + 1);
+  navAlternateRoutePoints = [origin, ...intermediates, endpoint];
+
+  if (navAlternateRouteLine) {
+    navAlternateRouteLine.setLatLngs(navAlternateRoutePoints.map((point) => [point.lat, point.lng]));
+  }
+  if (navAlternateRouteLayer) navAlternateRouteLayer.clearLayers();
+  navAlternateRouteMarkers = navAlternateRoutePoints
+    .map((point, index) => navCreateAlternateRouteMarker(point, index))
+    .filter(Boolean);
+  navAlternateMarker = navAlternateRouteMarkers[navAlternateRouteMarkers.length - 1] || null;
+  navRenderAlternateLegs();
+  navRenderAlternatePhaseMarkers();
+  navUpdateAlternateBreakMode();
+}
+
+async function navResolveAlternatePointIdentifier(index) {
+  const point = navAlternateRoutePoints[index];
+  if (!point || point.role === "origin" || point.code || point.pending) return;
+  const latlng = L.latLng(point.lat, point.lng);
+  const nearby = navFindNearestAerodrome(latlng);
+  if (nearby && nearby.distanceNm <= NAV_NEAR_AERODROME_NM) {
+    point.code = nearby.ad.icao;
+    point.title = nearby.ad.name || "";
+    point.kind = "aerodrome";
+    point.source = "aerodromes";
+    if (index === navAlternateRoutePoints.length - 1 && navAlternate && !navAlternate.icao) {
+      navAlternate = { ...navAlternate, icao: nearby.ad.icao, name: nearby.ad.name || "" };
+      navSyncAlternateSelects(nearby.ad.icao);
+    }
+    navRenderAlternateRoute();
+    navUpdateE6B();
+    return;
+  }
+
+  point.pending = true;
+  try {
+    const response = await fetch(`/api/navigation/five-letter-code?lat=${encodeURIComponent(point.lat)}&lng=${encodeURIComponent(point.lng)}`);
+    const payload = await response.json();
+    if (!response.ok || !payload.code) throw new Error("alternate-code-unavailable");
+    point.code = String(payload.code);
+    point.title = `${point.code} · ${Number(payload.distance_nm || 0).toFixed(1)} NM`;
+    point.kind = "route-point";
+    point.source = "five-letter-map";
+    if (index === navAlternateRoutePoints.length - 1 && navAlternate) {
+      navAlternate = { ...navAlternate, code: point.code, title: point.title };
+    }
+  } catch (_error) {
+    point.source = "fallback";
+  } finally {
+    point.pending = false;
+    navRenderAlternateRoute();
+    navUpdateE6B();
+  }
+}
+
 function navGetAlternateDistanceNm() {
-  const dest = navGetDestinationPoint();
-  if (!dest || !navAlternate) return NaN;
-  return navDistanceNm(dest, L.latLng(navAlternate.lat, navAlternate.lng));
+  if (!navAlternate || navAlternateRoutePoints.length < 2) return NaN;
+  return navAlternateRoutePoints.slice(1).reduce((sum, point, index) => {
+    return sum + navDistanceNm(navAlternateRoutePoints[index], point);
+  }, 0);
 }
 
 function navRenderAlternateSummary() {
   const detail = document.getElementById("nav-alternate-detail");
+  const panel = document.getElementById("nav-alternate-route-panel");
   const gph = parseFloat(document.getElementById("nav-e6b-gph")?.value || "0");
-  const speed = parseFloat(document.getElementById("nav-e6b-speed")?.value || "0");
   const nm = navGetAlternateDistanceNm();
-  const fuel = speed > 0 && gph > 0 && Number.isFinite(nm) ? (nm / speed) * gph : NaN;
+  const performance = navSummarizeLegPerformance(navComputeLegsForPoints(navAlternateRoutePoints), navAlternateLegWinds);
+  const fuel = performance.complete && gph > 0 ? (performance.timeMin / 60) * gph : NaN;
+  const origin = navGetAlternateOriginMeta();
+  const originCode = origin?.code || "--";
+  navSetText("nav-alternate-final-landing", originCode);
+  navSetText("nav-alternate-touch-go", navGetRoundTripTouchGoCode());
+  if (panel) panel.hidden = !origin;
 
   navSetText("nav-alternate-nm", Number.isFinite(nm) ? `${navFmt(nm, 1)} NM` : "--");
   navSetText("nav-alternate-fuel", Number.isFinite(fuel) ? `${navFmt(fuel, 1)} gal` : "--");
@@ -1138,34 +1699,37 @@ function navRenderAlternateSummary() {
     return;
   }
   if (!navGetDestinationPoint()) {
-    detail.textContent = navT("alternate_need_route");
+    detail.textContent = navT("alternate_route_no_destination");
     return;
   }
   const label = navAlternate.icao ? `${navAlternate.icao} - ${navAlternate.name || ""}` : navT("alternate_manual");
-  detail.textContent = `${label} · ${navAlternate.lat.toFixed(5)}, ${navAlternate.lng.toFixed(5)}`;
+  const points = Math.max(0, navAlternateRoutePoints.length - 2);
+  detail.textContent = Number.isFinite(nm)
+    ? navTf("alternate_route_summary", {
+        origin: originCode,
+        destination: label,
+        points: String(points),
+        distance: navFmt(nm, 1),
+      })
+    : navT("alternate_route_need_two");
 }
 
 function navSetAlternate(alternate) {
   if (!navMap || !window.L) return;
-  navAlternate = alternate;
-  navSyncAlternateSelects(alternate.icao || "");
-  if (navAlternateMarker) navAlternateMarker.remove();
-  navAlternateMarker = L.marker([alternate.lat, alternate.lng], {
-    draggable: true,
-    icon: L.divIcon({
-      className: "nav-alternate-marker",
-      html: "ALT",
-      iconSize: [38, 28],
-      iconAnchor: [19, 14],
-    }),
-  }).addTo(navMap);
-  navAlternateMarker.bindPopup(`<strong>${navEscapeHtml(alternate.icao || "ALT")}</strong><br>${navEscapeHtml(alternate.name || navT("alternate_manual"))}`);
-  navAlternateMarker.on("dragend", () => {
-    const ll = navAlternateMarker.getLatLng();
-    navAlternate = { ...navAlternate, lat: ll.lat, lng: ll.lng, icao: navAlternate.icao || "", name: navAlternate.name || navT("alternate_manual") };
-    if (navAlternate.icao === "") navSyncAlternateSelects("");
-    navUpdateE6B();
-  });
+  const intermediates = navGetAlternateIntermediates();
+  navAlternate = {
+    ...alternate,
+    icao: alternate.icao || "",
+    name: alternate.name || alternate.title || navT("alternate_manual"),
+    lat: Number(alternate.lat),
+    lng: Number(alternate.lng),
+  };
+  navSyncAlternateSelects(navAlternate.icao);
+  navAlternateRoutePoints = navGetAlternateOriginMeta()
+    ? [navGetAlternateOriginMeta(), ...intermediates]
+    : [];
+  navRenderAlternateRoute();
+  if (navAlternateRoutePoints.length) navResolveAlternatePointIdentifier(navAlternateRoutePoints.length - 1);
   navUpdateE6B();
 }
 
@@ -1257,11 +1821,69 @@ function navSetManualAlternate(latlng) {
 }
 
 function navClearAlternate() {
-  if (navAlternateMarker) navAlternateMarker.remove();
+  if (navAlternateRouteLayer) navAlternateRouteLayer.clearLayers();
+  if (navAlternateRouteLine) navAlternateRouteLine.setLatLngs([]);
+  navAlternateRouteMarkers = [];
+  navAlternateRoutePoints = [];
+  navAlternateLegWinds = {};
   navAlternateMarker = null;
   navAlternate = null;
+  navClearAlternatePhaseMarkers();
+  navRenderAlternatePhaseMarkers();
+  navRenderAlternateLegs();
+  navUpdateAlternateBreakMode();
   navSyncAlternateSelects("");
+  navRenderAlternateSummary();
   navUpdateE6B();
+}
+
+function navAddAlternateRoutePoint(latlng) {
+  if (!navGetDestinationPoint()) {
+    navSetRouteBuilderStatus(navT("alternate_route_no_destination"));
+    navRenderAlternateSummary();
+    return;
+  }
+  if (navAlternate) {
+    const insertIndex = Math.max(1, navAlternateRoutePoints.length - 1);
+    const point = navAlternatePointMeta({
+      lat: latlng.lat,
+      lng: latlng.lng,
+      role: "intermediate",
+      source: "alternate-route",
+    }, navAlternateRoutePoints.length);
+    const shiftedWinds = {};
+    Object.entries(navAlternateLegWinds).forEach(([key, value]) => {
+      const legIndex = Number(key);
+      if (Number.isFinite(legIndex)) shiftedWinds[legIndex >= insertIndex ? legIndex + 1 : legIndex] = value;
+    });
+    navAlternateLegWinds = shiftedWinds;
+    navAlternateRoutePoints.splice(insertIndex, 0, point);
+    navRenderAlternateRoute();
+    navResolveAlternatePointIdentifier(navAlternateRoutePoints.length - 2);
+    navUpdateE6B();
+    return;
+  }
+  navSetManualAlternate(latlng);
+}
+
+function navUndoAlternatePoint() {
+  if (!navAlternate) return;
+  if (navAlternateRoutePoints.length > 2) {
+    const removedLegIndex = navAlternateRoutePoints.length - 2;
+    navAlternateRoutePoints.splice(removedLegIndex, 1);
+    const shiftedWinds = {};
+    Object.entries(navAlternateLegWinds).forEach(([key, value]) => {
+      const legIndex = Number(key);
+      if (!Number.isFinite(legIndex) || legIndex === removedLegIndex) return;
+      shiftedWinds[legIndex > removedLegIndex ? legIndex - 1 : legIndex] = value;
+    });
+    navAlternateLegWinds = shiftedWinds;
+    navRenderAlternateRoute();
+    navUpdateE6B();
+    navSetPrintStatus(navT("alternate_route_undo"));
+    return;
+  }
+  if (!navAlternate.icao) navClearAlternate();
 }
 
 function navFormatMinutes(totalMinutes) {
@@ -1306,15 +1928,16 @@ function navCheckVfrAltitude(heading, rawAltitude) {
 
 function navUpdateE6B() {
   const nm = parseFloat(document.getElementById("nav-e6b-nm")?.value || "0");
-  const speed = parseFloat(document.getElementById("nav-e6b-speed")?.value || "0");
   const gph = parseFloat(document.getElementById("nav-e6b-gph")?.value || "0");
   const reserveMin = parseFloat(document.getElementById("nav-e6b-reserve")?.value || "0");
   const meters = parseFloat(document.getElementById("nav-e6b-meters")?.value || "0");
-  const timeMin = speed > 0 ? (nm / speed) * 60 : NaN;
+  const routePerformance = navSummarizeLegPerformance(navComputeLegs(), navLegWinds);
+  const timeMin = routePerformance.complete ? routePerformance.timeMin : NaN;
   const fuel = Number.isFinite(timeMin) ? (timeMin / 60) * gph : NaN;
   const reserveFuel = gph > 0 ? (reserveMin / 60) * gph : 0;
   const alternateNm = navGetAlternateDistanceNm();
-  const alternateFuel = speed > 0 && gph > 0 && Number.isFinite(alternateNm) ? (alternateNm / speed) * gph : NaN;
+  const alternatePerformance = navSummarizeLegPerformance(navComputeLegsForPoints(navAlternateRoutePoints), navAlternateLegWinds);
+  const alternateFuel = alternatePerformance.complete && gph > 0 ? (alternatePerformance.timeMin / 60) * gph : NaN;
   const feet = Number.isFinite(meters) ? meters * 3.28084 : NaN;
 
   navSetText("nav-e6b-time", Number.isFinite(timeMin) ? navFormatMinutes(timeMin) : "--");
@@ -1322,7 +1945,9 @@ function navUpdateE6B() {
   navSetText("nav-e6b-final-reserve", gph > 0 ? `${navFmt(reserveFuel, 1)} gal` : "--");
   navSetText(
     "nav-e6b-fuel-reserve",
-    Number.isFinite(fuel) ? `${navFmt(fuel + (Number.isFinite(alternateFuel) ? alternateFuel : 0) + reserveFuel, 1)} gal` : "--"
+    Number.isFinite(fuel)
+      ? `${navFmt(fuel + (Number.isFinite(alternateFuel) ? alternateFuel : 0) + reserveFuel, 1)} gal`
+      : "--"
   );
   navSetText("nav-e6b-feet", Number.isFinite(feet) ? `${navFmt(feet, 0)} ft` : "--");
   navRenderAlternateSummary();
@@ -1335,22 +1960,117 @@ function navSyncDistanceToE6B(totalNm) {
   navUpdateE6B();
 }
 
+function navFindNearestAerodrome(latlng) {
+  const aerodromes = Array.isArray(window.AERODROMES) ? window.AERODROMES : [];
+  let nearest = null;
+  aerodromes.forEach((ad) => {
+    const point = navAerodromeLatLng(ad);
+    if (!point) return;
+    const distance = navDistanceNm(latlng, point);
+    if (!nearest || distance < nearest.distanceNm) nearest = { ad, point, distanceNm: distance };
+  });
+  return nearest;
+}
+
+function navUpdateRouteMarkerPresentation(marker, index) {
+  if (!marker) return;
+  const meta = marker.navPointMeta || {};
+  const code = navPointIdentifier(marker, index);
+  const label = navPointDisplayLabel(meta, code);
+  const suffix = meta.kind === "aerodrome"
+    ? navT("route_point_aerodrome")
+    : meta.source === "five-letter-map"
+      ? navT("route_point_source")
+      : meta.pending
+        ? navT("route_point_pending")
+        : navT("route_point_fallback");
+  marker.bindTooltip(label, {
+    permanent: true,
+    direction: "top",
+    offset: [0, -8],
+    className: "nav-point-label",
+  });
+  const popupLabel = meta.customName && meta.customName !== code
+    ? `<strong>${navEscapeHtml(meta.customName)}</strong><br>${navEscapeHtml(code)}`
+    : `<strong>${navEscapeHtml(code)}</strong>`;
+  marker.bindPopup(`${popupLabel}<br>${navEscapeHtml(suffix)}`);
+}
+
+function navEditRoutePointName(marker, index, event) {
+  if (!marker) return;
+  if (window.L?.DomEvent && event?.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+  const meta = marker.navPointMeta || {};
+  if (!navPromptPointName(meta, navPointIdentifier(marker, index))) return;
+  navRenderRoute();
+}
+
+async function navResolvePointIdentifier(marker, preferred = null) {
+  if (!marker || !navMarkers.includes(marker)) return;
+  if (preferred?.code) {
+    marker.navPointMeta = {
+      code: preferred.code,
+      title: preferred.title || "",
+      customName: preferred.customName || marker.navPointMeta?.customName || "",
+      kind: preferred.kind || "route-point",
+      source: preferred.source || "local",
+      pending: false,
+    };
+    navRenderRoute();
+    return;
+  }
+
+  const latlng = marker.getLatLng();
+  const nearby = navFindNearestAerodrome(latlng);
+  if (nearby && nearby.distanceNm <= NAV_NEAR_AERODROME_NM) {
+    marker.navPointMeta = {
+      code: nearby.ad.icao,
+      title: nearby.ad.name || "",
+      customName: marker.navPointMeta?.customName || "",
+      kind: "aerodrome",
+      source: "aerodromes",
+      pending: false,
+    };
+    navRenderRoute();
+    return;
+  }
+
+  marker.navPointMeta = { pending: true, kind: "route-point", source: "five-letter-map" };
+  navRenderRoute();
+  try {
+    const response = await fetch(`/api/navigation/five-letter-code?lat=${encodeURIComponent(latlng.lat)}&lng=${encodeURIComponent(latlng.lng)}`);
+    const payload = await response.json();
+    if (!response.ok || !payload.code || !navMarkers.includes(marker)) throw new Error("five-letter-code-unavailable");
+    marker.navPointMeta = {
+      code: payload.code,
+      title: `${payload.code} · ${Number(payload.distance_nm || 0).toFixed(1)} NM`,
+      customName: marker.navPointMeta?.customName || "",
+      kind: "route-point",
+      source: "five-letter-map",
+      pending: false,
+    };
+  } catch (_error) {
+    if (!navMarkers.includes(marker)) return;
+    marker.navPointMeta = {
+      title: navT("route_point_fallback"),
+      customName: marker.navPointMeta?.customName || "",
+      kind: "route-point",
+      source: "fallback",
+      pending: false,
+    };
+  }
+  navRenderRoute();
+}
+
 function navRenderRoute() {
   if (!navMap || !navLine) return;
   const pts = navGetRoutePoints();
   navLine.setLatLngs(pts);
   if (navLegLabelLayer) navLegLabelLayer.clearLayers();
 
-  navMarkers.forEach((marker, idx) => {
-    marker.bindTooltip(String(idx + 1), {
-      permanent: true,
-      direction: "top",
-      offset: [0, -8],
-      className: "nav-point-label",
-    });
-  });
+  navMarkers.forEach((marker, idx) => navUpdateRouteMarkerPresentation(marker, idx));
 
   const legs = navComputeLegs();
+  navRenderDistanceTicks(legs);
   const showLegLabels = document.getElementById("nav-show-leg-labels")?.checked;
   if (showLegLabels && navLegLabelLayer) {
     legs.forEach((leg) => {
@@ -1371,19 +2091,29 @@ function navRenderRoute() {
   const body = document.getElementById("nav-legs-body");
   if (body) {
     body.innerHTML = legs.length
-      ? legs.map((leg) => `
-          <tr>
-            <td>${leg.index} -> ${leg.index + 1}</td>
-            <td>${navFmt(leg.nm, 1)}</td>
-            <td>${String(leg.heading).padStart(3, "0")} deg</td>
-            <td>${navRenderAltitudeCell(leg)}</td>
-          </tr>
-        `).join("")
-      : `<tr><td colspan="4" class="note">${navT("add_two_points")}</td></tr>`;
+      ? legs.map((leg) => {
+          const performance = navPerformanceForLeg(leg);
+          return `
+            <tr>
+              <td>${navEscapeHtml(navMarkerDisplayLabel(navMarkers[leg.index - 1], leg.index - 1))} → ${navEscapeHtml(navMarkerDisplayLabel(navMarkers[leg.index], leg.index))}</td>
+              <td>${navFmt(leg.nm, 1)}</td>
+              <td>${String(Math.round(leg.magTrack)).padStart(3, "0")} deg</td>
+              <td>${navRenderAltitudeCell(leg)}</td>
+              <td>${navRenderWindCell(leg)}</td>
+              <td>${Number.isFinite(performance.magHead) ? `${String(Math.round(performance.magHead)).padStart(3, "0")} deg` : "-"}</td>
+              <td>${Number.isFinite(performance.groundSpeedKt) ? `${navFmt(performance.groundSpeedKt, 0)} kt` : "-"}</td>
+              <td>${Number.isFinite(performance.timeMin) ? navFormatMinutes(performance.timeMin) : "-"}</td>
+            </tr>
+          `;
+        }).join("")
+      : `<tr><td colspan="8" class="note">${navT("add_two_points")}</td></tr>`;
   }
 
   navSetText("nav-total-nm", `${navFmt(totalNm, 1)} NM`);
   navSetText("nav-leg-count", String(legs.length));
+  navRenderAerodromeCharts();
+  navRenderPhaseMarkers(totalNm);
+  navRenderAlternateRoute();
   navSyncDistanceToE6B(totalNm);
   navRenderAlternateSummary();
   navUpdateSimulationAvailability();
@@ -1391,7 +2121,7 @@ function navRenderRoute() {
 
 function navRenderAltitudeCell(leg) {
   const value = navLegAltitudes[leg.index] || "";
-  const check = navCheckVfrAltitude(leg.heading, value);
+  const check = navCheckVfrAltitude(leg.magTrack, value);
   return `
     <label class="nav-altitude-cell">
       <input
@@ -1409,15 +2139,99 @@ function navRenderAltitudeCell(leg) {
   `;
 }
 
+function navRenderWindCell(leg) {
+  const value = navLegWinds[leg.index] || "";
+  const parsed = navParseWind(value);
+  const statusClass = value && !parsed ? "bad" : parsed ? "ok" : "empty";
+  const statusText = value && !parsed
+    ? navT("wind_format_invalid")
+    : parsed
+      ? navT("wind_format_ok")
+      : navT("wind_format_hint");
+  return `
+    <label class="nav-wind-cell">
+      <input
+        class="select nav-wind-input"
+        type="text"
+        maxlength="9"
+        placeholder="130/09kts"
+        autocomplete="off"
+        value="${navEscapeHtml(value)}"
+        data-nav-leg-wind="${leg.index}"
+        aria-label="${navT("wind_speed_header")} ${leg.index}"
+        title="${navT("wind_at_altitude_help")}"
+      >
+      <span class="nav-wind-status ${statusClass}">${statusText}</span>
+    </label>
+  `;
+}
+
+function navRenderAlternateWindCell(leg) {
+  const value = navAlternateLegWinds[leg.index] || "";
+  const parsed = navParseWind(value);
+  const statusClass = value && !parsed ? "bad" : parsed ? "ok" : "empty";
+  const statusText = value && !parsed
+    ? navT("wind_format_invalid")
+    : parsed
+      ? navT("wind_format_ok")
+      : navT("wind_format_hint");
+  return `
+    <label class="nav-wind-cell">
+      <input
+        class="select nav-wind-input"
+        type="text"
+        maxlength="9"
+        placeholder="130/09kts"
+        autocomplete="off"
+        value="${navEscapeHtml(value)}"
+        data-nav-alt-leg-wind="${leg.index}"
+        aria-label="${navT("wind_speed_header")} alternate ${leg.index}"
+        title="${navT("wind_at_altitude_help")}"
+      >
+      <span class="nav-wind-status ${statusClass}">${statusText}</span>
+    </label>
+  `;
+}
+
+function navRenderAlternateLegs() {
+  const box = document.getElementById("nav-alternate-legs-box");
+  const body = document.getElementById("nav-alternate-legs-body");
+  if (!box || !body) return;
+  const legs = navAlternateRoutePoints.length >= 2
+    ? navComputeLegsForPoints(navAlternateRoutePoints)
+    : [];
+  box.hidden = !navAlternate || !legs.length;
+  if (!legs.length) {
+    body.innerHTML = "";
+    return;
+  }
+  body.innerHTML = legs.map((leg) => {
+    const performance = navCalculateLegPerformance(leg, navParseWind(navAlternateLegWinds[leg.index]));
+    const from = navPointDisplayLabel(leg.from, `A${leg.index - 1}`);
+    const to = navPointDisplayLabel(leg.to, `A${leg.index}`);
+    return `
+      <tr>
+        <td>${navEscapeHtml(from)} → ${navEscapeHtml(to)}</td>
+        <td>${navFmt(leg.nm, 1)}</td>
+        <td>${String(Math.round(leg.magTrack)).padStart(3, "0")} deg</td>
+        <td>${navRenderAlternateWindCell(leg)}</td>
+        <td>${Number.isFinite(performance.magHead) ? `${String(Math.round(performance.magHead)).padStart(3, "0")} deg` : "-"}</td>
+        <td>${Number.isFinite(performance.groundSpeedKt) ? `${navFmt(performance.groundSpeedKt, 0)} kt` : "-"}</td>
+        <td>${Number.isFinite(performance.timeMin) ? navFormatMinutes(performance.timeMin) : "-"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
 function navHandleAltitudeInput(event) {
   const input = event.target.closest("[data-nav-leg-altitude]");
   if (!input) return;
   const legIndex = input.getAttribute("data-nav-leg-altitude");
   navLegAltitudes[legIndex] = input.value;
   const row = input.closest("tr");
-  const headingText = row?.children?.[2]?.textContent || "";
-  const heading = Number((headingText.match(/\d+/) || [0])[0]);
-  const check = navCheckVfrAltitude(heading, input.value);
+  const legIndexNumber = Number(legIndex);
+  const leg = navComputeLegs().find((item) => item.index === legIndexNumber);
+  const check = navCheckVfrAltitude(leg?.magTrack || 0, input.value);
   const status = row?.querySelector(".nav-altitude-status");
   if (status) {
     status.className = `nav-altitude-status ${check.cls}`;
@@ -1425,19 +2239,91 @@ function navHandleAltitudeInput(event) {
   }
 }
 
-function navCreateRouteMarker(latlng) {
+function navHandleWindInput(event) {
+  const input = event.target.closest("[data-nav-leg-wind]");
+  if (!input) return;
+  const legIndex = input.getAttribute("data-nav-leg-wind");
+  navLegWinds[legIndex] = input.value;
+  const parsed = navParseWind(input.value);
+  input.setCustomValidity(input.value.trim() && !parsed ? navT("wind_format_invalid") : "");
+  const status = input.closest(".nav-wind-cell")?.querySelector(".nav-wind-status");
+  if (status) {
+    status.className = `nav-wind-status ${input.value.trim() && !parsed ? "bad" : parsed ? "ok" : "empty"}`;
+    status.textContent = input.value.trim() && !parsed
+      ? navT("wind_format_invalid")
+      : parsed
+        ? navT("wind_format_ok")
+        : navT("wind_format_hint");
+  }
+}
+
+function navHandleWindChange(event) {
+  const input = event.target.closest("[data-nav-leg-wind]");
+  if (!input) return;
+  const legIndex = input.getAttribute("data-nav-leg-wind");
+  const parsed = navParseWind(input.value);
+  if (parsed) {
+    input.value = parsed.text;
+    navLegWinds[legIndex] = parsed.text;
+  } else if (!input.value.trim()) {
+    delete navLegWinds[legIndex];
+  }
+  navHandleWindInput(event);
+  navRenderRoute();
+}
+
+function navHandleAlternateWindInput(event) {
+  const input = event.target.closest("[data-nav-alt-leg-wind]");
+  if (!input) return;
+  const legIndex = input.getAttribute("data-nav-alt-leg-wind");
+  navAlternateLegWinds[legIndex] = input.value;
+  const parsed = navParseWind(input.value);
+  input.setCustomValidity(input.value.trim() && !parsed ? navT("wind_format_invalid") : "");
+  const status = input.closest(".nav-wind-cell")?.querySelector(".nav-wind-status");
+  if (status) {
+    status.className = `nav-wind-status ${input.value.trim() && !parsed ? "bad" : parsed ? "ok" : "empty"}`;
+    status.textContent = input.value.trim() && !parsed
+      ? navT("wind_format_invalid")
+      : parsed
+        ? navT("wind_format_ok")
+        : navT("wind_format_hint");
+  }
+}
+
+function navHandleAlternateWindChange(event) {
+  const input = event.target.closest("[data-nav-alt-leg-wind]");
+  if (!input) return;
+  const legIndex = input.getAttribute("data-nav-alt-leg-wind");
+  const parsed = navParseWind(input.value);
+  if (parsed) {
+    input.value = parsed.text;
+    navAlternateLegWinds[legIndex] = parsed.text;
+  } else if (!input.value.trim()) {
+    delete navAlternateLegWinds[legIndex];
+  }
+  navHandleAlternateWindInput(event);
+  navRenderAlternateLegs();
+}
+
+function navCreateRouteMarker(latlng, pointMeta = null) {
   if (!navMap || !window.L) return;
   const marker = L.marker(latlng, { draggable: true }).addTo(navMap);
+  marker.navPointMeta = pointMeta ? { ...pointMeta, pending: false } : {};
+  marker.on("click", (event) => navEditRoutePointName(marker, navMarkers.indexOf(marker), event));
   marker.on("drag", navRenderRoute);
-  marker.on("dragend", navRenderRoute);
+  marker.on("dragend", () => {
+    navResolvePointIdentifier(marker);
+    navRenderRoute();
+  });
   return marker;
 }
 
-function navAddPoint(latlng) {
-  const marker = navCreateRouteMarker(latlng);
+function navAddPoint(latlng, pointMeta = null) {
+  const marker = navCreateRouteMarker(latlng, pointMeta);
   if (!marker) return;
   navMarkers.push(marker);
   navRenderRoute();
+  if (!pointMeta?.code) navResolvePointIdentifier(marker);
 }
 
 function navSetRouteBuilderStatus(message) {
@@ -1450,6 +2336,7 @@ function navBuildAerodromeRoute() {
   const depSelect = document.getElementById("nav-route-dep-select");
   const destSelect = document.getElementById("nav-route-dest-select");
   const roundTrip = Boolean(document.getElementById("nav-route-roundtrip")?.checked);
+  const alternateIcao = document.getElementById("nav-route-alt-select")?.value || "";
   const dep = navGetAerodrome(depSelect?.value || "");
   const dest = navGetAerodrome(destSelect?.value || "");
   const depLatLng = navAerodromeLatLng(dep);
@@ -1465,7 +2352,12 @@ function navBuildAerodromeRoute() {
   }
 
   navClearRoute();
-  [depLatLng, destLatLng].concat(roundTrip ? [depLatLng] : []).forEach((latlng) => navAddPoint(latlng));
+  navAddPoint(depLatLng, { code: dep.icao, title: dep.name, kind: "aerodrome", source: "aerodromes" });
+  navAddPoint(destLatLng, { code: dest.icao, title: dest.name, kind: "aerodrome", source: "aerodromes" });
+  if (roundTrip) navAddPoint(depLatLng, { code: dep.icao, title: dep.name, kind: "aerodrome", source: "aerodromes" });
+  navRoundTripConfig = roundTrip
+    ? { departureIcao: dep.icao, destinationIcao: dest.icao }
+    : null;
   navSetMode("route");
   navFitRoute();
   navSetRouteBuilderStatus(
@@ -1474,16 +2366,24 @@ function navBuildAerodromeRoute() {
       dest: dest.icao,
     })
   );
+  if (alternateIcao) navSelectAlternateByIcao(alternateIcao);
 }
 
 function navShiftLegAltitudesAfterInsert(splitLegIndex) {
   const shifted = {};
+  const shiftedWinds = {};
   Object.entries(navLegAltitudes).forEach(([key, value]) => {
     const legIndex = Number(key);
     if (!Number.isFinite(legIndex)) return;
     shifted[legIndex > splitLegIndex ? legIndex + 1 : legIndex] = value;
   });
+  Object.entries(navLegWinds).forEach(([key, value]) => {
+    const legIndex = Number(key);
+    if (!Number.isFinite(legIndex)) return;
+    shiftedWinds[legIndex > splitLegIndex ? legIndex + 1 : legIndex] = value;
+  });
   navLegAltitudes = shifted;
+  navLegWinds = shiftedWinds;
 }
 
 function navDistancePointToSegmentPx(p, a, b) {
@@ -1499,13 +2399,20 @@ function navDistancePointToSegmentPx(p, a, b) {
 }
 
 function navFindNearestSegmentIndex(latlng) {
-  if (!navMap || navMarkers.length < 2) return -1;
+  return navFindNearestSegmentIndexForPoints(
+    navMarkers.map((marker) => marker.getLatLng()),
+    latlng,
+  );
+}
+
+function navFindNearestSegmentIndexForPoints(points, latlng) {
+  if (!navMap || !Array.isArray(points) || points.length < 2 || !latlng) return -1;
   const clickPoint = navMap.latLngToLayerPoint(latlng);
   let bestIndex = -1;
   let bestDistance = Infinity;
-  for (let i = 0; i < navMarkers.length - 1; i += 1) {
-    const a = navMap.latLngToLayerPoint(navMarkers[i].getLatLng());
-    const b = navMap.latLngToLayerPoint(navMarkers[i + 1].getLatLng());
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = navMap.latLngToLayerPoint(points[i]);
+    const b = navMap.latLngToLayerPoint(points[i + 1]);
     const distance = navDistancePointToSegmentPx(clickPoint, a, b);
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -1527,7 +2434,297 @@ function navAddBreakingPoint(latlng) {
   navMarkers.splice(segmentIndex + 1, 0, marker);
   navShiftLegAltitudesAfterInsert(segmentIndex + 1);
   navRenderRoute();
+  navResolvePointIdentifier(marker);
   navSetPrintStatus(navT("break_inserted"));
+}
+
+function navShiftAlternateLegWindsAfterInsert(splitLegIndex) {
+  const shifted = {};
+  Object.entries(navAlternateLegWinds).forEach(([key, value]) => {
+    const legIndex = Number(key);
+    if (!Number.isFinite(legIndex)) return;
+    shifted[legIndex >= splitLegIndex ? legIndex + 1 : legIndex] = value;
+  });
+  navAlternateLegWinds = shifted;
+}
+
+function navAddAlternateBreakingPoint(latlng) {
+  if (!navMap || !navAlternate || navAlternateRoutePoints.length < 2) {
+    navSetPrintStatus(navT("alternate_route_need_two"));
+    return;
+  }
+  const segmentIndex = navFindNearestSegmentIndexForPoints(navAlternateRoutePoints, latlng);
+  if (segmentIndex < 0) return;
+  const insertIndex = segmentIndex + 1;
+  const point = navAlternatePointMeta({
+    lat: latlng.lat,
+    lng: latlng.lng,
+    role: "intermediate",
+    source: "alternate-route",
+  }, insertIndex);
+  navShiftAlternateLegWindsAfterInsert(insertIndex);
+  navAlternateRoutePoints.splice(insertIndex, 0, point);
+  navRenderAlternateRoute();
+  navResolveAlternatePointIdentifier(insertIndex);
+  navUpdateE6B();
+  navSetPrintStatus(navT("alternate_break_inserted"));
+}
+
+function navClearPhaseMarkers() {
+  if (navTocMarker) navTocMarker.remove();
+  if (navTodMarker) navTodMarker.remove();
+  navTocMarker = null;
+  navTodMarker = null;
+}
+
+function navPopulateTocReferenceSelect() {
+  const select = document.getElementById("nav-toc-reference");
+  if (!select) return;
+  const previous = select.value || "0";
+  select.innerHTML = "";
+  navMarkers.forEach((marker, index) => {
+    if (index >= navMarkers.length - 1) return;
+    const option = document.createElement("option");
+    const code = navPointIdentifier(marker, index);
+    option.value = String(index);
+    option.textContent = index === 0
+      ? `${code} · ${navT("toc_reference_departure")}`
+      : `${code} · P${index + 1}`;
+    select.appendChild(option);
+  });
+  if (Array.from(select.options).some((option) => option.value === previous)) {
+    select.value = previous;
+  } else {
+    select.value = "0";
+  }
+}
+
+function navGetTocReferenceData() {
+  const selectedIndex = Number.parseInt(document.getElementById("nav-toc-reference")?.value || "0", 10);
+  const maxIndex = Math.max(0, navMarkers.length - 2);
+  const referenceIndex = Number.isFinite(selectedIndex)
+    ? Math.max(0, Math.min(selectedIndex, maxIndex))
+    : 0;
+  const referenceCode = navMarkerDisplayLabel(navMarkers[referenceIndex], referenceIndex) || navT("toc_reference_departure");
+  const referenceDistanceNm = navComputeLegs()
+    .filter((leg) => leg.index <= referenceIndex)
+    .reduce((sum, leg) => sum + leg.nm, 0);
+  return { referenceIndex, referenceCode, referenceDistanceNm };
+}
+
+function navCalculatePhaseData(points, totalNm, options = {}) {
+  const phaseLegs = navComputeLegsForPoints(points || []);
+  const maxIndex = Math.max(0, (points || []).length - 2);
+  const referenceIndex = Number.isFinite(options.referenceIndex)
+    ? Math.max(0, Math.min(options.referenceIndex, maxIndex))
+    : 0;
+  const referenceCode = options.referenceCode || navPointDisplayLabel(points?.[referenceIndex], navT("toc_reference_departure"));
+  const referenceDistanceNm = phaseLegs
+    .filter((leg) => leg.index <= referenceIndex)
+    .reduce((sum, leg) => sum + leg.nm, 0);
+  const climbStartAltitudeFt = Number(options.climbStartAltitudeFt);
+  const cruiseAltitudeFt = Number(options.cruiseAltitudeFt);
+  const climbSpeedKt = Number(options.climbSpeedKt);
+  const climbRateFpm = Number(options.climbRateFpm);
+  const climbAltitudeFt = cruiseAltitudeFt - climbStartAltitudeFt;
+  const climbTimeMin = Number.isFinite(climbAltitudeFt) && climbRateFpm > 0
+    ? (Math.max(0, climbAltitudeFt) / climbRateFpm)
+    : NaN;
+  const tocDistanceNm = Number.isFinite(climbTimeMin) && climbSpeedKt > 0
+    ? (climbTimeMin * climbSpeedKt) / 60
+    : NaN;
+  const tocFromDepartureNm = Number.isFinite(tocDistanceNm)
+    ? referenceDistanceNm + tocDistanceNm
+    : NaN;
+  const destinationAltitudeFt = Number(options.destinationAltitudeFt);
+  const descentAltitudeFt = cruiseAltitudeFt - destinationAltitudeFt;
+  const todBeforeDestinationNm = cruiseAltitudeFt > destinationAltitudeFt && Number.isFinite(descentAltitudeFt)
+    ? (descentAltitudeFt / 1000) * 3 + 2
+    : NaN;
+  return {
+    tocNm: tocDistanceNm,
+    tocDistanceNm,
+    tocFromDepartureNm,
+    tocReferenceIndex: referenceIndex,
+    tocReferenceCode: referenceCode,
+    tocReferenceDistanceNm: referenceDistanceNm,
+    climbStartAltitudeFt,
+    climbAltitudeFt,
+    climbSpeedKt,
+    climbRateFpm,
+    climbTimeMin,
+    cruiseAltitudeFt,
+    destinationAltitudeFt,
+    descentAltitudeFt,
+    todBeforeDestinationNm,
+    todFromDepartureNm: Number.isFinite(todBeforeDestinationNm) ? totalNm - todBeforeDestinationNm : NaN,
+    totalNm,
+  };
+}
+
+function navGetPhaseData(totalNm = navComputeLegs().reduce((sum, leg) => sum + leg.nm, 0)) {
+  const tocReference = navGetTocReferenceData();
+  return navCalculatePhaseData(navGetRoutePoints(), totalNm, {
+    referenceIndex: tocReference.referenceIndex,
+    referenceCode: tocReference.referenceCode,
+    climbStartAltitudeFt: document.getElementById("nav-toc-start-altitude")?.value,
+    cruiseAltitudeFt: document.getElementById("nav-cruise-altitude")?.value,
+    climbSpeedKt: document.getElementById("nav-toc-climb-speed")?.value,
+    climbRateFpm: document.getElementById("nav-toc-climb-rate")?.value,
+    destinationAltitudeFt: document.getElementById("nav-destination-altitude")?.value,
+  });
+}
+
+function navGetAlternatePhaseData(totalNm = navComputeLegsForPoints(navAlternateRoutePoints).reduce((sum, leg) => sum + leg.nm, 0)) {
+  return navCalculatePhaseData(navAlternateRoutePoints, totalNm, {
+    referenceIndex: 0,
+    referenceCode: navPointDisplayLabel(navAlternateRoutePoints[0], navT("alternate_final_landing")),
+    climbStartAltitudeFt: document.getElementById("nav-alt-toc-start-altitude")?.value,
+    cruiseAltitudeFt: document.getElementById("nav-alt-cruise-altitude")?.value,
+    climbSpeedKt: document.getElementById("nav-alt-toc-climb-speed")?.value,
+    climbRateFpm: document.getElementById("nav-alt-toc-climb-rate")?.value,
+    destinationAltitudeFt: document.getElementById("nav-alt-destination-altitude")?.value,
+  });
+}
+
+function navPointAlongRoute(distanceNm) {
+  return navPointAlongPoints(navGetRoutePoints(), distanceNm);
+}
+
+function navPointAlongPoints(points, distanceNm) {
+  const legs = navComputeLegsForPoints(points || []);
+  if (!legs.length) return null;
+  const bounded = Math.max(0, Math.min(distanceNm, legs.reduce((sum, leg) => sum + leg.nm, 0)));
+  let travelled = 0;
+  for (const leg of legs) {
+    if (bounded <= travelled + leg.nm || leg === legs[legs.length - 1]) {
+      const fraction = leg.nm > 0 ? Math.max(0, Math.min(1, (bounded - travelled) / leg.nm)) : 0;
+      return L.latLng(
+        leg.from.lat + (leg.to.lat - leg.from.lat) * fraction,
+        leg.from.lng + (leg.to.lng - leg.from.lng) * fraction,
+      );
+    }
+    travelled += leg.nm;
+  }
+  return null;
+}
+
+function navCreatePhaseMarker(latlng, label, className) {
+  return L.marker(latlng, {
+    interactive: false,
+    icon: L.divIcon({
+      className: `nav-phase-marker ${className}`,
+      html: navEscapeHtml(label),
+      iconSize: [42, 24],
+      iconAnchor: [21, 12],
+    }),
+  }).addTo(navMap);
+}
+
+function navClearAlternatePhaseMarkers() {
+  if (navAlternateTocMarker) navAlternateTocMarker.remove();
+  if (navAlternateTodMarker) navAlternateTodMarker.remove();
+  navAlternateTocMarker = null;
+  navAlternateTodMarker = null;
+}
+
+function navPhaseInputsValid(data) {
+  return Number.isFinite(data.cruiseAltitudeFt)
+    && Number.isFinite(data.destinationAltitudeFt)
+    && Number.isFinite(data.climbStartAltitudeFt)
+    && Number.isFinite(data.climbRateFpm)
+    && data.climbRateFpm > 0
+    && Number.isFinite(data.climbSpeedKt)
+    && data.climbSpeedKt > 0;
+}
+
+function navRenderAlternatePhaseMarkers() {
+  navClearAlternatePhaseMarkers();
+  const box = document.getElementById("nav-alternate-phase-box");
+  const status = document.getElementById("nav-alt-toc-tod-status");
+  const tocDistanceInput = document.getElementById("nav-alt-toc-nm");
+  const legs = navComputeLegsForPoints(navAlternateRoutePoints);
+  const totalNm = legs.reduce((sum, leg) => sum + leg.nm, 0);
+  const data = navGetAlternatePhaseData(totalNm);
+  if (box) box.hidden = !navAlternate || legs.length === 0;
+  if (tocDistanceInput) tocDistanceInput.value = Number.isFinite(data.tocDistanceNm) ? data.tocDistanceNm.toFixed(1) : "";
+  if (!navAlternate || legs.length === 0) {
+    if (status) status.textContent = navT("alternate_toc_tod_pending");
+    return;
+  }
+  if (!navPhaseInputsValid(data)) {
+    if (status) status.textContent = navT("toc_tod_pending");
+    return;
+  }
+  const tocInRoute = Number.isFinite(data.tocFromDepartureNm) && data.tocFromDepartureNm >= 0 && data.tocFromDepartureNm <= totalNm;
+  const todInRoute = Number.isFinite(data.todFromDepartureNm) && data.todFromDepartureNm >= 0 && data.todFromDepartureNm <= totalNm;
+  if (tocInRoute) navAlternateTocMarker = navCreatePhaseMarker(navPointAlongPoints(navAlternateRoutePoints, data.tocFromDepartureNm), "TOC", "nav-phase-toc");
+  if (todInRoute) navAlternateTodMarker = navCreatePhaseMarker(navPointAlongPoints(navAlternateRoutePoints, data.todFromDepartureNm), "TOD", "nav-phase-tod");
+  if (status) {
+    const message = navTf("toc_tod_ready", {
+      toc: navFmt(data.tocDistanceNm, 1),
+      reference: data.tocReferenceCode,
+      climb: navFmt(data.climbSpeedKt, 0),
+      rate: navFmt(data.climbRateFpm, 0),
+      time: navFormatMinutes(data.climbTimeMin),
+      tod: Number.isFinite(data.todBeforeDestinationNm) ? navFmt(data.todBeforeDestinationNm, 1) : "--",
+    });
+    const notices = [];
+    if (data.climbAltitudeFt <= 0) notices.push(navT("toc_no_climb"));
+    if (!Number.isFinite(data.todBeforeDestinationNm)) notices.push(navT("tod_invalid"));
+    else if (!todInRoute || !tocInRoute) notices.push(navT("toc_tod_outside"));
+    status.textContent = [message, ...notices].join(" ");
+  }
+}
+
+function navRenderPhaseMarkers(totalNm = navComputeLegs().reduce((sum, leg) => sum + leg.nm, 0)) {
+  navClearPhaseMarkers();
+  navPopulateTocReferenceSelect();
+  const data = navGetPhaseData(totalNm);
+  const status = document.getElementById("nav-toc-tod-status");
+  const tocDistanceInput = document.getElementById("nav-toc-nm");
+  if (tocDistanceInput) {
+    tocDistanceInput.value = Number.isFinite(data.tocDistanceNm) ? data.tocDistanceNm.toFixed(1) : "";
+  }
+  if (!navMap || navMarkers.length < 2) {
+    if (status) status.textContent = navT("toc_tod_pending");
+    return;
+  }
+  if (!Number.isFinite(data.cruiseAltitudeFt) || !Number.isFinite(data.destinationAltitudeFt)) {
+    if (status) status.textContent = navT("toc_tod_pending");
+    return;
+  }
+  if (!Number.isFinite(data.climbStartAltitudeFt)
+    || !Number.isFinite(data.climbRateFpm)
+    || data.climbRateFpm <= 0
+    || !Number.isFinite(data.climbSpeedKt)
+    || data.climbSpeedKt <= 0) {
+    if (status) status.textContent = navT("toc_tod_invalid");
+    return;
+  }
+
+  const tocInRoute = Number.isFinite(data.tocFromDepartureNm)
+    && data.tocFromDepartureNm >= data.tocReferenceDistanceNm
+    && data.tocFromDepartureNm <= totalNm;
+  const todInRoute = Number.isFinite(data.todFromDepartureNm) && data.todFromDepartureNm >= 0 && data.todFromDepartureNm <= totalNm;
+  if (tocInRoute) navTocMarker = navCreatePhaseMarker(navPointAlongRoute(data.tocFromDepartureNm), "TOC", "nav-phase-toc");
+  if (todInRoute) navTodMarker = navCreatePhaseMarker(navPointAlongRoute(data.todFromDepartureNm), "TOD", "nav-phase-tod");
+  if (status) {
+    const message = navTf("toc_tod_ready", {
+      toc: Number.isFinite(data.tocDistanceNm) ? navFmt(data.tocDistanceNm, 1) : "--",
+      reference: data.tocReferenceCode,
+      climb: Number.isFinite(data.climbSpeedKt) ? navFmt(data.climbSpeedKt, 0) : "--",
+      rate: Number.isFinite(data.climbRateFpm) ? navFmt(data.climbRateFpm, 0) : "--",
+      time: Number.isFinite(data.climbTimeMin) ? navFormatMinutes(data.climbTimeMin) : "--",
+      tod: Number.isFinite(data.todBeforeDestinationNm) ? navFmt(data.todBeforeDestinationNm, 1) : "--",
+    });
+    const notices = [];
+    if (data.climbAltitudeFt <= 0) notices.push(navT("toc_no_climb"));
+    if (!Number.isFinite(data.todBeforeDestinationNm)) notices.push(navT("tod_invalid"));
+    else if (!todInRoute) notices.push(navT("toc_tod_outside"));
+    if (!tocInRoute) notices.push(navT("toc_tod_outside"));
+    status.textContent = [message, ...notices].join(" ");
+  }
 }
 
 function navRenderReferences() {
@@ -1814,9 +3011,13 @@ function navHandleReferenceAction(event) {
 
 function navClearRoute() {
   if (!navMap) return;
+  navClearAlternate();
   navMarkers.forEach((marker) => marker.remove());
   navMarkers = [];
   navLegAltitudes = {};
+  navLegWinds = {};
+  navRoundTripConfig = null;
+  navClearPhaseMarkers();
   navRenderRoute();
 }
 
@@ -1827,10 +3028,17 @@ function navClearReferences() {
 }
 
 function navUndoPoint() {
+  if (navMode === "alternate") {
+    navUndoAlternatePoint();
+    return;
+  }
   const marker = navMarkers.pop();
   if (marker) marker.remove();
   Object.keys(navLegAltitudes).forEach((key) => {
     if (Number(key) >= navMarkers.length) delete navLegAltitudes[key];
+  });
+  Object.keys(navLegWinds).forEach((key) => {
+    if (Number(key) >= navMarkers.length) delete navLegWinds[key];
   });
   navRenderRoute();
 }
@@ -1838,18 +3046,31 @@ function navUndoPoint() {
 function navFitRoute() {
   if (!navMap || !window.L) return;
   const layers = navMarkers.concat(navReferenceMarkers.map((item) => item.marker));
-  if (navAlternateMarker) layers.push(navAlternateMarker);
+  layers.push(...navAlternateRouteMarkers);
+  if (navTocMarker) layers.push(navTocMarker);
+  if (navTodMarker) layers.push(navTodMarker);
   if (!layers.length) return;
   const group = L.featureGroup(layers);
   navMap.fitBounds(group.getBounds().pad(0.25));
 }
 
 function navSetMode(mode) {
-  navMode = ["route", "break", "alternate", "reference"].includes(mode) ? mode : "route";
+  const alternateBreakButton = document.getElementById("nav-mode-alternate-break");
+  if (mode === "alternate-break" && alternateBreakButton?.disabled) mode = "route";
+  navMode = ["route", "break", "alternate-break", "alternate", "reference"].includes(mode) ? mode : "route";
   document.getElementById("nav-mode-route")?.classList.toggle("active", navMode === "route");
   document.getElementById("nav-mode-break")?.classList.toggle("active", navMode === "break");
+  alternateBreakButton?.classList.toggle("active", navMode === "alternate-break");
   document.getElementById("nav-mode-alternate")?.classList.toggle("active", navMode === "alternate");
   document.getElementById("nav-mode-reference")?.classList.toggle("active", navMode === "reference");
+}
+
+function navUpdateAlternateBreakMode() {
+  const button = document.getElementById("nav-mode-alternate-break");
+  if (!button) return;
+  const available = Boolean(navAlternate && navAlternateRoutePoints.length >= 2);
+  button.disabled = !available;
+  if (!available && navMode === "alternate-break") navSetMode("route");
 }
 
 function navGetRouteSignature(points = navGetRoutePoints()) {
@@ -2241,7 +3462,7 @@ function navApplyLanguage(lang) {
 }
 
 let navPrintCleanupTimer = null;
-let navLastPdfUrl = null;
+let navLastPdfUrls = [];
 
 function navSetPrintStatus(message) {
   const status = document.getElementById("nav-print-status");
@@ -2253,31 +3474,460 @@ function navSetPrintStatusHtml(html) {
   if (status) status.innerHTML = html;
 }
 
-function navCollectPdfPayload() {
-  const legs = navComputeLegs().map((leg) => {
-    const altitude = navLegAltitudes[leg.index] || "";
-    const check = navCheckVfrAltitude(leg.heading, altitude);
-    return {
-      label: `${leg.index} -> ${leg.index + 1}`,
-      nm: navFmt(leg.nm, 1),
-      heading: `${String(leg.heading).padStart(3, "0")} deg`,
-      altitude,
-      altitude_status: altitude ? check.text : "",
-    };
+function navGetRoundTripPdfRanges() {
+  if (!navRoundTripConfig || navMarkers.length < 3) return null;
+  const destinationIndex = navMarkers.findIndex((marker, index) => {
+    return index > 0
+      && marker?.navPointMeta?.kind === "aerodrome"
+      && navPointIdentifier(marker, index) === navRoundTripConfig.destinationIcao;
+  });
+  const finalIndex = navMarkers.length - 1;
+  const finalCode = navPointIdentifier(navMarkers[finalIndex], finalIndex);
+  if (destinationIndex <= 0 || destinationIndex >= finalIndex || finalCode !== navRoundTripConfig.departureIcao) {
+    return null;
+  }
+  return [
+    {
+      startIndex: 0,
+      endIndex: destinationIndex,
+      documentLabel: navT("pdf_outbound_label"),
+      filename: "flightlogAcporto-ida.pdf",
+    },
+    {
+      startIndex: destinationIndex,
+      endIndex: finalIndex,
+      documentLabel: navT("pdf_return_label"),
+      filename: "flightlogAcporto-volta.pdf",
+    },
+  ];
+}
+
+function navNormalizePlanPoint(raw, fallbackRole = "intermediate") {
+  if (!raw) return null;
+  const lat = Number(raw.lat);
+  const lng = Number(raw.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return {
+    code: String(raw.code || raw.icao || "").trim(),
+    title: String(raw.title || raw.name || "").trim(),
+    customName: String(raw.customName || "").trim(),
+    kind: String(raw.kind || "route-point"),
+    source: String(raw.source || "import"),
+    lat,
+    lng,
+    role: raw.role || fallbackRole,
+  };
+}
+
+function navBuildPlanSnapshot() {
+  return {
+    format: "myflyapp-flightplan",
+    version: 1,
+    exported_at: new Date().toISOString(),
+    route: {
+      points: navMarkers.map((marker, index) => navPointMeta(marker, index)),
+      leg_altitudes: { ...navLegAltitudes },
+      leg_winds: { ...navLegWinds },
+      round_trip: navRoundTripConfig ? { ...navRoundTripConfig } : null,
+      builder: {
+        departure_icao: navPointIdentifier(navMarkers[0], 0),
+        destination_icao: navRoundTripConfig?.destinationIcao || navPointIdentifier(navMarkers[1], 1),
+        round_trip_checked: Boolean(document.getElementById("nav-route-roundtrip")?.checked),
+      },
+    },
+    alternate: navAlternate
+      ? {
+          destination: {
+            icao: navAlternate.icao || "",
+            name: navAlternate.name || "",
+            customName: navAlternate.customName || "",
+            lat: Number(navAlternate.lat),
+            lng: Number(navAlternate.lng),
+          },
+          route_points: navAlternateRoutePoints.map((point) => navAlternatePointMeta(point)),
+          leg_winds: { ...navAlternateLegWinds },
+          phase: {
+            start_altitude: document.getElementById("nav-alt-toc-start-altitude")?.value || "",
+            cruise_altitude: document.getElementById("nav-alt-cruise-altitude")?.value || "",
+            climb_speed: document.getElementById("nav-alt-toc-climb-speed")?.value || "",
+            climb_rate: document.getElementById("nav-alt-toc-climb-rate")?.value || "",
+            destination_altitude: document.getElementById("nav-alt-destination-altitude")?.value || "",
+          },
+          route_nm: Number.isFinite(navGetAlternateDistanceNm()) ? navGetAlternateDistanceNm() : null,
+        }
+      : null,
+    references: navReferenceMarkers.map((item) => {
+      const ll = item.marker.getLatLng();
+      return {
+        id: item.id,
+        title: item.title || "",
+        note: item.note || "",
+        altitude: item.altitude || "",
+        lat: Number(ll.lat.toFixed(6)),
+        lng: Number(ll.lng.toFixed(6)),
+      };
+    }),
+    fields: [
+      "nav-aircraft-ident",
+      "nav-pilot",
+      "nav-flight-date",
+      "nav-toc-reference",
+      "nav-toc-start-altitude",
+      "nav-cruise-altitude",
+      "nav-toc-climb-speed",
+      "nav-toc-climb-rate",
+      "nav-destination-altitude",
+      "nav-e6b-speed",
+      "nav-e6b-gph",
+      "nav-e6b-reserve",
+      "nav-e6b-meters",
+      "nav-alt-toc-start-altitude",
+      "nav-alt-cruise-altitude",
+      "nav-alt-toc-climb-speed",
+      "nav-alt-toc-climb-rate",
+      "nav-alt-destination-altitude",
+    ].reduce((result, id) => {
+      result[id] = document.getElementById(id)?.value || "";
+      return result;
+    }, {}),
+  };
+}
+
+function navExportPlan() {
+  const snapshot = navBuildPlanSnapshot();
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "myflyapp-flightplan.json";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  navSetPrintStatus(navT("plan_exported"));
+}
+
+function navCreateImportedReference(raw, index) {
+  const point = navNormalizePlanPoint(raw, "reference");
+  if (!point || !navMap) return;
+  const id = String(raw.id || `ref-import-${Date.now()}-${index}`);
+  const marker = L.marker([point.lat, point.lng], {
+    draggable: true,
+    icon: L.divIcon({
+      className: "nav-reference-marker",
+      html: `<span>${index + 1}</span>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    }),
+  }).addTo(navMap);
+  const item = {
+    id,
+    marker,
+    title: String(raw.title || `Ref ${index + 1}`),
+    note: String(raw.note || ""),
+    altitude: String(raw.altitude || ""),
+  };
+  navReferenceMarkers.push(item);
+  navUpdateReferencePopup(item);
+  marker.on("dragend", navRenderReferences);
+}
+
+function navApplyPlanSnapshot(plan) {
+  if (!plan || plan.format !== "myflyapp-flightplan" || Number(plan.version) !== 1) {
+    throw new Error("unsupported-flightplan");
+  }
+  const route = plan.route || {};
+  const fields = plan.fields || {};
+  const points = Array.isArray(route.points) ? route.points.map((point) => navNormalizePlanPoint(point)).filter(Boolean) : [];
+
+  navClearRoute();
+  navClearReferences();
+  [
+    "nav-aircraft-ident",
+    "nav-pilot",
+    "nav-flight-date",
+    "nav-toc-reference",
+    "nav-toc-start-altitude",
+    "nav-cruise-altitude",
+    "nav-toc-climb-speed",
+    "nav-toc-climb-rate",
+    "nav-destination-altitude",
+    "nav-e6b-speed",
+    "nav-e6b-gph",
+    "nav-e6b-reserve",
+    "nav-e6b-meters",
+  ].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input && Object.prototype.hasOwnProperty.call(fields, id)) input.value = String(fields[id] ?? "");
   });
 
+  navLegAltitudes = {};
+  Object.entries(route.leg_altitudes || {}).forEach(([key, value]) => {
+    if (Number.isFinite(Number(key)) && String(value).trim()) navLegAltitudes[key] = String(value);
+  });
+  navLegWinds = {};
+  Object.entries(route.leg_winds || {}).forEach(([key, value]) => {
+    const parsed = navParseWind(value);
+    if (Number.isFinite(Number(key)) && parsed) navLegWinds[key] = parsed.text;
+  });
+  navRoundTripConfig = route.round_trip && route.round_trip.departureIcao && route.round_trip.destinationIcao
+    ? {
+        departureIcao: String(route.round_trip.departureIcao),
+        destinationIcao: String(route.round_trip.destinationIcao),
+      }
+    : null;
+  const builder = route.builder || {};
+  const departureSelect = document.getElementById("nav-route-dep-select");
+  const destinationSelect = document.getElementById("nav-route-dest-select");
+  if (departureSelect && builder.departure_icao && Array.from(departureSelect.options).some((option) => option.value === builder.departure_icao)) {
+    departureSelect.value = builder.departure_icao;
+  }
+  if (destinationSelect && builder.destination_icao && Array.from(destinationSelect.options).some((option) => option.value === builder.destination_icao)) {
+    destinationSelect.value = builder.destination_icao;
+  }
+  const roundTripInput = document.getElementById("nav-route-roundtrip");
+  if (roundTripInput) roundTripInput.checked = Boolean(builder.round_trip_checked || navRoundTripConfig);
+
+  points.forEach((point) => {
+    const marker = navCreateRouteMarker([point.lat, point.lng], point);
+    if (!marker) return;
+    navMarkers.push(marker);
+    if (!point.code) navResolvePointIdentifier(marker);
+  });
+
+  (Array.isArray(plan.references) ? plan.references : []).forEach(navCreateImportedReference);
+
+  navAlternate = null;
+  navAlternateRoutePoints = [];
+  const alternate = plan.alternate || null;
+  const alternateDestination = navNormalizePlanPoint(alternate?.destination, "destination");
+  if (alternateDestination) {
+    navAlternate = {
+      icao: alternateDestination.code,
+      name: alternateDestination.title || navT("alternate_manual"),
+      customName: alternateDestination.customName || "",
+      lat: alternateDestination.lat,
+      lng: alternateDestination.lng,
+      code: alternateDestination.code,
+    };
+    navAlternateRoutePoints = (Array.isArray(alternate.route_points) ? alternate.route_points : [])
+      .map((point) => navNormalizePlanPoint(point))
+      .filter(Boolean);
+    if (navAlternateRoutePoints.length < 2) navAlternateRoutePoints = [];
+    navAlternateLegWinds = {};
+    Object.entries(alternate.leg_winds || {}).forEach(([key, value]) => {
+      const parsed = navParseWind(value);
+      if (Number.isFinite(Number(key)) && parsed) navAlternateLegWinds[key] = parsed.text;
+    });
+    navSyncAlternateSelects(navAlternate.icao);
+  } else {
+    navAlternateLegWinds = {};
+    navSyncAlternateSelects("");
+  }
+
+  navSetMode("route");
+  navRenderRoute();
+  navRenderReferences();
+  navRenderAlternateRoute();
+  navUpdateE6B();
+  navFitRoute();
+  navSetPrintStatus(navT("plan_imported"));
+}
+
+async function navImportPlanFile(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  try {
+    const text = await file.text();
+    navApplyPlanSnapshot(JSON.parse(text));
+  } catch (_error) {
+    navSetPrintStatus(navT("plan_import_error"));
+  }
+}
+
+function navGetPhaseDataForSegment(startIndex, endIndex) {
+  const points = navMarkers.slice(startIndex, endIndex + 1).map((marker, localIndex) => {
+    const absoluteIndex = startIndex + localIndex;
+    return { ...navPointMeta(marker, absoluteIndex), label: navMarkerDisplayLabel(marker, absoluteIndex) };
+  });
+  const reference = navGetTocReferenceData();
+  const referenceIndex = reference.referenceIndex >= startIndex && reference.referenceIndex < endIndex
+    ? reference.referenceIndex - startIndex
+    : 0;
+  const totalNm = navComputeLegsForPoints(points).reduce((sum, leg) => sum + leg.nm, 0);
+  return navCalculatePhaseData(points, totalNm, {
+    referenceIndex,
+    referenceCode: navPointDisplayLabel(points[referenceIndex], navT("toc_reference_departure")),
+    climbStartAltitudeFt: document.getElementById("nav-toc-start-altitude")?.value,
+    cruiseAltitudeFt: document.getElementById("nav-cruise-altitude")?.value,
+    climbSpeedKt: document.getElementById("nav-toc-climb-speed")?.value,
+    climbRateFpm: document.getElementById("nav-toc-climb-rate")?.value,
+    destinationAltitudeFt: document.getElementById("nav-destination-altitude")?.value,
+  });
+}
+
+function navBuildPhaseAwareRows(points, windMap, phaseData, legIndexOffset = 0, altitudeMap = {}) {
+  const routePoints = points || [];
+  const routeLegs = navComputeLegsForPoints(routePoints);
+  const totalNm = routeLegs.reduce((sum, leg) => sum + leg.nm, 0);
+  if (!routePoints.length) return [];
+  const boundaries = [{ distance: 0, label: routePoints[0].label || navT("toc_reference_departure"), phase: "" }];
+  let travelled = 0;
+  routeLegs.forEach((leg, index) => {
+    travelled += leg.nm;
+    boundaries.push({ distance: travelled, label: routePoints[index + 1].label, phase: "" });
+  });
+  if (phaseData && Number.isFinite(phaseData.tocFromDepartureNm)
+    && phaseData.tocFromDepartureNm > 0 && phaseData.tocFromDepartureNm < totalNm) {
+    boundaries.push({ distance: phaseData.tocFromDepartureNm, label: "TOC", phase: "TOC" });
+  }
+  if (phaseData && Number.isFinite(phaseData.todFromDepartureNm)
+    && phaseData.todFromDepartureNm > 0 && phaseData.todFromDepartureNm < totalNm) {
+    boundaries.push({ distance: phaseData.todFromDepartureNm, label: "TOD", phase: "TOD" });
+  }
+  boundaries.sort((a, b) => a.distance - b.distance || (a.phase ? -1 : 1));
+  const uniqueBoundaries = boundaries.filter((item, index, list) => {
+    if (index === 0) return true;
+    const previous = list[index - 1];
+    return Math.abs(item.distance - previous.distance) > 0.05 || item.label !== previous.label;
+  });
+  const rows = [{
+    checkpoint: uniqueBoundaries[0].label,
+    label: uniqueBoundaries[0].label,
+    from_code: "",
+    to_code: uniqueBoundaries[0].label,
+    nm: "",
+    aid_freq: "",
+    altitude: "",
+    altitude_status: "",
+    wind_speed: "",
+    wind_direction: null,
+    wind_speed_kt: null,
+    mag_track: "",
+    mag_head: "",
+    gs: "",
+    time: "",
+  }];
+  for (let index = 1; index < uniqueBoundaries.length; index += 1) {
+    const from = uniqueBoundaries[index - 1];
+    const to = uniqueBoundaries[index];
+    const midpoint = (from.distance + to.distance) / 2;
+    let accumulated = 0;
+    let sourceLeg = routeLegs[routeLegs.length - 1];
+    for (const leg of routeLegs) {
+      if (midpoint <= accumulated + leg.nm || leg === routeLegs[routeLegs.length - 1]) {
+        sourceLeg = leg;
+        break;
+      }
+      accumulated += leg.nm;
+    }
+    const globalLegIndex = sourceLeg.index + legIndexOffset;
+    const wind = navParseWind(windMap?.[globalLegIndex]);
+    const performance = navCalculateLegPerformance({
+      ...sourceLeg,
+      nm: Math.max(0, to.distance - from.distance),
+    }, wind);
+    const altitude = altitudeMap?.[globalLegIndex] || "";
+    const check = altitude ? navCheckVfrAltitude(sourceLeg.magTrack, altitude) : null;
+    rows.push({
+      checkpoint: to.label,
+      label: `${from.label} -> ${to.label}`,
+      from_code: from.label,
+      to_code: to.label,
+      nm: navFmt(Math.max(0, to.distance - from.distance), 1),
+      aid_freq: "-",
+      altitude,
+      altitude_status: check ? check.text : "",
+      wind_speed: wind ? wind.text : "-",
+      wind_direction: wind ? wind.direction : null,
+      wind_speed_kt: wind ? wind.speed : null,
+      mag_track: `${String(Math.round(sourceLeg.magTrack)).padStart(3, "0")} deg`,
+      mag_head: Number.isFinite(performance.magHead) ? `${String(Math.round(performance.magHead)).padStart(3, "0")} deg` : "-",
+      gs: Number.isFinite(performance.groundSpeedKt) ? `${navFmt(performance.groundSpeedKt, 0)} kt` : "-",
+      time: Number.isFinite(performance.timeMin) ? navFormatMinutes(performance.timeMin) : "-",
+      phase: to.phase || "",
+    });
+  }
+  return rows;
+}
+
+function navCollectPdfPayload(options = {}) {
+  const startIndex = Number.isInteger(options.startIndex) ? Math.max(0, options.startIndex) : 0;
+  const endIndex = Number.isInteger(options.endIndex)
+    ? Math.min(navMarkers.length - 1, options.endIndex)
+    : navMarkers.length - 1;
+  const selectedPoints = navMarkers.slice(startIndex, endIndex + 1).map((marker, localIndex) => {
+    const absoluteIndex = startIndex + localIndex;
+    return { ...navPointMeta(marker, absoluteIndex), label: navMarkerDisplayLabel(marker, absoluteIndex) };
+  });
+  const selectedLegs = navComputeLegsForPoints(selectedPoints);
+  const totalNm = selectedLegs.reduce((sum, leg) => sum + leg.nm, 0);
+  const phaseData = navGetPhaseDataForSegment(startIndex, endIndex);
+  const gph = Number.parseFloat(document.getElementById("nav-e6b-gph")?.value || "");
+  const reserveMin = Number.parseFloat(document.getElementById("nav-e6b-reserve")?.value || "");
+  const alternateNm = navAlternate ? navGetAlternateDistanceNm() : NaN;
+  const routePerformance = navSummarizeLegPerformance(selectedLegs, Object.fromEntries(
+    Object.entries(navLegWinds).map(([index, value]) => [Number(index) - startIndex, value])
+  ));
+  const segmentTimeMin = routePerformance.timeMin;
+  const routeFuel = Number.isFinite(segmentTimeMin) && gph > 0 ? (segmentTimeMin / 60) * gph : NaN;
+  const reserveFuel = gph > 0 && Number.isFinite(reserveMin) ? (reserveMin / 60) * gph : NaN;
+  const suppressFuel = Boolean(options.suppressFuel);
+  const legs = navBuildPhaseAwareRows(selectedPoints, Object.fromEntries(
+    Object.entries(navLegWinds).map(([index, value]) => [Number(index) - startIndex, value])
+  ), phaseData, 0, Object.fromEntries(
+    Object.entries(navLegAltitudes).map(([index, value]) => [Number(index) - startIndex, value])
+  ));
+  const alternatePoints = navAlternateRoutePoints.map((point) => ({
+    ...navAlternatePointMeta(point),
+    label: navPointDisplayLabel(point, navT("alternate_manual")),
+  }));
+  const alternateLegs = navComputeLegsForPoints(alternatePoints);
+  const alternateTotalNm = alternateLegs.reduce((sum, leg) => sum + leg.nm, 0);
+  const alternatePhaseData = navGetAlternatePhaseData(alternateTotalNm);
+  const alternatePerformance = navSummarizeLegPerformance(alternateLegs, navAlternateLegWinds);
+  const alternateFuel = alternatePerformance.complete && gph > 0 ? (alternatePerformance.timeMin / 60) * gph : NaN;
   return {
     legs,
+    points: navMarkers
+      .slice(startIndex, endIndex + 1)
+      .map((marker, index) => navPointMeta(marker, startIndex + index)),
+    document_label: options.documentLabel || "",
+    suppress_fuel: suppressFuel,
+    metadata: {
+      aircraft_ident: document.getElementById("nav-aircraft-ident")?.value || "",
+      pilot: document.getElementById("nav-pilot")?.value || "",
+      date: document.getElementById("nav-flight-date")?.value || "",
+    },
+    phases: {
+      toc_nm: Number.isFinite(phaseData.tocDistanceNm) ? `${navFmt(phaseData.tocDistanceNm, 1)} NM` : "-",
+      toc_reference: phaseData.tocReferenceCode || "-",
+      toc_from_departure_nm: Number.isFinite(phaseData.tocFromDepartureNm) ? `${navFmt(phaseData.tocFromDepartureNm, 1)} NM` : "-",
+      toc_start_altitude_ft: Number.isFinite(phaseData.climbStartAltitudeFt) ? `${navFmt(phaseData.climbStartAltitudeFt, 0)} ft` : "-",
+      toc_climb_speed_kt: Number.isFinite(phaseData.climbSpeedKt) ? `${navFmt(phaseData.climbSpeedKt, 0)} kt` : "-",
+      toc_climb_rate_fpm: Number.isFinite(phaseData.climbRateFpm) ? `${navFmt(phaseData.climbRateFpm, 0)} ft/min` : "-",
+      toc_climb_time: Number.isFinite(phaseData.climbTimeMin) ? navFormatMinutes(phaseData.climbTimeMin) : "-",
+      cruise_altitude_ft: Number.isFinite(phaseData.cruiseAltitudeFt) ? `${navFmt(phaseData.cruiseAltitudeFt, 0)} ft` : "-",
+      destination_altitude_ft: Number.isFinite(phaseData.destinationAltitudeFt) ? `${navFmt(phaseData.destinationAltitudeFt, 0)} ft` : "-",
+      descent_altitude_ft: Number.isFinite(phaseData.descentAltitudeFt) ? `${navFmt(phaseData.descentAltitudeFt, 0)} ft` : "-",
+      tod_before_dest_nm: Number.isFinite(phaseData.todBeforeDestinationNm) ? `${navFmt(phaseData.todBeforeDestinationNm, 1)} NM` : "-",
+    },
     e6b: {
-      nm: document.getElementById("nav-e6b-nm")?.value
-        ? `${document.getElementById("nav-e6b-nm").value} NM`
+      nm: Number.isFinite(totalNm)
+        ? `${navFmt(totalNm, 1)} NM`
         : "-",
-      time: document.getElementById("nav-e6b-time")?.textContent || "-",
-      fuel: document.getElementById("nav-e6b-fuel")?.textContent || "-",
-      alternate_nm: document.getElementById("nav-alternate-nm")?.textContent || "-",
-      alternate_fuel: document.getElementById("nav-alternate-fuel")?.textContent || "-",
-      final_reserve: document.getElementById("nav-e6b-final-reserve")?.textContent || "-",
-      fuel_reserve: document.getElementById("nav-e6b-fuel-reserve")?.textContent || "-",
+      time: Number.isFinite(segmentTimeMin) ? navFormatMinutes(segmentTimeMin) : "-",
+      speed: Number.isFinite(routePerformance.groundSpeedKt) ? `${navFmt(routePerformance.groundSpeedKt, 0)} kt` : "-",
+      fuel: suppressFuel || !Number.isFinite(routeFuel) ? "-" : `${navFmt(routeFuel, 1)} gal`,
+      alternate_nm: Number.isFinite(alternateNm) ? `${navFmt(alternateNm, 1)} NM` : "-",
+      alternate_fuel: suppressFuel || !Number.isFinite(alternateFuel)
+        ? "-"
+        : `${navFmt(alternateFuel, 1)} gal`,
+      final_reserve: suppressFuel || !Number.isFinite(reserveFuel) ? "-" : `${navFmt(reserveFuel, 1)} gal`,
+      fuel_reserve: suppressFuel || !Number.isFinite(routeFuel)
+        ? "-"
+        : `${navFmt(routeFuel + (Number.isFinite(alternateFuel) ? alternateFuel : 0) + (Number.isFinite(reserveFuel) ? reserveFuel : 0), 1)} gal`,
       feet: document.getElementById("nav-e6b-feet")?.textContent || "-",
     },
     alternate: navAlternate
@@ -2285,6 +3935,28 @@ function navCollectPdfPayload() {
           title: navAlternate.icao ? `${navAlternate.icao} - ${navAlternate.name || ""}` : navT("alternate_manual"),
           lat: navAlternate.lat.toFixed(5),
           lng: navAlternate.lng.toFixed(5),
+          route_nm: Number.isFinite(alternateNm) ? `${navFmt(alternateNm, 1)} NM` : "-",
+          route_points: navAlternateRoutePoints.map((point) => navAlternatePointMeta(point)),
+          legs: navBuildPhaseAwareRows(alternatePoints, navAlternateLegWinds, alternatePhaseData),
+          phases: {
+            toc_nm: Number.isFinite(alternatePhaseData.tocDistanceNm) ? `${navFmt(alternatePhaseData.tocDistanceNm, 1)} NM` : "-",
+            toc_reference: alternatePhaseData.tocReferenceCode || "-",
+            toc_from_departure_nm: Number.isFinite(alternatePhaseData.tocFromDepartureNm) ? `${navFmt(alternatePhaseData.tocFromDepartureNm, 1)} NM` : "-",
+            toc_start_altitude_ft: Number.isFinite(alternatePhaseData.climbStartAltitudeFt) ? `${navFmt(alternatePhaseData.climbStartAltitudeFt, 0)} ft` : "-",
+            toc_climb_speed_kt: Number.isFinite(alternatePhaseData.climbSpeedKt) ? `${navFmt(alternatePhaseData.climbSpeedKt, 0)} kt` : "-",
+            toc_climb_rate_fpm: Number.isFinite(alternatePhaseData.climbRateFpm) ? `${navFmt(alternatePhaseData.climbRateFpm, 0)} ft/min` : "-",
+            toc_climb_time: Number.isFinite(alternatePhaseData.climbTimeMin) ? navFormatMinutes(alternatePhaseData.climbTimeMin) : "-",
+            cruise_altitude_ft: Number.isFinite(alternatePhaseData.cruiseAltitudeFt) ? `${navFmt(alternatePhaseData.cruiseAltitudeFt, 0)} ft` : "-",
+            destination_altitude_ft: Number.isFinite(alternatePhaseData.destinationAltitudeFt) ? `${navFmt(alternatePhaseData.destinationAltitudeFt, 0)} ft` : "-",
+            descent_altitude_ft: Number.isFinite(alternatePhaseData.descentAltitudeFt) ? `${navFmt(alternatePhaseData.descentAltitudeFt, 0)} ft` : "-",
+            tod_before_dest_nm: Number.isFinite(alternatePhaseData.todBeforeDestinationNm) ? `${navFmt(alternatePhaseData.todBeforeDestinationNm, 1)} NM` : "-",
+          },
+          e6b: {
+            nm: Number.isFinite(alternateTotalNm) ? `${navFmt(alternateTotalNm, 1)} NM` : "-",
+            time: Number.isFinite(alternatePerformance.timeMin) ? navFormatMinutes(alternatePerformance.timeMin) : "-",
+            speed: Number.isFinite(alternatePerformance.groundSpeedKt) ? `${navFmt(alternatePerformance.groundSpeedKt, 0)} kt` : "-",
+            fuel: suppressFuel || !Number.isFinite(alternateFuel) ? "-" : `${navFmt(alternateFuel, 1)} gal`,
+          },
         }
       : null,
     references: navReferenceMarkers.map((item) => {
@@ -2301,18 +3973,28 @@ function navCollectPdfPayload() {
 }
 
 function navDownloadBlob(blob, filename) {
-  if (navLastPdfUrl) URL.revokeObjectURL(navLastPdfUrl);
+  navRevokePdfUrls();
+  const download = navCreatePdfDownload(blob, filename);
+  navSetPrintStatusHtml(
+    `${navT("pdf_download_ready")} <a class="nav-download-link" href="${download.url}" download="${filename}" target="_blank" rel="noopener">${navT("pdf_download_link")}</a>`
+  );
+}
+
+function navRevokePdfUrls() {
+  navLastPdfUrls.forEach((url) => URL.revokeObjectURL(url));
+  navLastPdfUrls = [];
+}
+
+function navCreatePdfDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
-  navLastPdfUrl = url;
+  navLastPdfUrls.push(url);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
-  navSetPrintStatusHtml(
-    `${navT("pdf_download_ready")} <a class="nav-download-link" href="${url}" download="${filename}" target="_blank" rel="noopener">${navT("pdf_download_link")}</a>`
-  );
+  return { url, filename };
 }
 
 function navCleanupPrintMode() {
@@ -2330,6 +4012,33 @@ async function navPrintPdf() {
   navSetPrintStatus(navT("pdf_generating"));
 
   try {
+    const roundTripRanges = navGetRoundTripPdfRanges();
+    if (roundTripRanges) {
+      navSetPrintStatus(navT("pdf_roundtrip_generating"));
+      navRevokePdfUrls();
+      const downloads = [];
+      for (const range of roundTripRanges) {
+        const response = await fetch("/api/navigation/pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(navCollectPdfPayload({
+            startIndex: range.startIndex,
+            endIndex: range.endIndex,
+            documentLabel: range.documentLabel,
+            suppressFuel: true,
+          })),
+        });
+        if (!response.ok) throw new Error(`PDF ${response.status}`);
+        downloads.push(navCreatePdfDownload(await response.blob(), range.filename));
+      }
+      const links = downloads.map((download, index) => {
+        const label = index === 0 ? navT("pdf_outbound_label") : navT("pdf_return_label");
+        return `<a class="nav-download-link" href="${download.url}" download="${download.filename}" target="_blank" rel="noopener">${label}</a>`;
+      });
+      navSetPrintStatusHtml(`${navT("pdf_roundtrip_ready")} ${links.join(" · ")}`);
+      return;
+    }
+
     const response = await fetch("/api/navigation/pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2337,7 +4046,7 @@ async function navPrintPdf() {
     });
     if (!response.ok) throw new Error(`PDF ${response.status}`);
     const blob = await response.blob();
-    navDownloadBlob(blob, "myflyapp-navegacao.pdf");
+    navDownloadBlob(blob, "myflyapp-flightlog.pdf");
   } catch (_err) {
     document.body.classList.add("printing-navigation");
     navSetPrintStatus(navT("pdf_fallback"));
@@ -2389,10 +4098,23 @@ function initNavigation() {
   }).addTo(navMap);
   navLine = L.polyline([], { color: "#f59e0b", weight: 4, opacity: 0.95 }).addTo(navMap);
   navLegLabelLayer = L.layerGroup().addTo(navMap);
+  navDistanceTickLayer = L.layerGroup().addTo(navMap);
+  navAlternateRouteLine = L.polyline([], {
+    color: "#ef4444",
+    weight: 3,
+    opacity: 0.9,
+    dashArray: "8 7",
+  }).addTo(navMap);
+  navAlternateRouteLayer = L.layerGroup().addTo(navMap);
   navLine.on("click", (event) => {
     if (navMode !== "break") return;
     if (window.L?.DomEvent) L.DomEvent.stopPropagation(event);
     navAddBreakingPoint(event.latlng);
+  });
+  navAlternateRouteLine.on("click", (event) => {
+    if (navMode !== "alternate-break") return;
+    if (window.L?.DomEvent) L.DomEvent.stopPropagation(event);
+    navAddAlternateBreakingPoint(event.latlng);
   });
   navSeedAerodromes();
 
@@ -2402,7 +4124,11 @@ function initNavigation() {
       return;
     }
     if (navMode === "alternate") {
-      navSetManualAlternate(event.latlng);
+      navAddAlternateRoutePoint(event.latlng);
+      return;
+    }
+    if (navMode === "alternate-break") {
+      navAddAlternateBreakingPoint(event.latlng);
       return;
     }
     if (navMode === "break") {
@@ -2415,26 +4141,53 @@ function initNavigation() {
   document.getElementById("nav-undo-point")?.addEventListener("click", navUndoPoint);
   document.getElementById("nav-fit-route")?.addEventListener("click", navFitRoute);
   document.getElementById("nav-clear-references")?.addEventListener("click", navClearReferences);
+  document.getElementById("nav-alternate-route-clear")?.addEventListener("click", navClearAlternate);
   document.getElementById("nav-show-leg-labels")?.addEventListener("change", navRenderRoute);
   document.getElementById("nav-mode-route")?.addEventListener("click", () => navSetMode("route"));
   document.getElementById("nav-mode-break")?.addEventListener("click", () => navSetMode("break"));
+  document.getElementById("nav-mode-alternate-break")?.addEventListener("click", () => navSetMode("alternate-break"));
   document.getElementById("nav-mode-alternate")?.addEventListener("click", () => navSetMode("alternate"));
   document.getElementById("nav-mode-reference")?.addEventListener("click", () => navSetMode("reference"));
   document.getElementById("nav-build-route")?.addEventListener("click", navBuildAerodromeRoute);
+  document.getElementById("nav-route-roundtrip")?.addEventListener("change", navRenderRoute);
   ["nav-alternate-select", "nav-route-alt-select"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", (event) => navHandleAlternateSelect(event.target.value));
   });
   document.getElementById("nav-print-pdf")?.addEventListener("click", navPrintPdf);
+  document.getElementById("nav-export-plan")?.addEventListener("click", navExportPlan);
+  document.getElementById("nav-import-plan")?.addEventListener("click", () => document.getElementById("nav-import-file")?.click());
+  document.getElementById("nav-import-file")?.addEventListener("change", navImportPlanFile);
   document.getElementById("nav-simulate")?.addEventListener("click", navOpenSimulation);
   document.getElementById("nav-sim-play")?.addEventListener("click", navToggleSimulationPlayback);
   document.getElementById("nav-sim-reset")?.addEventListener("click", navResetSimulation);
   document.getElementById("nav-sim-close")?.addEventListener("click", navCloseSimulation);
   document.getElementById("nav-sim-mode")?.addEventListener("change", () => navRenderSimulationAtDistance(navSimDistanceNm));
-  document.getElementById("nav-legs-body")?.addEventListener("input", navHandleAltitudeInput);
+  document.getElementById("nav-legs-body")?.addEventListener("input", (event) => {
+    navHandleAltitudeInput(event);
+    navHandleWindInput(event);
+  });
+  document.getElementById("nav-legs-body")?.addEventListener("change", navHandleWindChange);
+  document.getElementById("nav-alternate-legs-body")?.addEventListener("input", navHandleAlternateWindInput);
+  document.getElementById("nav-alternate-legs-body")?.addEventListener("change", navHandleAlternateWindChange);
   document.getElementById("nav-references-list")?.addEventListener("input", navHandleReferenceInput);
   document.getElementById("nav-references-list")?.addEventListener("click", navHandleReferenceAction);
+  ["nav-toc-reference", "nav-toc-start-altitude", "nav-toc-nm", "nav-toc-climb-speed", "nav-toc-climb-rate", "nav-cruise-altitude", "nav-destination-altitude"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", () => navRenderPhaseMarkers());
+    document.getElementById(id)?.addEventListener("change", () => navRenderPhaseMarkers());
+  });
   ["nav-e6b-nm", "nav-e6b-speed", "nav-e6b-gph", "nav-e6b-reserve", "nav-e6b-meters"].forEach((id) => {
     document.getElementById(id)?.addEventListener("input", navUpdateE6B);
+  });
+  document.getElementById("nav-e6b-speed")?.addEventListener("input", navRenderRoute);
+  [
+    "nav-alt-toc-start-altitude",
+    "nav-alt-cruise-altitude",
+    "nav-alt-toc-climb-speed",
+    "nav-alt-toc-climb-rate",
+    "nav-alt-destination-altitude",
+  ].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", navRenderAlternateRoute);
+    document.getElementById(id)?.addEventListener("change", navRenderAlternateRoute);
   });
   navSetMode("route");
   navPopulateRouteBuilderSelects();
@@ -2446,6 +4199,8 @@ function initNavigation() {
     savedLanguage = "pt";
   }
   navApplyLanguage(savedLanguage || document.getElementById("site-language")?.value || "pt");
+  const dateInput = document.getElementById("nav-flight-date");
+  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
   navRenderReferences();
   navUpdateE6B();
 }

@@ -40,6 +40,12 @@
 - Match the approved G5 mockup bezel and 4:3 display proportions without stretching the compass. Menus occupy the bottom of the display, with neutral gradient cells, cyan selection outlines and separate cyan values; power symbols use CSS geometry rather than platform-dependent glyphs.
 - G5 canvases are read-only displays, with no pointer cursor or focusable page-toggle styling. Page changes use the knob-selected HSI/PFD menu item; retain legible labels and menu focus indication.
 - Preserve `body.printing-navigation` styles used by navigation PDF/print fallback.
+- Keep the navigation flight-log metadata and TOC/TOD boxes readable beside the route panel; per-leg wind inputs may overflow horizontally inside the existing table wrapper without widening the page.
+- Keep the route-scoped aerodrome chart cards compact, readable, and wrapping at narrow widths; chart actions must remain usable without widening the navigation panel.
+- Keep TOC/TOD map markers visually distinct and legible over Leaflet tiles at desktop and narrow widths.
+- Keep the navigation map's 5 NM tick marks visible over Leaflet tiles without obscuring route points; hover distance labels must remain compact and readable.
+- Keep the alternate-route panel and its final-landing context readable beside the route builder; the separate dashed alternate line and origin/intermediate/destination markers must remain distinguishable over Leaflet tiles and wrap at narrow widths.
+- Keep the alternate breaking-point mode visibly distinct from ordinary route Breaking point and Alternate modes, including its disabled state before an alternate route exists.
 - Keep badge classes compatible with JS: `.vfr`, `.mvfr`, `.ifr`, `.lifr`, `.unknown`, `.mb-ok`, `.mb-bad`.
 
 ## Work Guidance
@@ -54,6 +60,7 @@
 - For avionics layout edits, verify both subtabs: Setup 1's G5 PFD/HSI canvases, controls, and GNS key matrix, plus Setup 2's GI-106A and GNC 255 controls, at desktop and narrow widths.
 - For introduction visibility, verify Nível 0 hides the exercise block, other levels/free mode restore it, and setup/language/mobile-mode switching preserves the selected presentation.
 - For print-related edits, trigger navigation print/PDF fallback and inspect the print view.
+- For navigation layout edits, check route tables with MAG TRACK, wind inputs, phase boxes and TOC/TOD markers at desktop and narrow widths.
 
 ## Child DOX Index
 

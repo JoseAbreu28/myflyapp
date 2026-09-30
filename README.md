@@ -33,7 +33,7 @@ Abrir <http://127.0.0.1:5000/>.
 
 - **Pré-voo:** mapas e fontes de apoio.
 - **Criar plano:** formulário local, alternante e consulta opcional de Narrow Route PIB.
-- **Navegações:** rota entre aeródromos, breaking points, referências, E6B, simulação com HSI/RMI/VOR e exportação PDF.
+- **Navegações:** rota entre aeródromos, identificadores ICAO/5-letter code, cartas ADC/VAC/eAIP dos aeródromos usados, vento por perna, marcas no mapa a cada 5 NM por perna, TOC calculado a partir da altitude/razão/velocidade de subida, TOD, referências, E6B, simulação com HSI/RMI/VOR, import/export JSON local de flightplans, rota explícita de alternate com pontos intermédios e exportação de flight log PDF com MAG TRACK (+1° para 1° W).
 - **Massa & Balanceamento:** peso, momento, CG e envelope para as aeronaves configuradas.
 
 ### Treino
@@ -77,7 +77,8 @@ docs/                           Documentação e planos históricos
 | --- | --- | --- |
 | `GET` | `/api/metar/<icao>` | METAR normalizado com cache curto. |
 | `GET` | `/api/taf/<icao>` | TAF normalizado com cache curto. |
-| `POST` | `/api/navigation/pdf` | PDF da rota, E6B, alternante e referências. |
+| `GET` | `/api/navigation/five-letter-code?lat=...&lng=...` | 5-letter code mais próximo do mapa de referências. |
+| `POST` | `/api/navigation/pdf` | Preenche o formulário `flightlogAcporto` com cada ponto da rota, vento, TOC/TOD, E6B, alternante e referências; o modo Ida e volta exporta os segmentos separadamente no browser. |
 | `POST` | `/api/fplbriefing/narrow-pib` | Proxy de PIB com token fornecido apenas no pedido. |
 | `POST` | `/api/fplbriefing/route-map` | GeoJSON de rota do fplbriefing. |
 

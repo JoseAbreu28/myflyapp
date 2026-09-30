@@ -21,6 +21,13 @@
 - Preserve Jinja-provided globals: `station`, `windy_embed_url`, `notam_viewer_url`, `fpl_briefing_url`, `flyweather_sources`, and `aerodromes`.
 - Maintain visible aviation disclaimers for navigation and mass/balance tools.
 - Keep the navigation simulator unavailable until a route with at least two points exists.
+- Keep the navigation phase hooks `nav-toc-reference`, `nav-toc-start-altitude`, `nav-toc-nm`, `nav-toc-climb-speed`, `nav-toc-climb-rate`, `nav-cruise-altitude`, `nav-destination-altitude`, and `nav-toc-tod-status` stable; the route table must retain per-leg altitude and wind inputs. Flight-log identity/date metadata is optional and is not shown in the navigation HTML. `nav-toc-nm` is a calculated read-only value.
+- Keep the alternate phase hooks `nav-alternate-phase-box`, `nav-alt-toc-start-altitude`, `nav-alt-cruise-altitude`, `nav-alt-toc-climb-speed`, `nav-alt-toc-climb-rate`, `nav-alt-destination-altitude`, `nav-alt-toc-nm` and `nav-alt-toc-tod-status` stable. The main and alternate calculation tables must expose MAG TRACK, wind, MAG HEAD, GS and per-leg time, while leaving derived values blank until their inputs are valid.
+- Preserve the `nav-route-roundtrip` control: when the route is built as Ida e volta, the navigation exporter produces separate outbound and return flight-log documents.
+- Preserve the `nav-export-plan`, `nav-import-plan`, `nav-import-file` and `nav-alternate-route-panel` hooks. Import/export is a browser-local JSON workflow; the alternate panel identifies the final landing context and supports a separate alternate route.
+- Preserve `nav-mode-alternate-break` as the dedicated alternate breaking-point control. It remains disabled until an alternate route exists and inserts intermediate points only into the dashed alternate path.
+- Keep the visible navigation table headings for MAG TRACK and `DDD/SSkts` wind aligned with the browser payload and PDF export; preserve the ICAO/5-letter point labels rendered on the map.
+- Keep the route chart hooks `nav-aerodrome-charts` and `nav-aerodrome-charts-list` stable; the panel is populated from known aerodromes in the active route and exposes ADC/VAC preview plus eAIP fallback links.
 - Keep the manual HSI/RMI/VOR study panel independent of route state, visible within the Navegações submodule, and initially populated with a complete example.
 - Keep the Treino > Instrumentos subtab and its VOR trainer independent of route state; preserve its frequency, aircraft-position, heading, OBS, TO/FROM, CDI, source, and educational-warning hooks.
 - Keep the Avionics Simulator as a local educational aid with two accessible subtabs: Setup 1 for paired G5 PFD/HSI canvases plus the horizontal GNS 430/430W front panel, and Setup 2 for the GI-106A VOR/LOC and GNC 255. Setup 2 is a compact black cockpit rack with the round GI-106A on the left and short, wide GNC 255 on the right, following the manual's volume/display/bezel-key/tuning arrangement. Its minimal display contains mode, active/standby frequencies, identifier and optional OBS/CDI or bearing/radial detail. Preserve stable IDs for the GNS volume deck, PUSH C/V, navigation knobs and CRSR centre, GI OBS/automatic flag, and GNC NAV/COM tuning, C/N, FLIP/FLOP, OBS and T/F. Keep flight configuration on the map and instruments.
@@ -53,6 +60,8 @@
 - `python -c "import app; print('import OK')"`.
 - Run the app and check `/` renders with no Jinja errors.
 - Browser-check tab switching after structural changes, including lazy initialization of the Instrumentos map and the Avionics Simulator render.
+- Browser-check route creation, point identifier resolution, per-leg `DDD/SSkts` wind input/validation and TOC/TOD controls after navigation markup changes.
+- Browser-check the Alternate Breaking point control in disabled, active and cleared-alternate states, including insertion into the dashed route.
 
 ## Child DOX Index
 

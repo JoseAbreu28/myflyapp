@@ -236,6 +236,17 @@ function initAerodromeMapFpl() {
 }
 
 function openChartPreview(url, title) {
+  if (!url) return;
+  const chartWindow = window.open(url, "_blank");
+  if (chartWindow) {
+    try {
+      chartWindow.opener = null;
+    } catch (_error) {
+      // The external PDF is already open; some browsers protect this property.
+    }
+    return;
+  }
+
   const modal = document.getElementById("chart-preview-modal");
   const frame = document.getElementById("chart-preview-frame");
   const caption = document.getElementById("chart-preview-title");

@@ -1,10 +1,15 @@
 from datetime import datetime, timezone
 from io import BytesIO
+import math
+from pathlib import Path
 import textwrap
 import re
 from urllib.parse import quote
 
 from flask import Flask, Response, jsonify, render_template, request
+from pypdf import PdfReader, PdfWriter
+from reportlab.lib.colors import HexColor
+from reportlab.pdfgen import canvas
 import requests
 
 import config
@@ -12,10 +17,17 @@ import config
 app = Flask(__name__)
 _cache = {}
 _flyweather_cam_ts_cache = {"value": None, "timestamp": None}
+_five_letter_codes_cache = {"value": None, "timestamp": None}
 _CEILING_RE = re.compile(r"\b(BKN|OVC|VV)(\d{3})\b")
 _FLYWEATHER_CAM_TS_RE = re.compile(r"cam31\.jpg\?t=(\d+)")
+_FIVE_LETTER_CODE_RE = re.compile(
+    r"\[\[null,\[(-?[0-9.]+),(-?[0-9.]+)\]\].*?\[\[\\?\"([A-Z0-9]{5})\\?\"\]\]",
+    re.DOTALL,
+)
 FPLBRIEFING_PIB_URL = "https://fplbriefing.nav.pt/rest/api/create-narrow-route-pib"
 FPLBRIEFING_ROUTE_URL = "https://fplbriefing.nav.pt/rest/api/rest/routes/route/{route_id}"
+FIVE_LETTER_MAP_URL = "https://www.google.com/maps/d/u/0/viewer?mid=1oVtBoQ-PRBQTyPVgwQo6yRjzazh0qGke&ll=40.46680875293716%2C-8.208544801568893&z=8"
+FLIGHTLOG_TEMPLATE_PATH = Path(__file__).resolve().parent / "static" / "pdf" / "flightlogAcporto-template.pdf"
 
 
 def _pdf_text(value):
@@ -109,6 +121,500 @@ def _build_simple_pdf(title, sections):
         f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii")
     )
     return out.getvalue()
+
+
+def _distance_nm(lat1, lon1, lat2, lon2):
+    """Return an approximate great-circle distance in nautical miles."""
+    lat1_rad = math.radians(float(lat1))
+    lat2_rad = math.radians(float(lat2))
+    delta_lat = lat2_rad - lat1_rad
+    delta_lon = math.radians(float(lon2) - float(lon1))
+    haversine = (
+        math.sin(delta_lat / 2) ** 2
+        + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
+    )
+    return 3440.065 * 2 * math.asin(math.sqrt(max(0.0, min(1.0, haversine))))
+
+
+def _load_five_letter_codes():
+    cached_at = _five_letter_codes_cache.get("timestamp")
+    cached_value = _five_letter_codes_cache.get("value")
+    if cached_at and cached_value:
+        age = (datetime.now(timezone.utc) - cached_at).total_seconds()
+        if age <= 86400:
+            return cached_value
+
+    try:
+        response = requests.get(
+            FIVE_LETTER_MAP_URL,
+            headers={"User-Agent": "MyFlyApp navigation planner"},
+            timeout=config.REQUEST_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        return []
+
+    points = []
+    seen = set()
+    for match in _FIVE_LETTER_CODE_RE.finditer(response.text):
+        code = match.group(3)
+        if code in seen:
+            continue
+        seen.add(code)
+        points.append({"code": code, "lat": float(match.group(1)), "lng": float(match.group(2))})
+
+    if points:
+        _five_letter_codes_cache["value"] = points
+        _five_letter_codes_cache["timestamp"] = datetime.now(timezone.utc)
+    return points
+
+
+def _nearest_five_letter_code(lat, lng):
+    points = _load_five_letter_codes()
+    if not points:
+        return None
+    nearest = min(points, key=lambda point: _distance_nm(lat, lng, point["lat"], point["lng"]))
+    return {
+        **nearest,
+        "distance_nm": round(_distance_nm(lat, lng, nearest["lat"], nearest["lng"]), 2),
+        "source_url": FIVE_LETTER_MAP_URL,
+    }
+
+
+def _build_pdf_document(streams, width, height):
+    objects = []
+
+    def add_obj(data):
+        objects.append(data)
+        return len(objects)
+
+    regular_font_id = add_obj(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
+    bold_font_id = add_obj(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
+    content_ids = []
+    for stream in streams:
+        raw_stream = stream.encode("latin-1", "replace")
+        content_ids.append(
+            add_obj(
+                b"<< /Length "
+                + str(len(raw_stream)).encode("ascii")
+                + b" >>\nstream\n"
+                + raw_stream
+                + b"endstream"
+            )
+        )
+
+    pages_id_placeholder = len(objects) + len(streams) + 1
+    page_ids = []
+    for content_id in content_ids:
+        page_ids.append(
+            add_obj(
+                f"<< /Type /Page /Parent {pages_id_placeholder} 0 R /MediaBox [0 0 {width} {height}] "
+                f"/Resources << /Font << /F1 {regular_font_id} 0 R /F2 {bold_font_id} 0 R >> >> "
+                f"/Contents {content_id} 0 R >>".encode("ascii")
+            )
+        )
+
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    pages_id = add_obj(f"<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>".encode("ascii"))
+    catalog_id = add_obj(f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii"))
+
+    output = BytesIO()
+    output.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for obj_id, data in enumerate(objects, start=1):
+        offsets.append(output.tell())
+        output.write(f"{obj_id} 0 obj\n".encode("ascii"))
+        output.write(data)
+        output.write(b"\nendobj\n")
+    xref = output.tell()
+    output.write(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    output.write(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        output.write(f"{offset:010d} 00000 n \n".encode("ascii"))
+    output.write(
+        f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\n"
+        f"startxref\n{xref}\n%%EOF\n".encode("ascii")
+    )
+    return output.getvalue()
+
+
+def _build_navigation_log_pdf_legacy(body):
+    """Deprecated generic report kept only as a historical fallback reference."""
+    width, height = 841.89, 595.28
+    page_stream = []
+
+    def command(value):
+        page_stream.append(value)
+
+    def color(rgb, stroke=False):
+        suffix = "RG" if stroke else "rg"
+        command(f"{rgb[0]:.3f} {rgb[1]:.3f} {rgb[2]:.3f} {suffix}")
+
+    def rect(x, y, w, h, fill=None, stroke=(0.16, 0.19, 0.24), line=0.7):
+        if fill is not None:
+            color(fill)
+        color(stroke, stroke=True)
+        command(f"{line:.2f} w {x:.1f} {y:.1f} {w:.1f} {h:.1f} re")
+        command("B" if fill is not None else "S")
+
+    def line(x1, y1, x2, y2, stroke=(0.16, 0.19, 0.24), line_width=0.7):
+        color(stroke, stroke=True)
+        command(f"{line_width:.2f} w {x1:.1f} {y1:.1f} m {x2:.1f} {y2:.1f} l S")
+
+    def text(value, x, y, size=8.5, bold=False, fill=(0.08, 0.10, 0.14)):
+        color(fill)
+        font = "F2" if bold else "F1"
+        command(f"BT /{font} {size:.1f} Tf {x:.1f} {y:.1f} Td ({_pdf_text(value)}) Tj ET")
+
+    def wrapped(value, x, y, max_width, size=7.5, bold=False, line_height=None, max_lines=None, fill=(0.08, 0.10, 0.14)):
+        if line_height is None:
+            line_height = size + 2
+        chars = max(1, int(max_width / max(size * 0.5, 1)))
+        parts = textwrap.wrap(str(value or "-"), width=chars) or [""]
+        if max_lines is not None:
+            parts = parts[:max_lines]
+        for index, part in enumerate(parts):
+            text(part, x, y - index * line_height, size=size, bold=bold, fill=fill)
+        return len(parts)
+
+    def value(value, fallback="-"):
+        if value is None or str(value).strip() == "":
+            return fallback
+        return str(value)
+
+    metadata = body.get("metadata") or {}
+    legs = body.get("legs") or []
+    phases = body.get("phases") or {}
+    e6b = body.get("e6b") or {}
+    alternate = body.get("alternate") or {}
+    references = body.get("references") or []
+    document_label = value(body.get("document_label") or metadata.get("document_label"), "NAVEGAÇÃO")
+    suppress_fuel = bool(body.get("suppress_fuel"))
+
+    margin = 28
+    navy = (0.07, 0.12, 0.20)
+    light = (0.94, 0.96, 0.98)
+    muted = (0.35, 0.40, 0.47)
+    rect(margin, height - 52, width - 2 * margin, 28, fill=navy, stroke=navy, line=0.8)
+    text(f"FLIGHT LOG - {document_label}", margin + 10, height - 42, size=14, bold=True, fill=(1, 1, 1))
+    text("MYFLYAPP - NAVEGAÇÃO", width - margin - 155, height - 40, size=8, bold=True, fill=(0.82, 0.88, 0.96))
+
+    meta_y = height - 72
+    meta_values = [
+        ("Aircraft / Ident", value(metadata.get("aircraft_ident")), margin, 175),
+        ("Pilot", value(metadata.get("pilot")), margin + 185, 215),
+        ("Date", value(metadata.get("date")), margin + 410, 120),
+        ("Variation", "1° W", margin + 540, 90),
+    ]
+    for label, item, x, field_width in meta_values:
+        rect(x, meta_y - 12, field_width, 20, fill=(1, 1, 1))
+        text(f"{label}: {item}", x + 6, meta_y - 4, size=7.4)
+
+    left_x, left_w = margin, 548
+    right_x, right_w = 594, width - margin - 594
+    table_top = height - 107
+    header_h = 38
+    columns = [
+        ("Checkpoints / Fixes", 119),
+        ("AID / Freq", 55),
+        ("Altitude / FL", 58),
+        ("MAG TRACK", 65),
+        ("Wind kt", 45),
+        ("MAG HEAD", 60),
+        ("Dist", 45),
+        ("GS", 45),
+        ("Time", 56),
+    ]
+    rect(left_x, table_top - header_h, left_w, header_h, fill=light)
+    current_x = left_x
+    for label, column_w in columns:
+        line(current_x, table_top, current_x, table_top - header_h)
+        wrapped(label, current_x + 4, table_top - 12, column_w - 8, size=7, bold=True, line_height=8, max_lines=3)
+        current_x += column_w
+    line(left_x + left_w, table_top, left_x + left_w, table_top - header_h)
+    line(left_x, table_top, left_x + left_w, table_top)
+    line(left_x, table_top - header_h, left_x + left_w, table_top - header_h)
+
+    row_h = 23
+    max_rows = 15
+    shown_legs = legs[:max_rows]
+    if len(legs) > max_rows:
+        shown_legs = shown_legs[:-1] + [{"label": "...", "note": "Mais pernas no relatório digital"}]
+    for row_index in range(max_rows):
+        row_top = table_top - header_h - row_index * row_h
+        row_bottom = row_top - row_h
+        rect(left_x, row_bottom, left_w, row_h, fill=(1, 1, 1) if row_index % 2 == 0 else (0.97, 0.98, 0.99))
+        current_x = left_x
+        leg = shown_legs[row_index] if row_index < len(shown_legs) else {}
+        row_values = [
+            value(leg.get("label")),
+            value(leg.get("aid_freq")),
+            value(leg.get("altitude")),
+            value(leg.get("mag_track")),
+            value(leg.get("wind_speed")),
+            value(leg.get("mag_head")),
+            value(leg.get("nm")),
+            value(leg.get("gs")),
+            value(leg.get("time")),
+        ]
+        for (_, column_w), cell_value in zip(columns, row_values):
+            line(current_x, row_top, current_x, row_bottom)
+            wrapped(cell_value, current_x + 4, row_top - 14, column_w - 8, size=7.2, max_lines=2)
+            current_x += column_w
+        line(left_x + left_w, row_top, left_x + left_w, row_bottom)
+        line(left_x, row_bottom, left_x + left_w, row_bottom)
+    table_bottom = table_top - header_h - max_rows * row_h
+
+    def info_box(title, top, rows, box_height):
+        rect(right_x, top - box_height, right_w, box_height, fill=(1, 1, 1))
+        text(title, right_x + 7, top - 14, size=9, bold=True, fill=navy)
+        line(right_x, top - 22, right_x + right_w, top - 22, stroke=navy, line_width=1.1)
+        cursor = top - 36
+        for label, item in rows:
+            text(label, right_x + 7, cursor, size=7.1, bold=True, fill=muted)
+            wrapped(item, right_x + 70, cursor, right_w - 78, size=7.4, max_lines=2)
+            cursor -= 20
+
+    info_box(
+        "TOC / TOD",
+        table_top,
+        [
+            ("TOC", f"{value(phases.get('toc_nm'))} from {value(phases.get('toc_reference'), 'DEP')}"),
+            ("Start", value(phases.get('toc_start_altitude_ft'))),
+            ("Climb", f"{value(phases.get('toc_climb_speed_kt'))} · {value(phases.get('toc_climb_rate_fpm'))} · {value(phases.get('toc_climb_time'))}"),
+            ("Cruise", value(phases.get('cruise_altitude_ft'))),
+            ("Dest", value(phases.get('destination_altitude_ft'))),
+            ("TOD", f"{value(phases.get('tod_before_dest_nm'))} before DEST"),
+            ("Descent", value(phases.get('descent_altitude_ft'))),
+            ("Formula", "TOD = delta altitude (000 ft) x 3 + 2"),
+        ],
+        194,
+    )
+    info_box(
+        "E6B / FUEL",
+        table_top - 204,
+        [
+            ("Route", value(e6b.get("nm"))),
+            ("Time", value(e6b.get("time"))),
+            ("GS", value(e6b.get("speed"))),
+            ("Fuel", "-" if suppress_fuel else value(e6b.get("fuel"))),
+            ("Reserve", "-" if suppress_fuel else value(e6b.get("final_reserve"))),
+            ("Alt.", value(e6b.get("alternate_nm"))),
+        ],
+        150,
+    )
+    alternate_label = value(alternate.get("title"), "Sem alternante") if alternate else "Sem alternante"
+    info_box(
+        "ALTERNATE / NOTES",
+        table_top - 345,
+        [
+            ("Alternate", alternate_label),
+            ("Points", f"{len(legs) + 1 if legs else 0} route points"),
+            ("Refs", f"{len(references)} reference(s)"),
+        ],
+        82,
+    )
+
+    if not legs:
+        text("Sem pernas de rota definidas.", left_x + 8, table_bottom - 14, size=8, fill=muted)
+    disclaimer = (
+        "Apoio ao planeamento: confirme carta oficial, AIP/eAIP, NOTAM, altitudes, vento, obstáculos e briefing. "
+        "MAG TRACK = track verdadeiro + 1° para variação 1° W. O vento é reportado no formato indicado, sem fabricar correção de vento."
+    )
+    wrapped(disclaimer, margin, 38, width - 2 * margin, size=7.1, fill=muted, max_lines=2)
+    text(
+        f"Gerado em {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} · MyFlyApp",
+        width - margin - 220,
+        23,
+        size=6.8,
+        fill=muted,
+    )
+    return _build_pdf_document(["\n".join(page_stream)], width, height)
+
+
+def _build_navigation_log_template_pdf(body):
+    """Fill the supplied Aero Club do Porto flight-log form without changing its layout."""
+    if not FLIGHTLOG_TEMPLATE_PATH.is_file():
+        raise FileNotFoundError(f"Flight-log template not found: {FLIGHTLOG_TEMPLATE_PATH}")
+
+    page_width, page_height = 841.92, 595.32
+    metadata = body.get("metadata") or {}
+    legs = body.get("legs") or []
+    phases = body.get("phases") or {}
+    e6b = body.get("e6b") or {}
+    suppress_fuel = bool(body.get("suppress_fuel"))
+
+    def clean(value):
+        if value is None:
+            return ""
+        text = str(value).strip()
+        return "" if text in {"-", "--", "None", "null"} else text
+
+    def without_suffix(value, suffix):
+        text = clean(value)
+        if text.lower().endswith(suffix.lower()):
+            return text[: -len(suffix)].strip()
+        return text
+
+    def wind_value(leg):
+        direction = clean(leg.get("wind_direction"))
+        speed = clean(leg.get("wind_speed_kt"))
+        if direction and speed:
+            try:
+                return f"{int(round(float(direction))) % 360:03d}/{int(round(float(speed))):02d}"
+            except (TypeError, ValueError):
+                pass
+        return clean(leg.get("wind_speed")).replace("kts", "").strip()
+
+    def truncate(text, max_chars):
+        text = clean(text)
+        return text if len(text) <= max_chars else f"{text[: max_chars - 1]}…"
+
+    def draw_text(pdf, x, y, value, size=7.0, bold=False, max_chars=None):
+        text = clean(value)
+        if max_chars:
+            text = truncate(text, max_chars)
+        if not text:
+            return
+        pdf.setFillColor(HexColor("#003b5c"))
+        pdf.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+        pdf.drawString(x, y, text)
+
+    def numeric_nm(value):
+        try:
+            return float(str(value).replace(",", ".").split()[0])
+        except (TypeError, ValueError, IndexError):
+            return 0.0
+
+    def route_cell_values(leg):
+        return [
+            truncate(leg.get("checkpoint") or leg.get("label"), 18),
+            clean(leg.get("aid_freq")),
+            without_suffix(leg.get("altitude"), "ft"),
+            without_suffix(leg.get("mag_track"), "deg"),
+            wind_value(leg),
+            without_suffix(leg.get("mag_head"), "deg"),
+            "" if suppress_fuel else clean(leg.get("fuel_remaining")),
+            without_suffix(leg.get("nm"), "nm"),
+            without_suffix(leg.get("gs"), "kt"),
+            clean(leg.get("time")),
+            clean(leg.get("eta")),
+        ]
+
+    overlay_stream = BytesIO()
+    pdf = canvas.Canvas(overlay_stream, pagesize=(page_width, page_height))
+    pdf.setTitle("flightlogAcporto")
+
+    # Header fields of the primary (left) sheet.
+    draw_text(pdf, 94, 552, metadata.get("aircraft_ident"), size=7.5, max_chars=24)
+    draw_text(pdf, 184, 552, metadata.get("pilot"), size=7.5, max_chars=24)
+    draw_text(pdf, 337, 552, metadata.get("date"), size=7.5, max_chars=16)
+
+    points = body.get("points") or []
+    initial_point = points[0].get("code") if points else ""
+    draw_text(pdf, 322, 437, initial_point, size=7.0, max_chars=22)
+    alternate = body.get("alternate") or {}
+    alternate_points = alternate.get("route_points") or []
+    alternate_initial_point = (alternate_points[0].get("code") if alternate_points else "") or initial_point
+    draw_text(pdf, 737, 437, alternate_initial_point, size=7.0, max_chars=22)
+
+    # The left table is the mandatory primary flight-log sheet. These coordinates
+    # match the printed form's fixed cells; the background PDF remains untouched.
+    left_x = [36, 90, 112, 154, 186, 210, 247, 273, 302, 334, 377]
+    row_y = [363, 326, 290, 253, 217, 180, 144, 107, 71]
+    phase_values = (
+        phases.get("toc_nm"),
+        phases.get("tod_before_dest_nm"),
+        phases.get("toc_start_altitude_ft"),
+        phases.get("cruise_altitude_ft"),
+    )
+    phase_rows = any(clean(value) for value in phase_values)
+    route_rows = list(legs)
+    route_labels = {clean(row.get("checkpoint") or row.get("label")).upper() for row in route_rows}
+    if phase_rows and legs and "TOC" not in route_labels:
+        route_rows.insert(1, {"checkpoint": "TOC"})
+    if phase_rows and legs and "TOD" not in route_labels:
+        route_rows.append({"checkpoint": "TOD"})
+
+    for row_y_value, leg in zip(row_y, route_rows[: len(row_y)]):
+        for column_x, cell in zip(left_x, route_cell_values(leg)):
+            draw_text(pdf, column_x, row_y_value, cell, size=6.7, max_chars=15)
+
+    # The right half of the same printed sheet is reserved for the alternate
+    # route. Fill it from the alternate's own phase-aware legs when supplied,
+    # including its independent track, wind, heading, GS and time values.
+    alternate_rows = alternate.get("legs") or []
+    if not alternate_rows and alternate_points:
+        alternate_rows = [{"checkpoint": point.get("code") or point.get("title") or ""} for point in alternate_points]
+    alternate_row_y = [372, 336, 300, 264]
+    alternate_left_x = [435 + (value - 36) for value in left_x]
+    for row_y_value, leg in zip(alternate_row_y, alternate_rows[: len(alternate_row_y)]):
+        for column_x, cell in zip(alternate_left_x, route_cell_values(leg)):
+            draw_text(pdf, column_x, row_y_value, cell, size=6.4, max_chars=15)
+
+    total_nm = sum(numeric_nm(leg.get("nm")) for leg in legs)
+    if total_nm:
+        # Printed TOTAL cell below the primary table.
+        draw_text(pdf, 272, 37, f"{total_nm:.1f} NM", size=7.0, max_chars=12)
+
+    # Keep fuel unfilled when the caller marks the report as provisional. The
+    # generated phase data is written into the printed Notes area so it remains
+    # available without disturbing the form's ATIS, landing or fuel blocks.
+    if not suppress_fuel:
+        fuel_value = clean(e6b.get("fuel"))
+        if fuel_value:
+            draw_text(pdf, 740, 213, fuel_value, size=7.0, max_chars=14)
+
+    phase_lines = []
+    if phases:
+        toc_nm = clean(phases.get("toc_nm"))
+        toc_reference = clean(phases.get("toc_reference")) or "DEP"
+        toc_route_nm = clean(phases.get("toc_from_departure_nm"))
+        toc_value = toc_nm or "unavailable"
+        toc_position = f" ({toc_route_nm} from DEP)" if toc_route_nm else ""
+        phase_lines.append(f"TOC: {toc_value} from {toc_reference}{toc_position}")
+        start_altitude = clean(phases.get("toc_start_altitude_ft"))
+        toc_altitude = clean(phases.get("cruise_altitude_ft"))
+        climb_rate = clean(phases.get("toc_climb_rate_fpm"))
+        climb_speed = clean(phases.get("toc_climb_speed_kt"))
+        climb_time = clean(phases.get("toc_climb_time"))
+        if any((start_altitude, toc_altitude, climb_rate, climb_speed, climb_time)):
+            phase_lines.append(
+                f"Climb: {start_altitude}->{toc_altitude} / {climb_rate} / {climb_speed} / {climb_time}"
+            )
+        tod_nm = clean(phases.get("tod_before_dest_nm")) or "unavailable"
+        phase_lines.append(f"TOD: {tod_nm} before DEST")
+    else:
+        phase_lines.extend(["TOC: unavailable", "TOD: unavailable"])
+
+    alternate_points = alternate.get("route_points") or []
+    alternate_codes = [clean(point.get("code")) for point in alternate_points if clean(point.get("code"))]
+    if alternate:
+        alternate_label = clean(alternate.get("title")) or "unavailable"
+        alternate_route = " -> ".join(alternate_codes) if alternate_codes else "unavailable"
+        phase_lines.append(f"Alternate: {alternate_label} / {alternate_route}")
+        alternate_phases = alternate.get("phases") or {}
+        alternate_toc = clean(alternate_phases.get("toc_nm")) or "unavailable"
+        alternate_tod = clean(alternate_phases.get("tod_before_dest_nm")) or "unavailable"
+        phase_lines.append(f"Alt TOC: {alternate_toc} / TOD: {alternate_tod}")
+
+    notes_x = 610
+    notes_y = 186
+    if phase_lines:
+        for index, line in enumerate(phase_lines[:5], start=1):
+            draw_text(pdf, notes_x, notes_y - ((index - 1) * 11), line, size=6.2, max_chars=60)
+    pdf.save()
+    overlay_stream.seek(0)
+
+    base_reader = PdfReader(str(FLIGHTLOG_TEMPLATE_PATH))
+    overlay_reader = PdfReader(overlay_stream)
+    base_page = base_reader.pages[0]
+    base_page.merge_page(overlay_reader.pages[0])
+    writer = PdfWriter()
+    writer.add_page(base_page)
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
 
 AERODROMES = [
     {"icao": "LPPT", "name": "Lisboa Humberto Delgado", "lat": 38.7742, "lon": -9.1342, "atis": "124.155", "main_freq": "118.105"},
@@ -454,67 +960,33 @@ def api_taf(icao):
     return jsonify(payload)
 
 
+@app.route("/api/navigation/five-letter-code")
+def api_navigation_five_letter_code():
+    try:
+        lat = float(request.args.get("lat", ""))
+        lng = float(request.args.get("lng", ""))
+    except (TypeError, ValueError):
+        return jsonify({"error": "valid_lat_lng_required"}), 400
+
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({"error": "valid_lat_lng_required"}), 400
+
+    point = _nearest_five_letter_code(lat, lng)
+    if not point:
+        return jsonify({"error": "five_letter_source_unavailable"}), 503
+    return jsonify({"error": None, **point})
+
+
 @app.route("/api/navigation/pdf", methods=["POST"])
 def api_navigation_pdf():
     body = request.get_json(silent=True) or {}
-
-    route_rows = []
-    for leg in body.get("legs") or []:
-        altitude = leg.get("altitude") or "-"
-        status = leg.get("altitude_status") or ""
-        route_rows.append(
-            f"Leg {leg.get('label', '-')}: {leg.get('nm', '-')} NM | "
-            f"HDG {leg.get('heading', '-')} | ALT {altitude} {status}".strip()
-        )
-    if not route_rows:
-        route_rows.append("Sem pernas de rota definidas.")
-
-    e6b = body.get("e6b") or {}
-    e6b_rows = [
-        f"Distancia: {e6b.get('nm', '-')}",
-        f"Tempo: {e6b.get('time', '-')}",
-        f"Combustivel rota: {e6b.get('fuel', '-')}",
-        f"Distancia para alternante: {e6b.get('alternate_nm', '-')}",
-        f"Combustivel para alternante: {e6b.get('alternate_fuel', '-')}",
-        f"Final reserve fuel: {e6b.get('final_reserve', '-')}",
-        f"Total rota + alternante + reserva: {e6b.get('fuel_reserve', '-')}",
-        f"Metros -> ft: {e6b.get('feet', '-')}",
-    ]
-    alternate = body.get("alternate") or {}
-    if alternate:
-        e6b_rows.append(
-            f"Alternate: {alternate.get('title', '-')} ({alternate.get('lat', '-')}, {alternate.get('lng', '-')})"
-        )
-
-    ref_rows = []
-    for idx, ref in enumerate(body.get("references") or [], start=1):
-        altitude = f" | Altitude: {ref.get('altitude')}" if ref.get("altitude") else ""
-        note = ref.get("note") or "Sem observacoes."
-        ref_rows.append(f"{idx}. {ref.get('title') or 'Ref'}{altitude}")
-        ref_rows.append(f"   {note}")
-        if ref.get("lat") is not None and ref.get("lng") is not None:
-            ref_rows.append(f"   Coordenadas: {ref.get('lat')}, {ref.get('lng')}")
-    if not ref_rows:
-        ref_rows.append("Sem pontos de referencia.")
-
-    disclaimer = (
-        "Ferramenta de apoio. Nao substitui carta aeronautica oficial, AIP/eAIP, NOTAM, "
-        "informacao de espaco aereo, altitudes minimas, obstaculos, terreno ou briefing operacional."
-    )
-    pdf = _build_simple_pdf(
-        "MyFlyApp - Report de Navegacao",
-        [
-            ("Disclaimer", [disclaimer]),
-            ("Rota", route_rows),
-            ("E6B", e6b_rows),
-            ("Pontos de referencia", ref_rows),
-        ],
-    )
+    pdf = _build_navigation_log_template_pdf(body)
     return Response(
         pdf,
         mimetype="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="myflyapp-navegacao.pdf"'},
+        headers={"Content-Disposition": 'attachment; filename="myflyapp-flightlog.pdf"'},
     )
+
 
 
 @app.route("/api/fplbriefing/narrow-pib", methods=["POST"])

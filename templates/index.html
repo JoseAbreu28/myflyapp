@@ -425,11 +425,15 @@
           <div class="nav-mode-group">
             <button id="nav-mode-route" class="btn nav-mode active" type="button" data-i18n="mode_route">Rota</button>
             <button id="nav-mode-break" class="btn nav-mode" type="button" data-i18n="mode_break">Breaking point</button>
+            <button id="nav-mode-alternate-break" class="btn nav-mode" type="button" data-i18n="mode_alternate_break" disabled>Alternate Breaking point</button>
             <button id="nav-mode-alternate" class="btn nav-mode" type="button" data-i18n="mode_alternate">Alternante</button>
             <button id="nav-mode-reference" class="btn nav-mode" type="button" data-i18n="mode_reference">Referência</button>
           </div>
           <div class="nav-toolbar-actions">
             <button id="nav-simulate" class="btn" type="button" data-i18n="simulate_btn" disabled>Simular</button>
+            <button id="nav-export-plan" class="btn" type="button" data-i18n="export_plan">Exportar flightplan</button>
+            <button id="nav-import-plan" class="btn" type="button" data-i18n="import_plan">Importar flightplan</button>
+            <input id="nav-import-file" type="file" accept="application/json,.json" hidden>
             <button id="nav-print-pdf" class="btn" type="button" data-i18n="save_pdf">Guardar PDF</button>
           </div>
         </div>
@@ -445,7 +449,7 @@
             <span data-i18n="show_nm">Mostrar NM</span>
           </label>
         </div>
-        <p class="note" data-i18n="nav_help">Modo Rota: clica para adicionar pernas. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternate: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
+        <p class="note" data-i18n="nav_help">Modo Rota: clica para adicionar pernas. Os pontos próximos de aeródromos recebem o ICAO; os restantes recebem o 5-letter code mais próximo do mapa de referências. Breaking point: clica na linha/mapa para inserir um ponto intermédio no segmento mais próximo. Alternate: escolhe na lista ou clica no mapa para definir o alternante. Modo Referência: marca locais visuais, obstáculos, pontos de viragem ou notas. Arrasta os marcadores para ajustar.</p>
       </div>
 
       <aside class="nav-panel">
@@ -472,6 +476,93 @@
           </div>
           <p id="nav-route-builder-status" class="note" data-i18n="route_builder_help">Escolhe os aeródromos para gerar a rota; depois podes ajustar com breaking points e referências.</p>
         </div>
+        <div id="nav-alternate-route-panel" class="nav-alternate-route-panel" hidden>
+          <h4 data-i18n="alternate_route_title">Rota do alternante</h4>
+          <p class="note" data-i18n="alternate_route_help">Seleciona o alternate e usa o modo Alternante para adicionar pontos intermédios no mapa. A rota começa na aterragem final.</p>
+          <div class="nav-alternate-route-context">
+            <span><strong data-i18n="alternate_final_landing">Aterragem final</strong><b id="nav-alternate-final-landing">--</b></span>
+          </div>
+          <button id="nav-alternate-route-clear" class="btn" type="button" data-i18n="alternate_route_clear">Limpar rota do alternante</button>
+        </div>
+        <div id="nav-aerodrome-charts" class="nav-aerodrome-charts" hidden>
+          <h4 data-i18n="nav_charts_title">Cartas dos aeródromos usados</h4>
+          <p class="note" data-i18n="nav_charts_help">Abre as cartas ADC/VAC e a página eAIP dos aeródromos identificados na rota.</p>
+          <div id="nav-aerodrome-charts-list" class="nav-aerodrome-charts-list"></div>
+        </div>
+        <div class="nav-phase-box">
+          <h4 data-i18n="toc_tod_title">TOC / TOD</h4>
+          <div class="nav-route-grid">
+            <label class="fpl-field" data-i18n-label="toc_reference">Ponto de início da subida
+              <select id="nav-toc-reference" class="select">
+                <option value="0" data-i18n="toc_reference_departure">Partida (DEP)</option>
+              </select>
+            </label>
+            <label class="fpl-field" data-i18n-label="toc_start_altitude">Altitude no início da subida (ft)
+              <input id="nav-toc-start-altitude" class="select" type="number" min="0" step="100" inputmode="numeric">
+            </label>
+            <label class="fpl-field" data-i18n-label="cruise_altitude">Altitude no TOC / cruzeiro (ft)
+              <input id="nav-cruise-altitude" class="select" type="number" min="0" step="500" inputmode="numeric">
+            </label>
+            <label class="fpl-field" data-i18n-label="toc_climb_speed">Velocidade inicial de subida (kt)
+              <input id="nav-toc-climb-speed" class="select" type="number" min="1" max="200" step="1" inputmode="numeric" value="70">
+            </label>
+            <label class="fpl-field" data-i18n-label="toc_climb_rate">Razão de subida (ft/min)
+              <input id="nav-toc-climb-rate" class="select" type="number" min="1" max="3000" step="50" inputmode="numeric" value="500">
+            </label>
+            <label class="fpl-field" data-i18n-label="destination_altitude">Altitude de destino (ft)
+              <input id="nav-destination-altitude" class="select" type="number" min="0" step="100" inputmode="numeric">
+            </label>
+            <label class="fpl-field" data-i18n-label="toc_distance">Distância calculada até TOC (NM)
+              <input id="nav-toc-nm" class="select" type="number" min="0" step="0.1" inputmode="decimal" readonly aria-readonly="true">
+            </label>
+          </div>
+          <p class="note nav-phase-help" data-i18n="toc_tod_help">A distância até TOC é calculada pela altitude inicial, altitude no TOC, razão e velocidade de subida. TOD = altitude a descer (milhares de ft) × 3 + 2; ROD 500 ft/min e GS 90 kt.</p>
+          <p id="nav-toc-tod-status" class="note" data-i18n="toc_tod_pending">Indica o ponto de subida, as altitudes, a razão e a velocidade para calcular TOC e TOD.</p>
+        </div>
+        <div id="nav-alternate-phase-box" class="nav-phase-box" hidden>
+          <h4 data-i18n="alternate_toc_tod_title">TOC / TOD do alternante</h4>
+          <div class="nav-route-grid">
+            <label class="fpl-field" data-i18n-label="alternate_toc_start_altitude">Altitude no início da subida (ft)
+              <input id="nav-alt-toc-start-altitude" class="select" type="number" min="0" step="100" inputmode="numeric">
+            </label>
+            <label class="fpl-field" data-i18n-label="alternate_cruise_altitude">Altitude no TOC / cruzeiro (ft)
+              <input id="nav-alt-cruise-altitude" class="select" type="number" min="0" step="500" inputmode="numeric">
+            </label>
+            <label class="fpl-field" data-i18n-label="alternate_toc_climb_speed">Velocidade inicial de subida (kt)
+              <input id="nav-alt-toc-climb-speed" class="select" type="number" min="1" max="200" step="1" inputmode="numeric" value="70">
+            </label>
+            <label class="fpl-field" data-i18n-label="alternate_toc_climb_rate">Razão de subida (ft/min)
+              <input id="nav-alt-toc-climb-rate" class="select" type="number" min="1" max="3000" step="50" inputmode="numeric" value="500">
+            </label>
+            <label class="fpl-field" data-i18n-label="alternate_destination_altitude">Altitude do alternate (ft)
+              <input id="nav-alt-destination-altitude" class="select" type="number" min="0" step="100" inputmode="numeric">
+            </label>
+            <label class="fpl-field" data-i18n-label="alternate_toc_distance">Distância calculada até TOC (NM)
+              <input id="nav-alt-toc-nm" class="select" type="number" min="0" step="0.1" inputmode="decimal" readonly aria-readonly="true">
+            </label>
+          </div>
+          <p class="note nav-phase-help" data-i18n="alternate_toc_tod_help">Define as altitudes do alternate. O TOD usa a mesma fórmula de descida.</p>
+          <p id="nav-alt-toc-tod-status" class="note" data-i18n="alternate_toc_tod_pending">Indica as altitudes para calcular TOC e TOD do alternate.</p>
+        </div>
+        <div id="nav-alternate-legs-box" class="nav-phase-box" hidden>
+          <h4 data-i18n="alternate_calculations_title">Cálculos do alternate</h4>
+          <div class="nav-table-wrap">
+            <table class="table nav-table nav-alternate-table">
+              <thead>
+                <tr>
+                  <th data-i18n="leg_header">Perna</th>
+                  <th>NM</th>
+                  <th data-i18n="mag_track_header">MAG TRACK</th>
+                  <th data-i18n="wind_speed_header">Vento</th>
+                  <th data-i18n="mag_head_header">MAG HEAD</th>
+                  <th data-i18n="gs_header">GS</th>
+                  <th data-i18n="time_header">Tempo</th>
+                </tr>
+              </thead>
+              <tbody id="nav-alternate-legs-body"></tbody>
+            </table>
+          </div>
+        </div>
         <div class="nav-summary">
           <div>
             <span class="note" data-i18n="total_label">Total</span>
@@ -488,12 +579,16 @@
               <tr>
                 <th data-i18n="leg_header">Perna</th>
                 <th>NM</th>
-                <th>HDG</th>
+                <th data-i18n="mag_track_header">MAG TRACK</th>
                 <th data-i18n="alt_vfr_header">ALT VFR</th>
+                <th data-i18n="wind_speed_header">Vento</th>
+                <th data-i18n="mag_head_header">MAG HEAD</th>
+                <th data-i18n="gs_header">GS</th>
+                <th data-i18n="time_header">Tempo</th>
               </tr>
             </thead>
             <tbody id="nav-legs-body">
-              <tr><td colspan="4" class="note" data-i18n="add_two_points">Adiciona pelo menos dois pontos.</td></tr>
+              <tr><td colspan="8" class="note" data-i18n="add_two_points">Adiciona pelo menos dois pontos.</td></tr>
             </tbody>
           </table>
         </div>

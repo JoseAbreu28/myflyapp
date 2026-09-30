@@ -3,7 +3,7 @@
 ## Purpose
 
 - MyFlyApp is a Flask/Vercel single-page aviation planning dashboard for Portuguese GA/PPL workflows, including an external E6BX flight-computer subtab under Navegações and a Treino tab with Instrumentos and Avionics Simulator submodules.
-- The app combines METAR/TAF proxying, external aviation embeds, route/navigation planning, simulation, manual instrument study, an interactive Porto/Viseu VOR trainer, a local Avionics Simulator with selectable Setup 1 (dual-G5 PFD/HSI + GNS 430/430W) and Setup 2 (GI-106A VOR/LOC + GNC 255), guided exercises, mass and balance calculations, and simple navigation PDF export.
+- The app combines METAR/TAF proxying, external aviation embeds, route/navigation planning, simulation, manual instrument study, an interactive Porto/Viseu VOR trainer, a local Avionics Simulator with selectable Setup 1 (dual-G5 PFD/HSI + GNS 430/430W) and Setup 2 (GI-106A VOR/LOC + GNC 255), guided exercises, mass and balance calculations, and flight-log style navigation PDF export.
 - Treat all aviation outputs as planning aids only; preserve existing warnings that official sources and pilot responsibility control.
 
 ## Core Contract
@@ -84,6 +84,14 @@ Default section order:
 - Do not store fplbriefing tokens or aviation credentials server-side; caller-supplied tokens remain request-scoped.
 - Setup 1 avionics behavior is approved by the user; preserve it when fixing Setup 2 unless the user explicitly requests a Setup 1 change.
 - Preserve the approved avionics design by default on desktop, tablet and phone. Show supplementary −/+ and aircraft touch controls only after the user enables the small Modo mobile toggle.
+- When Ida e volta is selected in Navegações, export separate outbound and return flight logs and leave Fuel/Reserve unfilled because the return may change.
+- TOC distance is calculated from the selected climb-start point's altitude to the TOC altitude; ask for climb rate with a 500 ft/min default and keep climb speed at an editable 70 kt default.
+- Navigation PDF export must fill the supplied `flightlogAcporto` form template and preserve its primary-sheet geometry, labels, cells, and two-sheet layout.
+- Navigation PDF Notes must identify both TOC and TOD; use calculated values when valid inputs exist and state `unavailable` explicitly when a phase cannot be calculated.
+- Navigation tables and flight-log PDFs must keep MAG TRACK populated for every route leg, calculate GS/MAG HEAD only when that leg has airspeed plus wind, and calculate time independently for each leg only when distance and GS are available. Split phase-aware legs at TOC and TOD for both the main route and alternate.
+- Navigation plans can be exported/imported as versioned browser-local JSON; the file carries route points, per-leg altitude/wind, phase/E6B inputs, references, round-trip metadata and the alternate route without storing credentials or plan data server-side.
+- An alternate is a route from the final landing point to the selected/manual alternate. In round trips the middle aerodrome is a touch-and-go and the final occurrence of the departure aerodrome is the landing point; if the return point has not yet been added, use the departure point itself. Alternate intermediate points can be added in Alternante mode.
+- Alternate route editing includes a separate Alternate Breaking point mode. It inserts a point into the nearest alternate segment, keeps the main route unchanged, and shifts the alternate per-leg data to the new leg indexes.
 
 ## Child DOX Index
 

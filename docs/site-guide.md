@@ -89,11 +89,23 @@ O subtab de navegação tem duas áreas:
 
 O simulador de rota só fica disponível com pelo menos dois pontos. O avião pode avançar/pausar, usar velocidades configuráveis e seguir o próximo breaking point ou o destino final. O marcador também pode ser arrastado ao longo da rota; esse movimento atualiza distância, tempo e os instrumentos HSI/RMI/VOR.
 
+Cada perna permite indicar o vento na altitude introduzida no formato `DDD/SSkts`, por exemplo `130/09kts` ou `320/03kts`. Direção e velocidade são normalizadas e reportadas na tabela e no PDF; não é fabricada uma correção de vento ou um magnetic heading. Os tracks apresentados são MAG TRACK, aplicando +1° à variação de 1° W.
+
+Pontos de rota próximos de um aeródromo recebem o identificador ICAO local. Os restantes consultam o mapa público de 5-letter codes configurado em `FIVE_LETTER_MAP_URL`; a lista é descarregada pelo backend, mantida apenas em cache de memória e o código mais próximo é escolhido pela distância geodésica aproximada.
+
+O bloco TOC/TOD permite escolher o ponto da rota onde começa a subida (por defeito, DEP), indicar a altitude nesse ponto, a altitude no TOC/cruzeiro, a razão de subida (por defeito, 500 ft/min) e a velocidade de subida (por defeito, 70 kt). A aplicação calcula o tempo e a distância até ao TOC; a distância apresentada é apenas de leitura. Se a altitude inicial já estiver acima do TOC, a distância é considerada 0 NM e isso é indicado no estado. O TOD é calculado como `Δ altitude (milhares de ft) × 3 + 2`, assumindo ROD 500 ft/min e GS 90 kt; se a altitude de destino não for inferior à altitude do TOC, o TOD é indicado como indisponível. Os pontos válidos são marcados sobre a rota quando ficam dentro da distância disponível. A rota também mostra marcas perpendiculares de 5 em 5 NM dentro de cada perna; a contagem reinicia em cada ponto da rota.
+
+Quando a rota contém aeródromos conhecidos, o painel **Cartas dos aeródromos usados** apresenta cada aeródromo uma única vez, mesmo numa rota ida e volta. Os links ADC/VAC abrem diretamente os PDFs oficiais numa nova aba e o link eAIP abre a página oficial; a edição atual deve ser confirmada antes do voo.
+
 O laboratório manual de instrumentos é independente da rota e começa com um exemplo válido. Permite alterar rumo, curso/OBS, bearings, CDI e TO/FROM para estudar as indicações sem alterar o plano.
 
 ### Exportação PDF
 
-O botão de exportação envia a rota, pernas, E6B, alternante e referências para `/api/navigation/pdf`. O backend cria um PDF simples com disclaimer, rota e cálculos de apoio. Se o download falhar, o browser usa a impressão como fallback quando disponível.
+O botão de exportação envia os dados fornecidos na sessão para `/api/navigation/pdf`. O backend preenche o formulário A4 horizontal fixo `static/pdf/flightlogAcporto-template.pdf`, preservando a grelha, cabeçalho, células e disposição da folha principal. A coluna **Checkpoints & Fixes** lista o ponto inicial e depois cada ponto individual da rota; os dados de distância, altitude, MAG TRACK, vento `DDD/SSkts`, GS e tempo em cada linha correspondem à perna que termina nesse ponto. As Notes identificam sempre TOC e TOD com os valores calculados ou `unavailable` quando não existem dados suficientes. Em **Ida e volta**, a rota `partida → destino → partida` é dividida no destino e são descarregados `flightlogAcporto-ida.pdf` e `flightlogAcporto-volta.pdf`; Fuel e Reserve ficam sem preenchimento nos dois documentos porque o regresso pode ser alterado. Se o download falhar, o browser usa a impressão como fallback quando disponível.
+
+### Importação, exportação e alternante
+
+Os botões **Exportar flightplan** e **Importar flightplan** gravam/carregam um JSON versionado apenas no browser. O ficheiro inclui pontos da rota, altitudes e vento por perna, TOC/TOD, E6B, referências, metadados de ida e volta e a rota do alternante. A rota do alternante começa sempre no ponto de aterragem final da rota principal; numa ida e volta o aeródromo intermédio é tratado como touch-and-go e usa-se a última ocorrência do aeródromo de partida como aterragem final. Se o regresso ainda não tiver sido inserido, usa-se o próprio ponto de partida (por exemplo, LPVL). Depois de escolher o alternate, ativa **Alternante** e clica no mapa para inserir pontos intermédios; a distância e o fuel do alternate usam essa polilinha, e a rota é incluída no payload do PDF.
 
 ### Massa & Balanceamento
 
@@ -156,7 +168,8 @@ A checklist global reúne os 5 níveis do Setup 1 e os 4 níveis do Setup 2. Cad
 | `GET` | `/` | Renderiza `templates/index.html` com configuração, aeródromos e links externos. |
 | `GET` | `/api/metar/<icao>` | Consulta/normaliza METAR; usa cache curto e resposta indisponível em falha upstream. |
 | `GET` | `/api/taf/<icao>` | Consulta/normaliza TAF; usa cache curto e resposta indisponível em falha upstream. |
-| `POST` | `/api/navigation/pdf` | Recebe rota/E6B/referências e devolve `application/pdf`. |
+| `GET` | `/api/navigation/five-letter-code?lat=...&lng=...` | Escolhe o 5-letter code mais próximo do mapa público e devolve as coordenadas de origem. |
+| `POST` | `/api/navigation/pdf` | Recebe rota, vento, TOC/TOD, E6B e referências e devolve o flight log `application/pdf`. |
 | `POST` | `/api/fplbriefing/narrow-pib` | Proxy de PIB Narrow Route com token fornecido no body. |
 | `POST` | `/api/fplbriefing/route-map` | Obtém GeoJSON de uma rota fplbriefing usando token request-scoped. |
 

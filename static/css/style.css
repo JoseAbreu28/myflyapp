@@ -1701,6 +1701,11 @@ h1 { margin: 0; font-size: 1.25rem; }
   box-shadow: inset 0 -2px 0 var(--mvfr);
 }
 
+#nav-mode-alternate-break.active {
+  border-color: var(--mvfr);
+  box-shadow: inset 0 -2px 0 var(--mvfr);
+}
+
 .nav-print-status {
   margin: 0 0 0.6rem;
 }
@@ -1734,6 +1739,71 @@ h1 { margin: 0; font-size: 1.25rem; }
   font-size: 0.95rem;
 }
 
+.nav-aerodrome-charts {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-aerodrome-charts h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.nav-aerodrome-charts > p {
+  margin: 0 0 0.6rem;
+}
+
+.nav-aerodrome-charts-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.nav-aerodrome-chart-card {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0.55rem;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.nav-aerodrome-chart-card strong,
+.nav-aerodrome-chart-card small {
+  display: block;
+}
+
+.nav-aerodrome-chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.45rem 0;
+}
+
+.nav-chart-button {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  text-decoration: none;
+}
+
+.nav-phase-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-phase-box h4 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+}
+
+.nav-phase-help,
+.nav-phase-box > p:last-child {
+  margin: 0.55rem 0 0;
+}
+
 .nav-route-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1754,6 +1824,43 @@ h1 { margin: 0; font-size: 1.25rem; }
 
 #nav-route-builder-status {
   margin: 0.6rem 0 0;
+}
+
+.nav-alternate-route-panel {
+  border: 1px solid rgba(239, 68, 68, 0.65);
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 0.8rem;
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.nav-alternate-route-panel h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.nav-alternate-route-panel > p {
+  margin: 0 0 0.6rem;
+}
+
+.nav-alternate-route-context {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  margin-bottom: 0.6rem;
+}
+
+.nav-alternate-route-context span {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.nav-alternate-route-context b {
+  font-family: "Consolas", "Courier New", monospace;
 }
 
 .nav-summary {
@@ -1799,7 +1906,18 @@ h1 { margin: 0; font-size: 1.25rem; }
   min-width: 128px;
 }
 
+.nav-wind-cell {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 84px;
+}
+
 .nav-altitude-input {
+  margin-top: 0;
+  padding: 0.35rem 0.45rem;
+}
+
+.nav-wind-input {
   margin-top: 0;
   padding: 0.35rem 0.45rem;
 }
@@ -1810,12 +1928,20 @@ h1 { margin: 0; font-size: 1.25rem; }
   color: var(--muted);
 }
 
-.nav-altitude-status.ok {
+.nav-altitude-status.ok,
+.nav-wind-status.ok {
   color: var(--vfr);
 }
 
-.nav-altitude-status.bad {
+.nav-altitude-status.bad,
+.nav-wind-status.bad {
   color: var(--ifr);
+}
+
+.nav-wind-status {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--muted);
 }
 
 .nav-e6b {
@@ -1852,6 +1978,35 @@ h1 { margin: 0; font-size: 1.25rem; }
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.45);
 }
 
+.nav-alternate-route-marker {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.6);
+}
+
+.nav-alternate-route-origin { background: #7c3aed; }
+.nav-alternate-route-destination { background: #dc2626; }
+.nav-alternate-route-intermediate { background: #b45309; }
+
+.nav-phase-marker {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  box-shadow: 0 3px 9px rgba(15, 23, 42, 0.55);
+}
+
+.nav-phase-toc { background: #2563eb; }
+.nav-phase-tod { background: #dc2626; }
+
 .nav-actions {
   margin-top: 0.7rem;
 }
@@ -1886,6 +2041,17 @@ h1 { margin: 0; font-size: 1.25rem; }
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.nav-distance-tick-label {
+  border: 1px solid rgba(22, 101, 52, 0.95);
+  border-radius: 4px;
+  background: rgba(240, 253, 244, 0.94);
+  color: #14532d;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.3rem;
 }
 
 .nav-point-label {
@@ -2449,6 +2615,7 @@ h1 { margin: 0; font-size: 1.25rem; }
   body.printing-navigation .note,
   body.printing-navigation .metric,
   body.printing-navigation .nav-altitude-status,
+  body.printing-navigation .nav-wind-status,
   body.printing-navigation .nav-reference-item small {
     color: #374151 !important;
   }
@@ -2458,6 +2625,10 @@ h1 { margin: 0; font-size: 1.25rem; }
   }
 
   body.printing-navigation .nav-altitude-status.bad {
+    color: #991b1b !important;
+  }
+
+  body.printing-navigation .nav-wind-status.bad {
     color: #991b1b !important;
   }
 
