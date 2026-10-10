@@ -63,8 +63,27 @@ const MB_I18N = {
     total_weight: "Peso total",
     cg_limits: "Limites CG",
     total_moment: "Momento total",
+    how_to_fill_title: "Como preencher",
+    empty_input_hint: "Ficha de pesagem: introduzir em lb",
+    empty_arm_hint: "Braço: introduzir em polegadas (in)",
+    load_input_hint: "Pessoas e bagagem: introduzir em kg",
+    fuel_input_hint: "Introduzir galões US",
+    conversion_title: "Conversões rápidas",
+    formula_kg_lb: "kg → lb = kg × 2,2046",
+    formula_lb_kg: "lb → kg = lb × 0,4536",
+    formula_gal_l: "gal US → L = gal × 3,785",
+    formula_fuel_lb: "AVGAS: gal US × 6 = lb",
+    formula_moment: "Momento = massa (lb) × braço (in)",
+    formula_cg: "CG (in) = momento total (lb·in) ÷ massa total (lb)",
+    formula_cg_cm: "CG (cm) = CG (in) × 2,54",
+    conversion_example: "Exemplo: 80 kg × 2,2046 = 176,4 lb.",
+    result_summary: "Resultado atual",
+    moment: "Momento",
+    mass: "Massa",
+    cg: "CG",
+    raw_moment: "momento sem dividir por 1000",
     manual_calc_title: "Cálculo manual do momento",
-    manual_calc_formula: "Momento de cada item = peso (lb) × braço (in). Momento total = soma dos momentos ÷ 1000.",
+    manual_calc_formula: "Para cada item: momento = massa (lb) × braço (in). Some os momentos em lb·in; para a carta, divida a soma por 1000. CG = momento total ÷ massa total.",
     manual_calc_sum: "Soma dos momentos",
     envelope_aria: "Envelope de centro de gravidade",
     moment_axis: "Momento / 1000 (lb·in)",
@@ -102,8 +121,27 @@ const MB_I18N = {
     total_weight: "Total weight",
     cg_limits: "CG limits",
     total_moment: "Total moment",
+    how_to_fill_title: "How to fill in",
+    empty_input_hint: "Weighing sheet: enter in lb",
+    empty_arm_hint: "Arm: enter in inches (in)",
+    load_input_hint: "People and baggage: enter in kg",
+    fuel_input_hint: "Enter US gallons",
+    conversion_title: "Quick conversions",
+    formula_kg_lb: "kg → lb = kg × 2.2046",
+    formula_lb_kg: "lb → kg = lb × 0.4536",
+    formula_gal_l: "US gal → L = gal × 3.785",
+    formula_fuel_lb: "AVGAS: US gal × 6 = lb",
+    formula_moment: "Moment = mass (lb) × arm (in)",
+    formula_cg: "CG (in) = total moment (lb·in) ÷ total mass (lb)",
+    formula_cg_cm: "CG (cm) = CG (in) × 2.54",
+    conversion_example: "Example: 80 kg × 2.2046 = 176.4 lb.",
+    result_summary: "Current result",
+    moment: "Moment",
+    mass: "Mass",
+    cg: "CG",
+    raw_moment: "moment before dividing by 1000",
     manual_calc_title: "Manual moment calculation",
-    manual_calc_formula: "Moment of each item = weight (lb) × arm (in). Total moment = sum of moments ÷ 1000.",
+    manual_calc_formula: "For each item: moment = mass (lb) × arm (in). Add moments in lb·in; for the chart, divide the sum by 1000. CG = total moment ÷ total mass.",
     manual_calc_sum: "Sum of moments",
     envelope_aria: "Center of gravity envelope",
     moment_axis: "Moment / 1000 (lb·in)",
@@ -240,7 +278,7 @@ function mbRenderForm(reg) {
       const unitLabel = s.unit === "gal" ? "gal" : "kg";
       let hint = "";
       if (s.unit === "gal") {
-        hint = `${mbT("max_usable")} ${s.maxGal} gal (≈ ${mbFmt(s.maxGal * MB_GAL_TO_L, 0)} L)`;
+        hint = `${mbT("fuel_input_hint")} · ${mbT("max_usable")} ${s.maxGal} gal (≈ ${mbFmt(s.maxGal * MB_GAL_TO_L, 0)} L)`;
       } else if (s.maxLb) {
         hint = `${mbT("max")} ${mbFmt(s.maxLb * MB_LB_TO_KG, 0)} kg (${s.maxLb} lb)`;
       }
@@ -257,6 +295,24 @@ function mbRenderForm(reg) {
     .join("");
 
   form.innerHTML = `
+    <div class="mb-guide card-inset">
+      <h4>${mbT("how_to_fill_title")}</h4>
+      <div class="mb-guide-grid">
+        <div class="mb-guide-step"><strong>1</strong><span>${mbT("empty_input_hint")}</span></div>
+        <div class="mb-guide-step"><strong>2</strong><span>${mbT("load_input_hint")}</span></div>
+        <div class="mb-guide-step"><strong>3</strong><span>${mbT("fuel_input_hint")}</span></div>
+      </div>
+      <div class="mb-formulas">
+        <strong>${mbT("conversion_title")}</strong>
+        <div class="mb-formula-grid">
+          <code>${mbT("formula_kg_lb")}</code>
+          <code>${mbT("formula_lb_kg")}</code>
+          <code>${mbT("formula_gal_l")}</code>
+          <code>${mbT("formula_fuel_lb")}</code>
+        </div>
+        <p class="note mb-formula-example">${mbT("conversion_example")}</p>
+      </div>
+    </div>
     <div class="mb-empty card-inset">
       <h4>${mbT("empty_aircraft")} <small class="note">(${mbT("weighing_data")})</small></h4>
       <div class="mb-grid">
@@ -266,6 +322,7 @@ function mbRenderForm(reg) {
             <input id="mb-empty-lb" class="select" type="number" min="0" step="0.01" value="${ac.emptyLb}">
             <em class="mb-unit">lb</em>
           </span>
+          <small class="note">${mbT("empty_input_hint")}</small>
         </label>
         <label class="mb-field">
           <span>${mbT("empty_arm")}</span>
@@ -273,13 +330,14 @@ function mbRenderForm(reg) {
             <input id="mb-empty-arm" class="select" type="number" min="0" step="0.01" value="${ac.emptyArm}">
             <em class="mb-unit">in</em>
           </span>
+          <small class="note">${mbT("empty_arm_hint")}</small>
         </label>
       </div>
     </div>
     <div class="mb-loads card-inset">
-      <h4>${mbT("load")}</h4>
+      <h4>${mbT("load")} <small class="note">(${mbT("load_input_hint")})</small></h4>
       <div class="mb-grid">${stationRows}</div>
-      <p class="note mb-conversion-note">${mbT("kg_to_lb_formula")}</p>
+      <p class="note mb-conversion-note">${mbT("formula_moment")}. ${mbT("formula_cg")}. ${mbT("formula_cg_cm")}.</p>
     </div>`;
 
   form.querySelectorAll("input").forEach((input) => {
@@ -394,6 +452,9 @@ function mbRenderResults(ac, r) {
     : mbT("outside");
 
   const fuelKg = r.fuelGal * MB_FUEL_LB_PER_GAL * MB_LB_TO_KG;
+  const totalMomentK = r.totalMoment / 1000;
+  const totalMomentKgM = r.totalMoment * MB_LB_TO_KG * 0.0254;
+  const cgCm = r.cg * 2.54;
 
   const warnHtml = r.warnings.length
     ? `<ul class="mb-warnings">${r.warnings.map((w) => `<li>⚠️ ${w}</li>`).join("")}</ul>`
@@ -410,18 +471,28 @@ function mbRenderResults(ac, r) {
       <p><strong>${mbT("manual_calc_title")}</strong></p>
       <p class="note">${mbT("manual_calc_formula")}</p>
       <div class="note">${manualRowsHtml}</div>
-      <p class="note"><strong>${mbT("manual_calc_sum")} = ${mbFmt(r.totalMoment / 1000, 3)} lb·in/1000 → ${mbFmt(r.totalMoment / 1000, 2)}</strong></p>
+      <p class="note"><strong>${mbT("manual_calc_sum")} = ${mbFmt(totalMomentK, 3)} lb·in/1000 (${mbFmt(r.totalMoment, 0)} lb·in; ${mbT("raw_moment")})</strong></p>
     </div>`;
 
   box.innerHTML = `
     <p><span class="badge mb-${statusClass}">${statusText}</span></p>
+    <p class="mb-result-heading"><strong>${mbT("result_summary")}</strong></p>
+    <div class="mb-summary-wrap">
+      <table class="mb-summary-table">
+        <thead><tr><th>${mbT("moment")}</th><th>${mbT("mass")}</th><th>${mbT("cg")}</th></tr></thead>
+        <tbody><tr>
+          <td><strong>${mbFmt(totalMomentK, 2)}</strong> <span class="note">lb·in/1000</span><small>${mbFmt(totalMomentKgM, 2)} kg·m</small></td>
+          <td><strong>${mbFmt(r.totalLb * MB_LB_TO_KG, 1)}</strong> <span class="note">kg</span><small>${mbFmt(r.totalLb, 0)} lb</small></td>
+          <td><strong>${mbFmt(r.cg, 2)}</strong> <span class="note">in</span><small>${mbFmt(cgCm, 2)} cm</small></td>
+        </tr></tbody>
+      </table>
+    </div>
+    <p class="mb-result-formula"><code>${mbT("formula_cg")}</code><br><span class="note">${mbT("formula_cg_cm")}</span></p>
     <table class="mb-table">
       <tr><th>${mbT("total_weight")}</th><td>${mbFmt(r.totalLb * MB_LB_TO_KG, 1)} kg <span class="note">(${mbFmt(r.totalLb, 0)} lb)</span></td></tr>
       <tr><th>MTOW</th><td>${mbFmt(ac.maxTakeoffLb * MB_LB_TO_KG, 0)} kg <span class="note">(${ac.maxTakeoffLb} lb)</span></td></tr>
       <tr><th>${mbT("fuel")}</th><td>${mbFmt(r.fuelGal, 1)} gal <span class="note">(≈ ${mbFmt(r.fuelGal * MB_GAL_TO_L, 0)} L · ${mbFmt(fuelKg, 0)} kg)</span></td></tr>
-      <tr><th>CG</th><td>${mbFmt(r.cg, 2)} in</td></tr>
       <tr><th>${mbT("cg_limits")} @ ${mbFmt(r.totalLb, 0)} lb</th><td>${mbFmt(r.fwdLimit, 2)}" – ${mbFmt(r.aftLimit, 2)}"</td></tr>
-      <tr><th>${mbT("total_moment")}</th><td>${mbFmt(r.totalMoment / 1000, 2)} <span class="note">(lb·in/1000)</span></td></tr>
     </table>
     ${manualCalcHtml}
     ${warnHtml}`;

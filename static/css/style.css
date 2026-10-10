@@ -2483,6 +2483,57 @@ h1 { margin: 0; font-size: 1.25rem; }
   margin-top: 0.8rem;
 }
 .card-inset h4 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+.mb-guide {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(96, 165, 250, 0.45);
+}
+.mb-guide h4 { margin-bottom: 0.7rem; }
+.mb-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+.mb-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.mb-guide-step strong {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 1.25rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #07111f;
+  font-size: 0.76rem;
+}
+.mb-formulas {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+.mb-formula-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.6rem;
+  margin-top: 0.4rem;
+}
+.mb-formula-grid code,
+.mb-result-formula code {
+  display: block;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.14);
+  font-size: 0.78rem;
+}
+.mb-formula-example { margin: 0.5rem 0 0; }
 .mb-input-wrap { position: relative; display: block; }
 .mb-input-wrap .select { padding-right: 2.6rem; }
 .mb-unit {
@@ -2504,6 +2555,39 @@ h1 { margin: 0; font-size: 1.25rem; }
 }
 .mb-table th { color: var(--muted); font-weight: 600; width: 45%; }
 .mb-table td { font-family: "Consolas", monospace; }
+.mb-result-heading { margin: 0.7rem 0 0.35rem; }
+.mb-summary-wrap { overflow-x: auto; }
+.mb-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.84rem;
+}
+.mb-summary-table th,
+.mb-summary-table td {
+  width: 33.333%;
+  padding: 0.45rem 0.35rem;
+  border: 1px solid var(--line);
+  text-align: center;
+  vertical-align: top;
+}
+.mb-summary-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.mb-summary-table td { font-family: "Consolas", monospace; }
+.mb-summary-table .note,
+.mb-summary-table small {
+  display: block;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.mb-result-formula {
+  margin: 0.65rem 0 0.8rem;
+  line-height: 1.45;
+}
+.mb-result-formula .note { font-size: 0.78rem; }
 
 .badge.mb-ok { background: var(--vfr); }
 .badge.mb-bad { background: var(--ifr); }
@@ -2562,6 +2646,12 @@ h1 { margin: 0; font-size: 1.25rem; }
   .vor-trainer-map { min-height: 380px; }
   .vor-map-toolbar { align-items: stretch; flex-direction: column; }
   .vor-readout-list { grid-template-columns: 1fr; }
+  .mb-guide-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .mb-formula-grid { grid-template-columns: 1fr; }
+  .mb-summary-table { font-size: 0.77rem; }
 }
 
 @media (min-width: 701px) and (max-width: 1000px) {
